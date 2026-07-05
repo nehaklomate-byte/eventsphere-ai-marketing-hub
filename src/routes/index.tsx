@@ -34,7 +34,6 @@ function Home() {
   return (
     <SiteLayout>
       <Hero />
-      <TrustedBy />
       <Stats />
       <Features />
       <Solutions />
@@ -59,32 +58,29 @@ function Hero() {
         <motion.div {...fadeUp}>
           <span className="inline-flex items-center gap-2 rounded-full glass px-3 py-1.5 text-xs font-medium text-foreground/80">
             <Sparkles className="h-3.5 w-3.5 text-brand-violet" />
-            Introducing EventSphere AI — private beta open
+            Now onboarding partners for private beta
           </span>
           <h1 className="mt-6 font-display text-4xl font-semibold leading-[1.05] tracking-tight text-foreground sm:text-5xl md:text-6xl">
-            Manage Every Event. <br />
+            Manage Every Event with <br />
             <span className="text-gradient-brand">One Intelligent Platform.</span>
           </h1>
           <p className="mt-6 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
-            Plan, organize, schedule and manage weddings, corporate events, college festivals, birthday parties, halls, vendors, workers, budgets and participants — from one unified cloud platform.
+            EventSphere AI helps organizations, halls, vendors and event professionals manage planning, bookings, teams, budgets and operations from one unified cloud platform.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Link to="/features" className="group inline-flex items-center gap-2 rounded-full btn-brand btn-brand-hover px-5 py-3 text-sm font-semibold">
-              Explore Platform <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            <Link to="/register" className="group inline-flex items-center gap-2 rounded-full btn-brand btn-brand-hover px-5 py-3 text-sm font-semibold">
+              Get started free <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
             <Link to="/marketplace" className="inline-flex items-center gap-2 rounded-full border border-input bg-background/70 px-5 py-3 text-sm font-semibold backdrop-blur hover:bg-accent">
-              Book Venue
+              Browse venues
             </Link>
-            <Link to="/register" className="inline-flex items-center gap-2 rounded-full bg-foreground text-background px-5 py-3 text-sm font-semibold hover:opacity-90">
-              Join Early Access
+            <Link to="/contact" className="inline-flex items-center gap-2 rounded-full px-3 py-3 text-sm font-semibold text-foreground hover:text-brand-violet">
+              <PlayCircle className="h-5 w-5" /> Request a demo
             </Link>
-            <a href="#demo" className="inline-flex items-center gap-2 rounded-full px-3 py-3 text-sm font-semibold text-foreground hover:text-brand-violet">
-              <PlayCircle className="h-5 w-5" /> Watch Demo
-            </a>
           </div>
           <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-4 w-4 text-brand-blue" /> SOC 2 ready</span>
-            <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-brand-violet" /> 99.9% uptime</span>
+            <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-4 w-4 text-brand-blue" /> Encrypted & role-based access</span>
+            <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-brand-violet" /> Built on secure cloud infrastructure</span>
             <span className="inline-flex items-center gap-1.5"><Sparkles className="h-4 w-4 text-brand-magenta" /> AI-assisted planning</span>
           </div>
         </motion.div>
@@ -184,35 +180,27 @@ function TrustedBy() {
   );
 }
 
-/* ---------------- STATS ---------------- */
+/* ---------------- WHY (replaces fabricated stats pre-launch) ---------------- */
 function Stats() {
-  const stats = [
-    { label: "Organizations", value: 1240, suffix: "+" },
-    { label: "Events Managed", value: 8600, suffix: "+" },
-    { label: "Hall Partners", value: 540, suffix: "+" },
-    { label: "Vendors", value: 3200, suffix: "+" },
-    { label: "Workers", value: 12500, suffix: "+" },
-    { label: "Bookings", value: 21800, suffix: "+" },
+  const items = [
+    { label: "One unified workspace", desc: "Planning, bookings, vendors, workers and reporting in a single console." },
+    { label: "Role-based by design", desc: "Distinct workflows for organizations, halls, vendors and professionals." },
+    { label: "Verified marketplace", desc: "Every listed partner is verified before going live to your team." },
+    { label: "Built for India first", desc: "GST, INR, regional languages and payment rails supported end to end." },
   ];
   return (
     <section className="mx-auto max-w-7xl px-5 md:px-8 py-20">
       <motion.div {...fadeUp} className="max-w-2xl">
-        <SectionEyebrow>By the numbers</SectionEyebrow>
-        <h2 className="mt-3 font-display text-3xl md:text-4xl font-semibold">Momentum, measured.</h2>
-        <p className="mt-3 text-muted-foreground">Live indicators of the EventSphere ecosystem, updated as we grow.</p>
+        <SectionEyebrow>Why EventSphere</SectionEyebrow>
+        <h2 className="mt-3 font-display text-3xl md:text-4xl font-semibold">Purpose-built for the way events actually run.</h2>
+        <p className="mt-3 text-muted-foreground">Replace scattered spreadsheets, WhatsApp threads and manual paperwork with a single system your entire team can trust.</p>
       </motion.div>
-      <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
-        {stats.map((s, i) => (
-          <motion.div
-            key={s.label}
-            {...fadeUp}
-            transition={{ ...fadeUp.transition, delay: i * 0.05 }}
-            className="rounded-2xl glass shadow-soft p-5 hover:shadow-glow transition-shadow"
-          >
-            <div className="font-display text-3xl font-semibold text-gradient-brand">
-              <Counter to={s.value} suffix={s.suffix} />
-            </div>
-            <div className="mt-1 text-xs uppercase tracking-widest text-muted-foreground">{s.label}</div>
+      <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {items.map((s, i) => (
+          <motion.div key={s.label} {...fadeUp} transition={{ ...fadeUp.transition, delay: i * 0.05 }}
+            className="rounded-2xl glass shadow-soft p-5 hover:shadow-glow transition-shadow">
+            <div className="font-display text-lg font-semibold text-foreground">{s.label}</div>
+            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
           </motion.div>
         ))}
       </div>
@@ -484,34 +472,27 @@ function Research() {
   );
 }
 
-/* ---------------- TESTIMONIALS ---------------- */
+/* ---------------- ADVISORY (honest pre-launch) ---------------- */
 function Testimonials() {
   const items = [
-    { name: "Ananya Rao", role: "Wedding Planner, Everly", quote: "EventSphere replaced three tools. Our coordinators saved 12 hours per event in the first month." },
-    { name: "Rahul Menon", role: "Ops Head, Meridian Halls", quote: "Bookings, vendors and payouts in one dashboard. Our occupancy grew 28% in one quarter." },
-    { name: "Priya Sharma", role: "Cultural Secretary, IIT Bombay", quote: "Running Mood Indigo went from chaos to calm. The QR check-ins alone were a game changer." },
+    { title: "Wedding planners", desc: "Codesigning coordinator workflows, budget dashboards and vendor payouts." },
+    { title: "Banquet halls & lawns", desc: "Building the availability calendar, enquiry inbox and dynamic pricing engine." },
+    { title: "Colleges & institutions", desc: "Shaping cultural fest workflows with volunteer, sponsor and artist tracking." },
   ];
   return (
     <section className="mx-auto max-w-7xl px-5 md:px-8 py-20">
       <motion.div {...fadeUp} className="max-w-2xl">
-        <SectionEyebrow>Testimonials</SectionEyebrow>
-        <h2 className="mt-3 font-display text-3xl md:text-4xl font-semibold">Loved by teams running unforgettable events.</h2>
+        <SectionEyebrow>Advisory network</SectionEyebrow>
+        <h2 className="mt-3 font-display text-3xl md:text-4xl font-semibold">Built alongside operators, not in a vacuum.</h2>
+        <p className="mt-3 text-muted-foreground">EventSphere AI is being shaped in the open with venues, planners and institutions who run events every week.</p>
       </motion.div>
       <div className="mt-12 grid gap-5 md:grid-cols-3">
         {items.map((t, i) => (
-          <motion.figure key={t.name} {...fadeUp} transition={{ ...fadeUp.transition, delay: i * 0.06 }}
+          <motion.figure key={t.title} {...fadeUp} transition={{ ...fadeUp.transition, delay: i * 0.06 }}
             className="rounded-3xl border border-border bg-card p-6 shadow-soft">
             <Quote className="h-6 w-6 text-brand-violet" />
-            <blockquote className="mt-3 text-foreground/90 leading-relaxed">"{t.quote}"</blockquote>
-            <figcaption className="mt-6 flex items-center gap-3">
-              <div className="grid h-10 w-10 place-items-center rounded-full bg-gradient-brand text-white text-sm font-semibold">
-                {t.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
-              </div>
-              <div>
-                <div className="text-sm font-semibold">{t.name}</div>
-                <div className="text-xs text-muted-foreground">{t.role}</div>
-              </div>
-            </figcaption>
+            <div className="mt-3 font-display text-lg font-semibold">{t.title}</div>
+            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{t.desc}</p>
           </motion.figure>
         ))}
       </div>

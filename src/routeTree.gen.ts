@@ -23,6 +23,7 @@ import { Route as ContactRouteImport } from './routes/contact'
 import { Route as BlogRouteImport } from './routes/blog'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as HallIdRouteImport } from './routes/hall.$id'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -94,6 +95,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HallIdRoute = HallIdRouteImport.update({
+  id: '/hall/$id',
+  path: '/hall/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/solutions': typeof SolutionsRoute
   '/terms': typeof TermsRoute
+  '/hall/$id': typeof HallIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/solutions': typeof SolutionsRoute
   '/terms': typeof TermsRoute
+  '/hall/$id': typeof HallIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -143,6 +151,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/solutions': typeof SolutionsRoute
   '/terms': typeof TermsRoute
+  '/hall/$id': typeof HallIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -161,6 +170,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/solutions'
     | '/terms'
+    | '/hall/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -177,6 +187,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/solutions'
     | '/terms'
+    | '/hall/$id'
   id:
     | '__root__'
     | '/'
@@ -193,6 +204,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/solutions'
     | '/terms'
+    | '/hall/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -210,6 +222,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SolutionsRoute: typeof SolutionsRoute
   TermsRoute: typeof TermsRoute
+  HallIdRoute: typeof HallIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -312,6 +325,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/hall/$id': {
+      id: '/hall/$id'
+      path: '/hall/$id'
+      fullPath: '/hall/$id'
+      preLoaderRoute: typeof HallIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -330,17 +350,8 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   SolutionsRoute: SolutionsRoute,
   TermsRoute: TermsRoute,
+  HallIdRoute: HallIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
