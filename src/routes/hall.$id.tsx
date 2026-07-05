@@ -159,7 +159,7 @@ function HallDetail() {
             <Card title="Gallery" icon={PartyPopper}
               trailing={<span className="text-xs text-muted-foreground inline-flex items-center gap-1"><Sparkles className="h-3.5 w-3.5" /> 360° tour coming soon</span>}>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {hall.gallery.slice(0, 9).map((src, i) => (
+                {hall.gallery.slice(0, 9).map((src: string, i: number) => (
                   <div key={i} className="aspect-[4/3] overflow-hidden rounded-xl border border-border">
                     <img src={src} alt={`${hall.name} ${i + 1}`} loading="lazy" className="h-full w-full object-cover hover:scale-105 transition-transform duration-500" />
                   </div>
