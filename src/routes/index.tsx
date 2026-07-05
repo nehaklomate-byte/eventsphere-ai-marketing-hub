@@ -34,7 +34,6 @@ function Home() {
   return (
     <SiteLayout>
       <Hero />
-      <TrustedBy />
       <Stats />
       <Features />
       <Solutions />
