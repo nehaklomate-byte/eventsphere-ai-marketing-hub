@@ -22,8 +22,17 @@ import { Route as FeaturesRouteImport } from './routes/features'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as BlogRouteImport } from './routes/blog'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as HallIdRouteImport } from './routes/hall.$id'
+import { Route as AuthenticatedWorkerRouteRouteImport } from './routes/_authenticated/worker/route'
+import { Route as AuthenticatedWorkerIndexRouteImport } from './routes/_authenticated/worker/index'
+import { Route as AuthenticatedWorkerProfileRouteImport } from './routes/_authenticated/worker/profile'
+import { Route as AuthenticatedWorkerNotificationsRouteImport } from './routes/_authenticated/worker/notifications'
+import { Route as AuthenticatedWorkerJobsRouteImport } from './routes/_authenticated/worker/jobs'
+import { Route as AuthenticatedWorkerEarningsRouteImport } from './routes/_authenticated/worker/earnings'
+import { Route as AuthenticatedWorkerCalendarRouteImport } from './routes/_authenticated/worker/calendar'
+import { Route as AuthenticatedWorkerAvailabilityRouteImport } from './routes/_authenticated/worker/availability'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -90,6 +99,10 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -100,6 +113,53 @@ const HallIdRoute = HallIdRouteImport.update({
   path: '/hall/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedWorkerRouteRoute =
+  AuthenticatedWorkerRouteRouteImport.update({
+    id: '/worker',
+    path: '/worker',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedWorkerIndexRoute =
+  AuthenticatedWorkerIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedWorkerRouteRoute,
+  } as any)
+const AuthenticatedWorkerProfileRoute =
+  AuthenticatedWorkerProfileRouteImport.update({
+    id: '/profile',
+    path: '/profile',
+    getParentRoute: () => AuthenticatedWorkerRouteRoute,
+  } as any)
+const AuthenticatedWorkerNotificationsRoute =
+  AuthenticatedWorkerNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AuthenticatedWorkerRouteRoute,
+  } as any)
+const AuthenticatedWorkerJobsRoute = AuthenticatedWorkerJobsRouteImport.update({
+  id: '/jobs',
+  path: '/jobs',
+  getParentRoute: () => AuthenticatedWorkerRouteRoute,
+} as any)
+const AuthenticatedWorkerEarningsRoute =
+  AuthenticatedWorkerEarningsRouteImport.update({
+    id: '/earnings',
+    path: '/earnings',
+    getParentRoute: () => AuthenticatedWorkerRouteRoute,
+  } as any)
+const AuthenticatedWorkerCalendarRoute =
+  AuthenticatedWorkerCalendarRouteImport.update({
+    id: '/calendar',
+    path: '/calendar',
+    getParentRoute: () => AuthenticatedWorkerRouteRoute,
+  } as any)
+const AuthenticatedWorkerAvailabilityRoute =
+  AuthenticatedWorkerAvailabilityRouteImport.update({
+    id: '/availability',
+    path: '/availability',
+    getParentRoute: () => AuthenticatedWorkerRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -116,7 +176,15 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/solutions': typeof SolutionsRoute
   '/terms': typeof TermsRoute
+  '/worker': typeof AuthenticatedWorkerRouteRouteWithChildren
   '/hall/$id': typeof HallIdRoute
+  '/worker/availability': typeof AuthenticatedWorkerAvailabilityRoute
+  '/worker/calendar': typeof AuthenticatedWorkerCalendarRoute
+  '/worker/earnings': typeof AuthenticatedWorkerEarningsRoute
+  '/worker/jobs': typeof AuthenticatedWorkerJobsRoute
+  '/worker/notifications': typeof AuthenticatedWorkerNotificationsRoute
+  '/worker/profile': typeof AuthenticatedWorkerProfileRoute
+  '/worker/': typeof AuthenticatedWorkerIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -134,10 +202,18 @@ export interface FileRoutesByTo {
   '/solutions': typeof SolutionsRoute
   '/terms': typeof TermsRoute
   '/hall/$id': typeof HallIdRoute
+  '/worker/availability': typeof AuthenticatedWorkerAvailabilityRoute
+  '/worker/calendar': typeof AuthenticatedWorkerCalendarRoute
+  '/worker/earnings': typeof AuthenticatedWorkerEarningsRoute
+  '/worker/jobs': typeof AuthenticatedWorkerJobsRoute
+  '/worker/notifications': typeof AuthenticatedWorkerNotificationsRoute
+  '/worker/profile': typeof AuthenticatedWorkerProfileRoute
+  '/worker': typeof AuthenticatedWorkerIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/blog': typeof BlogRoute
   '/contact': typeof ContactRoute
@@ -151,7 +227,15 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/solutions': typeof SolutionsRoute
   '/terms': typeof TermsRoute
+  '/_authenticated/worker': typeof AuthenticatedWorkerRouteRouteWithChildren
   '/hall/$id': typeof HallIdRoute
+  '/_authenticated/worker/availability': typeof AuthenticatedWorkerAvailabilityRoute
+  '/_authenticated/worker/calendar': typeof AuthenticatedWorkerCalendarRoute
+  '/_authenticated/worker/earnings': typeof AuthenticatedWorkerEarningsRoute
+  '/_authenticated/worker/jobs': typeof AuthenticatedWorkerJobsRoute
+  '/_authenticated/worker/notifications': typeof AuthenticatedWorkerNotificationsRoute
+  '/_authenticated/worker/profile': typeof AuthenticatedWorkerProfileRoute
+  '/_authenticated/worker/': typeof AuthenticatedWorkerIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -170,7 +254,15 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/solutions'
     | '/terms'
+    | '/worker'
     | '/hall/$id'
+    | '/worker/availability'
+    | '/worker/calendar'
+    | '/worker/earnings'
+    | '/worker/jobs'
+    | '/worker/notifications'
+    | '/worker/profile'
+    | '/worker/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -188,9 +280,17 @@ export interface FileRouteTypes {
     | '/solutions'
     | '/terms'
     | '/hall/$id'
+    | '/worker/availability'
+    | '/worker/calendar'
+    | '/worker/earnings'
+    | '/worker/jobs'
+    | '/worker/notifications'
+    | '/worker/profile'
+    | '/worker'
   id:
     | '__root__'
     | '/'
+    | '/_authenticated'
     | '/about'
     | '/blog'
     | '/contact'
@@ -204,11 +304,20 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/solutions'
     | '/terms'
+    | '/_authenticated/worker'
     | '/hall/$id'
+    | '/_authenticated/worker/availability'
+    | '/_authenticated/worker/calendar'
+    | '/_authenticated/worker/earnings'
+    | '/_authenticated/worker/jobs'
+    | '/_authenticated/worker/notifications'
+    | '/_authenticated/worker/profile'
+    | '/_authenticated/worker/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AboutRoute: typeof AboutRoute
   BlogRoute: typeof BlogRoute
   ContactRoute: typeof ContactRoute
@@ -318,6 +427,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -332,11 +448,106 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HallIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/worker': {
+      id: '/_authenticated/worker'
+      path: '/worker'
+      fullPath: '/worker'
+      preLoaderRoute: typeof AuthenticatedWorkerRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/worker/': {
+      id: '/_authenticated/worker/'
+      path: '/'
+      fullPath: '/worker/'
+      preLoaderRoute: typeof AuthenticatedWorkerIndexRouteImport
+      parentRoute: typeof AuthenticatedWorkerRouteRoute
+    }
+    '/_authenticated/worker/profile': {
+      id: '/_authenticated/worker/profile'
+      path: '/profile'
+      fullPath: '/worker/profile'
+      preLoaderRoute: typeof AuthenticatedWorkerProfileRouteImport
+      parentRoute: typeof AuthenticatedWorkerRouteRoute
+    }
+    '/_authenticated/worker/notifications': {
+      id: '/_authenticated/worker/notifications'
+      path: '/notifications'
+      fullPath: '/worker/notifications'
+      preLoaderRoute: typeof AuthenticatedWorkerNotificationsRouteImport
+      parentRoute: typeof AuthenticatedWorkerRouteRoute
+    }
+    '/_authenticated/worker/jobs': {
+      id: '/_authenticated/worker/jobs'
+      path: '/jobs'
+      fullPath: '/worker/jobs'
+      preLoaderRoute: typeof AuthenticatedWorkerJobsRouteImport
+      parentRoute: typeof AuthenticatedWorkerRouteRoute
+    }
+    '/_authenticated/worker/earnings': {
+      id: '/_authenticated/worker/earnings'
+      path: '/earnings'
+      fullPath: '/worker/earnings'
+      preLoaderRoute: typeof AuthenticatedWorkerEarningsRouteImport
+      parentRoute: typeof AuthenticatedWorkerRouteRoute
+    }
+    '/_authenticated/worker/calendar': {
+      id: '/_authenticated/worker/calendar'
+      path: '/calendar'
+      fullPath: '/worker/calendar'
+      preLoaderRoute: typeof AuthenticatedWorkerCalendarRouteImport
+      parentRoute: typeof AuthenticatedWorkerRouteRoute
+    }
+    '/_authenticated/worker/availability': {
+      id: '/_authenticated/worker/availability'
+      path: '/availability'
+      fullPath: '/worker/availability'
+      preLoaderRoute: typeof AuthenticatedWorkerAvailabilityRouteImport
+      parentRoute: typeof AuthenticatedWorkerRouteRoute
+    }
   }
 }
 
+interface AuthenticatedWorkerRouteRouteChildren {
+  AuthenticatedWorkerAvailabilityRoute: typeof AuthenticatedWorkerAvailabilityRoute
+  AuthenticatedWorkerCalendarRoute: typeof AuthenticatedWorkerCalendarRoute
+  AuthenticatedWorkerEarningsRoute: typeof AuthenticatedWorkerEarningsRoute
+  AuthenticatedWorkerJobsRoute: typeof AuthenticatedWorkerJobsRoute
+  AuthenticatedWorkerNotificationsRoute: typeof AuthenticatedWorkerNotificationsRoute
+  AuthenticatedWorkerProfileRoute: typeof AuthenticatedWorkerProfileRoute
+  AuthenticatedWorkerIndexRoute: typeof AuthenticatedWorkerIndexRoute
+}
+
+const AuthenticatedWorkerRouteRouteChildren: AuthenticatedWorkerRouteRouteChildren =
+  {
+    AuthenticatedWorkerAvailabilityRoute: AuthenticatedWorkerAvailabilityRoute,
+    AuthenticatedWorkerCalendarRoute: AuthenticatedWorkerCalendarRoute,
+    AuthenticatedWorkerEarningsRoute: AuthenticatedWorkerEarningsRoute,
+    AuthenticatedWorkerJobsRoute: AuthenticatedWorkerJobsRoute,
+    AuthenticatedWorkerNotificationsRoute:
+      AuthenticatedWorkerNotificationsRoute,
+    AuthenticatedWorkerProfileRoute: AuthenticatedWorkerProfileRoute,
+    AuthenticatedWorkerIndexRoute: AuthenticatedWorkerIndexRoute,
+  }
+
+const AuthenticatedWorkerRouteRouteWithChildren =
+  AuthenticatedWorkerRouteRoute._addFileChildren(
+    AuthenticatedWorkerRouteRouteChildren,
+  )
+
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedWorkerRouteRoute: typeof AuthenticatedWorkerRouteRouteWithChildren
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedWorkerRouteRoute: AuthenticatedWorkerRouteRouteWithChildren,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AboutRoute: AboutRoute,
   BlogRoute: BlogRoute,
   ContactRoute: ContactRoute,

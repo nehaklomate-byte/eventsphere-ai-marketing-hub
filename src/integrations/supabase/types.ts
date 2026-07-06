@@ -515,86 +515,370 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_notifications: {
+        Row: {
+          action_url: string | null
+          body: string | null
+          category: Database["public"]["Enums"]["notification_category"]
+          created_at: string
+          id: string
+          metadata: Json
+          read_at: string | null
+          task_id: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          action_url?: string | null
+          body?: string | null
+          category?: Database["public"]["Enums"]["notification_category"]
+          created_at?: string
+          id?: string
+          metadata?: Json
+          read_at?: string | null
+          task_id?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          action_url?: string | null
+          body?: string | null
+          category?: Database["public"]["Enums"]["notification_category"]
+          created_at?: string
+          id?: string
+          metadata?: Json
+          read_at?: string | null
+          task_id?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_notifications_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "worker_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_tasks: {
+        Row: {
+          accepted_at: string | null
+          assigned_by: string
+          assigner_role: Database["public"]["Enums"]["app_role"] | null
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          end_time: string | null
+          event_date: string
+          event_name: string
+          id: string
+          organization_id: string | null
+          organization_name: string | null
+          paused_at: string | null
+          payment_amount: number | null
+          priority: Database["public"]["Enums"]["task_priority"]
+          rejected_at: string | null
+          rejection_reason: string | null
+          resumed_at: string | null
+          start_time: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["task_status"]
+          task_name: string
+          updated_at: string
+          venue: string | null
+          venue_address: string | null
+          worker_id: string
+          worker_notes: string | null
+          worker_user_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          assigned_by: string
+          assigner_role?: Database["public"]["Enums"]["app_role"] | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          end_time?: string | null
+          event_date: string
+          event_name: string
+          id?: string
+          organization_id?: string | null
+          organization_name?: string | null
+          paused_at?: string | null
+          payment_amount?: number | null
+          priority?: Database["public"]["Enums"]["task_priority"]
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          resumed_at?: string | null
+          start_time?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
+          task_name: string
+          updated_at?: string
+          venue?: string | null
+          venue_address?: string | null
+          worker_id: string
+          worker_notes?: string | null
+          worker_user_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          assigned_by?: string
+          assigner_role?: Database["public"]["Enums"]["app_role"] | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          end_time?: string | null
+          event_date?: string
+          event_name?: string
+          id?: string
+          organization_id?: string | null
+          organization_name?: string | null
+          paused_at?: string | null
+          payment_amount?: number | null
+          priority?: Database["public"]["Enums"]["task_priority"]
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          resumed_at?: string | null
+          start_time?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
+          task_name?: string
+          updated_at?: string
+          venue?: string | null
+          venue_address?: string | null
+          worker_id?: string
+          worker_notes?: string | null
+          worker_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_tasks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_tasks_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workers: {
         Row: {
           address: string | null
+          agency_description: string | null
+          agency_gst: string | null
+          agency_logo_url: string | null
+          agency_name: string | null
+          agency_reg_no: string | null
+          agency_services: Json
+          agency_team_size: number | null
+          agency_years: number | null
           available_days: Json
+          bio: string | null
+          blocked_dates: Json
           category: string | null
+          certificates: Json
           city: string | null
+          country: string | null
           created_at: string
           daily_charges: number | null
+          date_of_birth: string | null
           deleted_at: string | null
+          district: string | null
+          documents: Json
           email: string | null
           emergency_contact: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          emergency_contact_relation: string | null
           full_name: string
+          gender: string | null
           hourly_charges: number | null
           id: string
+          id_proof_number: string | null
+          id_proof_type: string | null
+          id_proof_url: string | null
           languages: Json
+          marketplace_visible: boolean
+          max_travel_km: number | null
+          min_booking_price: number | null
+          monthly_charges: number | null
+          nationality: string | null
           owner_id: string
+          payment_type: Database["public"]["Enums"]["payment_type"] | null
+          per_event_charges: number | null
           phone: string | null
           photo_url: string | null
           pincode: string | null
+          preferred_cities: Json
+          preferred_language: string | null
+          profile_completion: number
           rating: number
           review_count: number
+          selfie_url: string | null
           skills: Json
           state: string | null
           status: Database["public"]["Enums"]["hall_status"]
           updated_at: string
+          verification_notes: string | null
+          verification_status: Database["public"]["Enums"]["verification_status"]
           verified: boolean
+          verified_at: string | null
+          verified_by: string | null
+          willing_to_travel: boolean
+          work_images: Json
+          work_videos: Json
+          worker_type: Database["public"]["Enums"]["worker_type"]
+          working_hours_end: string | null
+          working_hours_start: string | null
           years_experience: number | null
         }
         Insert: {
           address?: string | null
+          agency_description?: string | null
+          agency_gst?: string | null
+          agency_logo_url?: string | null
+          agency_name?: string | null
+          agency_reg_no?: string | null
+          agency_services?: Json
+          agency_team_size?: number | null
+          agency_years?: number | null
           available_days?: Json
+          bio?: string | null
+          blocked_dates?: Json
           category?: string | null
+          certificates?: Json
           city?: string | null
+          country?: string | null
           created_at?: string
           daily_charges?: number | null
+          date_of_birth?: string | null
           deleted_at?: string | null
+          district?: string | null
+          documents?: Json
           email?: string | null
           emergency_contact?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_relation?: string | null
           full_name: string
+          gender?: string | null
           hourly_charges?: number | null
           id?: string
+          id_proof_number?: string | null
+          id_proof_type?: string | null
+          id_proof_url?: string | null
           languages?: Json
+          marketplace_visible?: boolean
+          max_travel_km?: number | null
+          min_booking_price?: number | null
+          monthly_charges?: number | null
+          nationality?: string | null
           owner_id: string
+          payment_type?: Database["public"]["Enums"]["payment_type"] | null
+          per_event_charges?: number | null
           phone?: string | null
           photo_url?: string | null
           pincode?: string | null
+          preferred_cities?: Json
+          preferred_language?: string | null
+          profile_completion?: number
           rating?: number
           review_count?: number
+          selfie_url?: string | null
           skills?: Json
           state?: string | null
           status?: Database["public"]["Enums"]["hall_status"]
           updated_at?: string
+          verification_notes?: string | null
+          verification_status?: Database["public"]["Enums"]["verification_status"]
           verified?: boolean
+          verified_at?: string | null
+          verified_by?: string | null
+          willing_to_travel?: boolean
+          work_images?: Json
+          work_videos?: Json
+          worker_type?: Database["public"]["Enums"]["worker_type"]
+          working_hours_end?: string | null
+          working_hours_start?: string | null
           years_experience?: number | null
         }
         Update: {
           address?: string | null
+          agency_description?: string | null
+          agency_gst?: string | null
+          agency_logo_url?: string | null
+          agency_name?: string | null
+          agency_reg_no?: string | null
+          agency_services?: Json
+          agency_team_size?: number | null
+          agency_years?: number | null
           available_days?: Json
+          bio?: string | null
+          blocked_dates?: Json
           category?: string | null
+          certificates?: Json
           city?: string | null
+          country?: string | null
           created_at?: string
           daily_charges?: number | null
+          date_of_birth?: string | null
           deleted_at?: string | null
+          district?: string | null
+          documents?: Json
           email?: string | null
           emergency_contact?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_relation?: string | null
           full_name?: string
+          gender?: string | null
           hourly_charges?: number | null
           id?: string
+          id_proof_number?: string | null
+          id_proof_type?: string | null
+          id_proof_url?: string | null
           languages?: Json
+          marketplace_visible?: boolean
+          max_travel_km?: number | null
+          min_booking_price?: number | null
+          monthly_charges?: number | null
+          nationality?: string | null
           owner_id?: string
+          payment_type?: Database["public"]["Enums"]["payment_type"] | null
+          per_event_charges?: number | null
           phone?: string | null
           photo_url?: string | null
           pincode?: string | null
+          preferred_cities?: Json
+          preferred_language?: string | null
+          profile_completion?: number
           rating?: number
           review_count?: number
+          selfie_url?: string | null
           skills?: Json
           state?: string | null
           status?: Database["public"]["Enums"]["hall_status"]
           updated_at?: string
+          verification_notes?: string | null
+          verification_status?: Database["public"]["Enums"]["verification_status"]
           verified?: boolean
+          verified_at?: string | null
+          verified_by?: string | null
+          willing_to_travel?: boolean
+          work_images?: Json
+          work_videos?: Json
+          worker_type?: Database["public"]["Enums"]["worker_type"]
+          working_hours_end?: string | null
+          working_hours_start?: string | null
           years_experience?: number | null
         }
         Relationships: []
@@ -629,6 +913,29 @@ export type Database = {
         | "declined"
         | "closed"
       hall_status: "draft" | "published" | "archived"
+      notification_category:
+        | "task_assigned"
+        | "task_updated"
+        | "task_cancelled"
+        | "task_deadline"
+        | "task_completed"
+        | "payment_received"
+        | "profile_approved"
+        | "profile_rejected"
+        | "admin_message"
+        | "system"
+      payment_type: "hourly" | "daily" | "per_event" | "monthly"
+      task_priority: "low" | "normal" | "high" | "urgent"
+      task_status:
+        | "pending"
+        | "accepted"
+        | "in_progress"
+        | "paused"
+        | "completed"
+        | "rejected"
+        | "cancelled"
+      verification_status: "unsubmitted" | "pending" | "approved" | "rejected"
+      worker_type: "individual" | "agency"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -774,6 +1081,31 @@ export const Constants = {
         "closed",
       ],
       hall_status: ["draft", "published", "archived"],
+      notification_category: [
+        "task_assigned",
+        "task_updated",
+        "task_cancelled",
+        "task_deadline",
+        "task_completed",
+        "payment_received",
+        "profile_approved",
+        "profile_rejected",
+        "admin_message",
+        "system",
+      ],
+      payment_type: ["hourly", "daily", "per_event", "monthly"],
+      task_priority: ["low", "normal", "high", "urgent"],
+      task_status: [
+        "pending",
+        "accepted",
+        "in_progress",
+        "paused",
+        "completed",
+        "rejected",
+        "cancelled",
+      ],
+      verification_status: ["unsubmitted", "pending", "approved", "rejected"],
+      worker_type: ["individual", "agency"],
     },
   },
 } as const
