@@ -368,7 +368,7 @@ function FieldGrid({ children }: { children: React.ReactNode }) { return <div cl
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return <label className="block"><span className="mb-1.5 block text-xs font-semibold text-muted-foreground">{label}{required && <span className="text-rose-500"> *</span>}</span>{children}</label>;
 }
-function Input({ value, onChange, type = "text", ...rest }: { value: string; onChange: (v: string) => void; type?: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+function Input({ value, onChange, type = "text", ...rest }: { value: string; onChange: (v: string) => void; type?: string } & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type">) {
   return <input type={type} value={value} onChange={(e) => onChange(e.target.value)} {...rest}
     className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-violet/40" />;
 }
