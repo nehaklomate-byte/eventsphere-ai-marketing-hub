@@ -27,10 +27,13 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as HallIdRouteImport } from './routes/hall.$id'
 import { Route as AuthenticatedWorkerRouteRouteImport } from './routes/_authenticated/worker/route'
 import { Route as AuthenticatedWorkerIndexRouteImport } from './routes/_authenticated/worker/index'
+import { Route as AuthenticatedWorkerSupportRouteImport } from './routes/_authenticated/worker/support'
+import { Route as AuthenticatedWorkerSettingsRouteImport } from './routes/_authenticated/worker/settings'
 import { Route as AuthenticatedWorkerProfileRouteImport } from './routes/_authenticated/worker/profile'
 import { Route as AuthenticatedWorkerNotificationsRouteImport } from './routes/_authenticated/worker/notifications'
 import { Route as AuthenticatedWorkerJobsRouteImport } from './routes/_authenticated/worker/jobs'
 import { Route as AuthenticatedWorkerEarningsRouteImport } from './routes/_authenticated/worker/earnings'
+import { Route as AuthenticatedWorkerDocumentsRouteImport } from './routes/_authenticated/worker/documents'
 import { Route as AuthenticatedWorkerCalendarRouteImport } from './routes/_authenticated/worker/calendar'
 import { Route as AuthenticatedWorkerAvailabilityRouteImport } from './routes/_authenticated/worker/availability'
 
@@ -125,6 +128,18 @@ const AuthenticatedWorkerIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedWorkerRouteRoute,
   } as any)
+const AuthenticatedWorkerSupportRoute =
+  AuthenticatedWorkerSupportRouteImport.update({
+    id: '/support',
+    path: '/support',
+    getParentRoute: () => AuthenticatedWorkerRouteRoute,
+  } as any)
+const AuthenticatedWorkerSettingsRoute =
+  AuthenticatedWorkerSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AuthenticatedWorkerRouteRoute,
+  } as any)
 const AuthenticatedWorkerProfileRoute =
   AuthenticatedWorkerProfileRouteImport.update({
     id: '/profile',
@@ -146,6 +161,12 @@ const AuthenticatedWorkerEarningsRoute =
   AuthenticatedWorkerEarningsRouteImport.update({
     id: '/earnings',
     path: '/earnings',
+    getParentRoute: () => AuthenticatedWorkerRouteRoute,
+  } as any)
+const AuthenticatedWorkerDocumentsRoute =
+  AuthenticatedWorkerDocumentsRouteImport.update({
+    id: '/documents',
+    path: '/documents',
     getParentRoute: () => AuthenticatedWorkerRouteRoute,
   } as any)
 const AuthenticatedWorkerCalendarRoute =
@@ -180,10 +201,13 @@ export interface FileRoutesByFullPath {
   '/hall/$id': typeof HallIdRoute
   '/worker/availability': typeof AuthenticatedWorkerAvailabilityRoute
   '/worker/calendar': typeof AuthenticatedWorkerCalendarRoute
+  '/worker/documents': typeof AuthenticatedWorkerDocumentsRoute
   '/worker/earnings': typeof AuthenticatedWorkerEarningsRoute
   '/worker/jobs': typeof AuthenticatedWorkerJobsRoute
   '/worker/notifications': typeof AuthenticatedWorkerNotificationsRoute
   '/worker/profile': typeof AuthenticatedWorkerProfileRoute
+  '/worker/settings': typeof AuthenticatedWorkerSettingsRoute
+  '/worker/support': typeof AuthenticatedWorkerSupportRoute
   '/worker/': typeof AuthenticatedWorkerIndexRoute
 }
 export interface FileRoutesByTo {
@@ -204,10 +228,13 @@ export interface FileRoutesByTo {
   '/hall/$id': typeof HallIdRoute
   '/worker/availability': typeof AuthenticatedWorkerAvailabilityRoute
   '/worker/calendar': typeof AuthenticatedWorkerCalendarRoute
+  '/worker/documents': typeof AuthenticatedWorkerDocumentsRoute
   '/worker/earnings': typeof AuthenticatedWorkerEarningsRoute
   '/worker/jobs': typeof AuthenticatedWorkerJobsRoute
   '/worker/notifications': typeof AuthenticatedWorkerNotificationsRoute
   '/worker/profile': typeof AuthenticatedWorkerProfileRoute
+  '/worker/settings': typeof AuthenticatedWorkerSettingsRoute
+  '/worker/support': typeof AuthenticatedWorkerSupportRoute
   '/worker': typeof AuthenticatedWorkerIndexRoute
 }
 export interface FileRoutesById {
@@ -231,10 +258,13 @@ export interface FileRoutesById {
   '/hall/$id': typeof HallIdRoute
   '/_authenticated/worker/availability': typeof AuthenticatedWorkerAvailabilityRoute
   '/_authenticated/worker/calendar': typeof AuthenticatedWorkerCalendarRoute
+  '/_authenticated/worker/documents': typeof AuthenticatedWorkerDocumentsRoute
   '/_authenticated/worker/earnings': typeof AuthenticatedWorkerEarningsRoute
   '/_authenticated/worker/jobs': typeof AuthenticatedWorkerJobsRoute
   '/_authenticated/worker/notifications': typeof AuthenticatedWorkerNotificationsRoute
   '/_authenticated/worker/profile': typeof AuthenticatedWorkerProfileRoute
+  '/_authenticated/worker/settings': typeof AuthenticatedWorkerSettingsRoute
+  '/_authenticated/worker/support': typeof AuthenticatedWorkerSupportRoute
   '/_authenticated/worker/': typeof AuthenticatedWorkerIndexRoute
 }
 export interface FileRouteTypes {
@@ -258,10 +288,13 @@ export interface FileRouteTypes {
     | '/hall/$id'
     | '/worker/availability'
     | '/worker/calendar'
+    | '/worker/documents'
     | '/worker/earnings'
     | '/worker/jobs'
     | '/worker/notifications'
     | '/worker/profile'
+    | '/worker/settings'
+    | '/worker/support'
     | '/worker/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -282,10 +315,13 @@ export interface FileRouteTypes {
     | '/hall/$id'
     | '/worker/availability'
     | '/worker/calendar'
+    | '/worker/documents'
     | '/worker/earnings'
     | '/worker/jobs'
     | '/worker/notifications'
     | '/worker/profile'
+    | '/worker/settings'
+    | '/worker/support'
     | '/worker'
   id:
     | '__root__'
@@ -308,10 +344,13 @@ export interface FileRouteTypes {
     | '/hall/$id'
     | '/_authenticated/worker/availability'
     | '/_authenticated/worker/calendar'
+    | '/_authenticated/worker/documents'
     | '/_authenticated/worker/earnings'
     | '/_authenticated/worker/jobs'
     | '/_authenticated/worker/notifications'
     | '/_authenticated/worker/profile'
+    | '/_authenticated/worker/settings'
+    | '/_authenticated/worker/support'
     | '/_authenticated/worker/'
   fileRoutesById: FileRoutesById
 }
@@ -462,6 +501,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWorkerIndexRouteImport
       parentRoute: typeof AuthenticatedWorkerRouteRoute
     }
+    '/_authenticated/worker/support': {
+      id: '/_authenticated/worker/support'
+      path: '/support'
+      fullPath: '/worker/support'
+      preLoaderRoute: typeof AuthenticatedWorkerSupportRouteImport
+      parentRoute: typeof AuthenticatedWorkerRouteRoute
+    }
+    '/_authenticated/worker/settings': {
+      id: '/_authenticated/worker/settings'
+      path: '/settings'
+      fullPath: '/worker/settings'
+      preLoaderRoute: typeof AuthenticatedWorkerSettingsRouteImport
+      parentRoute: typeof AuthenticatedWorkerRouteRoute
+    }
     '/_authenticated/worker/profile': {
       id: '/_authenticated/worker/profile'
       path: '/profile'
@@ -490,6 +543,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWorkerEarningsRouteImport
       parentRoute: typeof AuthenticatedWorkerRouteRoute
     }
+    '/_authenticated/worker/documents': {
+      id: '/_authenticated/worker/documents'
+      path: '/documents'
+      fullPath: '/worker/documents'
+      preLoaderRoute: typeof AuthenticatedWorkerDocumentsRouteImport
+      parentRoute: typeof AuthenticatedWorkerRouteRoute
+    }
     '/_authenticated/worker/calendar': {
       id: '/_authenticated/worker/calendar'
       path: '/calendar'
@@ -510,10 +570,13 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedWorkerRouteRouteChildren {
   AuthenticatedWorkerAvailabilityRoute: typeof AuthenticatedWorkerAvailabilityRoute
   AuthenticatedWorkerCalendarRoute: typeof AuthenticatedWorkerCalendarRoute
+  AuthenticatedWorkerDocumentsRoute: typeof AuthenticatedWorkerDocumentsRoute
   AuthenticatedWorkerEarningsRoute: typeof AuthenticatedWorkerEarningsRoute
   AuthenticatedWorkerJobsRoute: typeof AuthenticatedWorkerJobsRoute
   AuthenticatedWorkerNotificationsRoute: typeof AuthenticatedWorkerNotificationsRoute
   AuthenticatedWorkerProfileRoute: typeof AuthenticatedWorkerProfileRoute
+  AuthenticatedWorkerSettingsRoute: typeof AuthenticatedWorkerSettingsRoute
+  AuthenticatedWorkerSupportRoute: typeof AuthenticatedWorkerSupportRoute
   AuthenticatedWorkerIndexRoute: typeof AuthenticatedWorkerIndexRoute
 }
 
@@ -521,11 +584,14 @@ const AuthenticatedWorkerRouteRouteChildren: AuthenticatedWorkerRouteRouteChildr
   {
     AuthenticatedWorkerAvailabilityRoute: AuthenticatedWorkerAvailabilityRoute,
     AuthenticatedWorkerCalendarRoute: AuthenticatedWorkerCalendarRoute,
+    AuthenticatedWorkerDocumentsRoute: AuthenticatedWorkerDocumentsRoute,
     AuthenticatedWorkerEarningsRoute: AuthenticatedWorkerEarningsRoute,
     AuthenticatedWorkerJobsRoute: AuthenticatedWorkerJobsRoute,
     AuthenticatedWorkerNotificationsRoute:
       AuthenticatedWorkerNotificationsRoute,
     AuthenticatedWorkerProfileRoute: AuthenticatedWorkerProfileRoute,
+    AuthenticatedWorkerSettingsRoute: AuthenticatedWorkerSettingsRoute,
+    AuthenticatedWorkerSupportRoute: AuthenticatedWorkerSupportRoute,
     AuthenticatedWorkerIndexRoute: AuthenticatedWorkerIndexRoute,
   }
 
