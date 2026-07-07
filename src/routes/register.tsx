@@ -10,6 +10,7 @@ import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { emailSchema, phoneSchema, pincodeSchema, passwordSchema, passwordStrength } from "@/lib/validation";
+import { DASHBOARD_PATH, resolveDashboardPath, humanizeAuthError } from "@/lib/auth-redirect";
 
 export const Route = createFileRoute("/register")({
   head: () => ({
@@ -42,8 +43,12 @@ function RegisterPage() {
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/" });
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (data.session) {
+        const path = await resolveDashboardPath(data.session.user.id);
+        navigate({ to: path, replace: true } as never);
+        return;
+      }
       setChecked(true);
     });
   }, [navigate]);
@@ -105,9 +110,9 @@ function RegisterPage() {
                 <CheckCircle2 className="h-7 w-7" />
               </div>
               <h2 className="mt-6 font-display text-3xl font-semibold">You're all set.</h2>
-              <p className="mt-2 text-muted-foreground">Your account has been created. Head to your workspace to complete onboarding.</p>
-              <Link to="/" className="mt-8 inline-flex items-center gap-2 rounded-full btn-brand btn-brand-hover px-5 py-3 text-sm font-semibold">
-                Go to workspace <ArrowRight className="h-4 w-4" />
+              <p className="mt-2 text-muted-foreground">Your account has been created. Opening your workspace…</p>
+              <Link to="/auth/callback" className="mt-8 inline-flex items-center gap-2 rounded-full btn-brand btn-brand-hover px-5 py-3 text-sm font-semibold">
+                Continue <ArrowRight className="h-4 w-4" />
               </Link>
             </motion.section>
           )}
@@ -151,6 +156,7 @@ function SectionHeader({ eyebrow, title, description }: { eyebrow: string; title
 
 /* --------- ROLE-SPECIFIC FORM --------- */
 function RoleForm({ role, onBack, onDone }: { role: Role; onBack: () => void; onDone: () => void }) {
+  const navigate = useNavigate();
   const [values, setValues] = useState<Record<string, string | boolean | undefined>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -177,12 +183,12 @@ function RoleForm({ role, onBack, onDone }: { role: Role; onBack: () => void; on
     setSubmitting(true);
     const data = parsed.data as Record<string, string>;
 
-    // 1. Sign up with role metadata
+    // 1. Sign up with role metadata (handle_new_user trigger creates profile + user_role)
     const { data: auth, error: signErr } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
       options: {
-        emailRedirectTo: `${window.location.origin}/`,
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
         data: {
           full_name: data.owner_full_name || data.full_name || data.name,
           phone: data.phone,
@@ -191,27 +197,32 @@ function RoleForm({ role, onBack, onDone }: { role: Role; onBack: () => void; on
       },
     });
     if (signErr) {
-      setServerErr(signErr.message.includes("registered") ? "An account already exists with this email." : signErr.message);
+      setServerErr(humanizeAuthError(signErr));
       setSubmitting(false); return;
     }
     const userId = auth.user?.id;
-    if (!userId) { setServerErr("Signup failed. Please try again."); setSubmitting(false); return; }
+    if (!userId) {
+      // Email confirmation is required — user must click the link before signing in
+      setSubmitting(false);
+      setServerErr("Check your inbox to confirm your email, then sign in.");
+      return;
+    }
 
-    // 2. Wait a tick for the auth trigger to create the profile & role
-    // 3. Insert role-specific row (session should exist because auto-confirm is on)
+    // 2. Insert role-specific row (session exists because auto-confirm is on)
     const err = await insertRoleRow(role, userId, data);
     setSubmitting(false);
     if (err) { setServerErr(err); return; }
     onDone();
+    // Immediately route to the correct dashboard
+    navigate({ to: DASHBOARD_PATH[role], replace: true } as never);
   }
 
   async function handleGoogle() {
     setServerErr(null);
-    // Store role so post-OAuth handler could pick it up. Simple approach: use metadata is not possible for OAuth,
-    // so user completes profile in workspace afterwards.
+    // Persist chosen role so /auth/callback can attach it to the new profile
     sessionStorage.setItem("pending_primary_role", role);
-    const res = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
-    if (res.error) setServerErr("Google sign-in failed. Try again.");
+    const res = await lovable.auth.signInWithOAuth("google", { redirect_uri: `${window.location.origin}/auth/callback` });
+    if (res.error) setServerErr("Google sign-in failed. Please try again.");
   }
 
   const pw = String(values.password ?? "");

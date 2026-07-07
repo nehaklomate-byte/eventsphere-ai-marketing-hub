@@ -6,6 +6,7 @@ import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { emailSchema } from "@/lib/validation";
+import { resolveDashboardPath, humanizeAuthError } from "@/lib/auth-redirect";
 import { z } from "zod";
 
 export const Route = createFileRoute("/login")({
@@ -37,8 +38,12 @@ function LoginPage() {
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/" });
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (data.session) {
+        const path = await resolveDashboardPath(data.session.user.id);
+        navigate({ to: path, replace: true } as never);
+        return;
+      }
       setChecked(true);
     });
   }, [navigate]);
@@ -54,21 +59,24 @@ function LoginPage() {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email: parsed.data.email, password: parsed.data.password });
-    setLoading(false);
+    const { data: signInData, error } = await supabase.auth.signInWithPassword({ email: parsed.data.email, password: parsed.data.password });
     if (error) {
-      setError(error.message.includes("Invalid") ? "Invalid email or password. Please try again." : error.message);
+      setLoading(false);
+      setError(humanizeAuthError(error));
       return;
     }
-    navigate({ to: "/" });
+    const uid = signInData.user?.id;
+    if (!uid) { setLoading(false); setError("Sign-in succeeded but no user session was returned. Please try again."); return; }
+    const path = await resolveDashboardPath(uid);
+    navigate({ to: path, replace: true } as never);
   }
 
   async function handleGoogle() {
     setGLoading(true); setError(null);
-    const res = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
-    if (res.error) { setError("Google sign-in failed. Try again."); setGLoading(false); return; }
+    const res = await lovable.auth.signInWithOAuth("google", { redirect_uri: `${window.location.origin}/auth/callback` });
+    if (res.error) { setError("Google sign-in failed. Please try again."); setGLoading(false); return; }
     if (res.redirected) return;
-    navigate({ to: "/" });
+    navigate({ to: "/auth/callback", replace: true } as never);
   }
 
   if (!checked) return <div className="grid min-h-dvh place-items-center bg-background"><Loader2 className="h-6 w-6 animate-spin text-brand-violet" /></div>;

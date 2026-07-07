@@ -16,6 +16,7 @@ import { Route as ResearchRouteImport } from './routes/research'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as MarketplaceRouteImport } from './routes/marketplace'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as FeaturesRouteImport } from './routes/features'
@@ -25,6 +26,12 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as HallIdRouteImport } from './routes/hall.$id'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
+import { Route as AuthenticatedVendorRouteImport } from './routes/_authenticated/vendor'
+import { Route as AuthenticatedOrganizationRouteImport } from './routes/_authenticated/organization'
+import { Route as AuthenticatedHallRouteImport } from './routes/_authenticated/hall'
+import { Route as AuthenticatedCustomerRouteImport } from './routes/_authenticated/customer'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedWorkerRouteRouteImport } from './routes/_authenticated/worker/route'
 import { Route as AuthenticatedWorkerIndexRouteImport } from './routes/_authenticated/worker/index'
 import { Route as AuthenticatedWorkerSupportRouteImport } from './routes/_authenticated/worker/support'
@@ -72,6 +79,11 @@ const PricingRoute = PricingRouteImport.update({
   path: '/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MarketplaceRoute = MarketplaceRouteImport.update({
   id: '/marketplace',
   path: '/marketplace',
@@ -115,6 +127,37 @@ const HallIdRoute = HallIdRouteImport.update({
   id: '/hall/$id',
   path: '/hall/$id',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedVendorRoute = AuthenticatedVendorRouteImport.update({
+  id: '/vendor',
+  path: '/vendor',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedOrganizationRoute =
+  AuthenticatedOrganizationRouteImport.update({
+    id: '/organization',
+    path: '/organization',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedHallRoute = AuthenticatedHallRouteImport.update({
+  id: '/hall',
+  path: '/hall',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCustomerRoute = AuthenticatedCustomerRouteImport.update({
+  id: '/customer',
+  path: '/customer',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedWorkerRouteRoute =
   AuthenticatedWorkerRouteRouteImport.update({
@@ -190,6 +233,7 @@ export interface FileRoutesByFullPath {
   '/features': typeof FeaturesRoute
   '/login': typeof LoginRoute
   '/marketplace': typeof MarketplaceRoute
+  '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
@@ -198,6 +242,12 @@ export interface FileRoutesByFullPath {
   '/solutions': typeof SolutionsRoute
   '/terms': typeof TermsRoute
   '/worker': typeof AuthenticatedWorkerRouteRouteWithChildren
+  '/admin': typeof AuthenticatedAdminRoute
+  '/customer': typeof AuthenticatedCustomerRoute
+  '/hall': typeof AuthenticatedHallRoute
+  '/organization': typeof AuthenticatedOrganizationRoute
+  '/vendor': typeof AuthenticatedVendorRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/hall/$id': typeof HallIdRoute
   '/worker/availability': typeof AuthenticatedWorkerAvailabilityRoute
   '/worker/calendar': typeof AuthenticatedWorkerCalendarRoute
@@ -218,6 +268,7 @@ export interface FileRoutesByTo {
   '/features': typeof FeaturesRoute
   '/login': typeof LoginRoute
   '/marketplace': typeof MarketplaceRoute
+  '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
@@ -225,6 +276,12 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/solutions': typeof SolutionsRoute
   '/terms': typeof TermsRoute
+  '/admin': typeof AuthenticatedAdminRoute
+  '/customer': typeof AuthenticatedCustomerRoute
+  '/hall': typeof AuthenticatedHallRoute
+  '/organization': typeof AuthenticatedOrganizationRoute
+  '/vendor': typeof AuthenticatedVendorRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/hall/$id': typeof HallIdRoute
   '/worker/availability': typeof AuthenticatedWorkerAvailabilityRoute
   '/worker/calendar': typeof AuthenticatedWorkerCalendarRoute
@@ -247,6 +304,7 @@ export interface FileRoutesById {
   '/features': typeof FeaturesRoute
   '/login': typeof LoginRoute
   '/marketplace': typeof MarketplaceRoute
+  '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
@@ -255,6 +313,12 @@ export interface FileRoutesById {
   '/solutions': typeof SolutionsRoute
   '/terms': typeof TermsRoute
   '/_authenticated/worker': typeof AuthenticatedWorkerRouteRouteWithChildren
+  '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/customer': typeof AuthenticatedCustomerRoute
+  '/_authenticated/hall': typeof AuthenticatedHallRoute
+  '/_authenticated/organization': typeof AuthenticatedOrganizationRoute
+  '/_authenticated/vendor': typeof AuthenticatedVendorRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/hall/$id': typeof HallIdRoute
   '/_authenticated/worker/availability': typeof AuthenticatedWorkerAvailabilityRoute
   '/_authenticated/worker/calendar': typeof AuthenticatedWorkerCalendarRoute
@@ -277,6 +341,7 @@ export interface FileRouteTypes {
     | '/features'
     | '/login'
     | '/marketplace'
+    | '/onboarding'
     | '/pricing'
     | '/privacy'
     | '/register'
@@ -285,6 +350,12 @@ export interface FileRouteTypes {
     | '/solutions'
     | '/terms'
     | '/worker'
+    | '/admin'
+    | '/customer'
+    | '/hall'
+    | '/organization'
+    | '/vendor'
+    | '/auth/callback'
     | '/hall/$id'
     | '/worker/availability'
     | '/worker/calendar'
@@ -305,6 +376,7 @@ export interface FileRouteTypes {
     | '/features'
     | '/login'
     | '/marketplace'
+    | '/onboarding'
     | '/pricing'
     | '/privacy'
     | '/register'
@@ -312,6 +384,12 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/solutions'
     | '/terms'
+    | '/admin'
+    | '/customer'
+    | '/hall'
+    | '/organization'
+    | '/vendor'
+    | '/auth/callback'
     | '/hall/$id'
     | '/worker/availability'
     | '/worker/calendar'
@@ -333,6 +411,7 @@ export interface FileRouteTypes {
     | '/features'
     | '/login'
     | '/marketplace'
+    | '/onboarding'
     | '/pricing'
     | '/privacy'
     | '/register'
@@ -341,6 +420,12 @@ export interface FileRouteTypes {
     | '/solutions'
     | '/terms'
     | '/_authenticated/worker'
+    | '/_authenticated/admin'
+    | '/_authenticated/customer'
+    | '/_authenticated/hall'
+    | '/_authenticated/organization'
+    | '/_authenticated/vendor'
+    | '/auth/callback'
     | '/hall/$id'
     | '/_authenticated/worker/availability'
     | '/_authenticated/worker/calendar'
@@ -363,6 +448,7 @@ export interface RootRouteChildren {
   FeaturesRoute: typeof FeaturesRoute
   LoginRoute: typeof LoginRoute
   MarketplaceRoute: typeof MarketplaceRoute
+  OnboardingRoute: typeof OnboardingRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   RegisterRoute: typeof RegisterRoute
@@ -370,6 +456,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SolutionsRoute: typeof SolutionsRoute
   TermsRoute: typeof TermsRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   HallIdRoute: typeof HallIdRoute
 }
 
@@ -422,6 +509,13 @@ declare module '@tanstack/react-router' {
       path: '/pricing'
       fullPath: '/pricing'
       preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/marketplace': {
@@ -486,6 +580,48 @@ declare module '@tanstack/react-router' {
       fullPath: '/hall/$id'
       preLoaderRoute: typeof HallIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/vendor': {
+      id: '/_authenticated/vendor'
+      path: '/vendor'
+      fullPath: '/vendor'
+      preLoaderRoute: typeof AuthenticatedVendorRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/organization': {
+      id: '/_authenticated/organization'
+      path: '/organization'
+      fullPath: '/organization'
+      preLoaderRoute: typeof AuthenticatedOrganizationRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/hall': {
+      id: '/_authenticated/hall'
+      path: '/hall'
+      fullPath: '/hall'
+      preLoaderRoute: typeof AuthenticatedHallRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/customer': {
+      id: '/_authenticated/customer'
+      path: '/customer'
+      fullPath: '/customer'
+      preLoaderRoute: typeof AuthenticatedCustomerRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/worker': {
       id: '/_authenticated/worker'
@@ -602,10 +738,20 @@ const AuthenticatedWorkerRouteRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedWorkerRouteRoute: typeof AuthenticatedWorkerRouteRouteWithChildren
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedCustomerRoute: typeof AuthenticatedCustomerRoute
+  AuthenticatedHallRoute: typeof AuthenticatedHallRoute
+  AuthenticatedOrganizationRoute: typeof AuthenticatedOrganizationRoute
+  AuthenticatedVendorRoute: typeof AuthenticatedVendorRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedWorkerRouteRoute: AuthenticatedWorkerRouteRouteWithChildren,
+  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedCustomerRoute: AuthenticatedCustomerRoute,
+  AuthenticatedHallRoute: AuthenticatedHallRoute,
+  AuthenticatedOrganizationRoute: AuthenticatedOrganizationRoute,
+  AuthenticatedVendorRoute: AuthenticatedVendorRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -620,6 +766,7 @@ const rootRouteChildren: RootRouteChildren = {
   FeaturesRoute: FeaturesRoute,
   LoginRoute: LoginRoute,
   MarketplaceRoute: MarketplaceRoute,
+  OnboardingRoute: OnboardingRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   RegisterRoute: RegisterRoute,
@@ -627,6 +774,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   SolutionsRoute: SolutionsRoute,
   TermsRoute: TermsRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   HallIdRoute: HallIdRoute,
 }
 export const routeTree = rootRouteImport
