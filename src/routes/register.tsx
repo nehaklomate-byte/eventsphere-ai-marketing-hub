@@ -10,6 +10,7 @@ import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { emailSchema, phoneSchema, pincodeSchema, passwordSchema, passwordStrength } from "@/lib/validation";
+import { DASHBOARD_PATH, resolveDashboardPath, humanizeAuthError } from "@/lib/auth-redirect";
 
 export const Route = createFileRoute("/register")({
   head: () => ({
@@ -42,8 +43,12 @@ function RegisterPage() {
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/" });
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (data.session) {
+        const path = await resolveDashboardPath(data.session.user.id);
+        navigate({ to: path, replace: true } as never);
+        return;
+      }
       setChecked(true);
     });
   }, [navigate]);

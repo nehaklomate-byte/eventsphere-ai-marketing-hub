@@ -27,6 +27,11 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as HallIdRouteImport } from './routes/hall.$id'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
+import { Route as AuthenticatedVendorRouteImport } from './routes/_authenticated/vendor'
+import { Route as AuthenticatedOrganizationRouteImport } from './routes/_authenticated/organization'
+import { Route as AuthenticatedHallRouteImport } from './routes/_authenticated/hall'
+import { Route as AuthenticatedCustomerRouteImport } from './routes/_authenticated/customer'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedWorkerRouteRouteImport } from './routes/_authenticated/worker/route'
 import { Route as AuthenticatedWorkerIndexRouteImport } from './routes/_authenticated/worker/index'
 import { Route as AuthenticatedWorkerSupportRouteImport } from './routes/_authenticated/worker/support'
@@ -128,6 +133,32 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
   path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedVendorRoute = AuthenticatedVendorRouteImport.update({
+  id: '/vendor',
+  path: '/vendor',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedOrganizationRoute =
+  AuthenticatedOrganizationRouteImport.update({
+    id: '/organization',
+    path: '/organization',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedHallRoute = AuthenticatedHallRouteImport.update({
+  id: '/hall',
+  path: '/hall',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCustomerRoute = AuthenticatedCustomerRouteImport.update({
+  id: '/customer',
+  path: '/customer',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedWorkerRouteRoute =
   AuthenticatedWorkerRouteRouteImport.update({
     id: '/worker',
@@ -211,6 +242,11 @@ export interface FileRoutesByFullPath {
   '/solutions': typeof SolutionsRoute
   '/terms': typeof TermsRoute
   '/worker': typeof AuthenticatedWorkerRouteRouteWithChildren
+  '/admin': typeof AuthenticatedAdminRoute
+  '/customer': typeof AuthenticatedCustomerRoute
+  '/hall': typeof AuthenticatedHallRoute
+  '/organization': typeof AuthenticatedOrganizationRoute
+  '/vendor': typeof AuthenticatedVendorRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/hall/$id': typeof HallIdRoute
   '/worker/availability': typeof AuthenticatedWorkerAvailabilityRoute
@@ -240,6 +276,11 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/solutions': typeof SolutionsRoute
   '/terms': typeof TermsRoute
+  '/admin': typeof AuthenticatedAdminRoute
+  '/customer': typeof AuthenticatedCustomerRoute
+  '/hall': typeof AuthenticatedHallRoute
+  '/organization': typeof AuthenticatedOrganizationRoute
+  '/vendor': typeof AuthenticatedVendorRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/hall/$id': typeof HallIdRoute
   '/worker/availability': typeof AuthenticatedWorkerAvailabilityRoute
@@ -272,6 +313,11 @@ export interface FileRoutesById {
   '/solutions': typeof SolutionsRoute
   '/terms': typeof TermsRoute
   '/_authenticated/worker': typeof AuthenticatedWorkerRouteRouteWithChildren
+  '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/customer': typeof AuthenticatedCustomerRoute
+  '/_authenticated/hall': typeof AuthenticatedHallRoute
+  '/_authenticated/organization': typeof AuthenticatedOrganizationRoute
+  '/_authenticated/vendor': typeof AuthenticatedVendorRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/hall/$id': typeof HallIdRoute
   '/_authenticated/worker/availability': typeof AuthenticatedWorkerAvailabilityRoute
@@ -304,6 +350,11 @@ export interface FileRouteTypes {
     | '/solutions'
     | '/terms'
     | '/worker'
+    | '/admin'
+    | '/customer'
+    | '/hall'
+    | '/organization'
+    | '/vendor'
     | '/auth/callback'
     | '/hall/$id'
     | '/worker/availability'
@@ -333,6 +384,11 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/solutions'
     | '/terms'
+    | '/admin'
+    | '/customer'
+    | '/hall'
+    | '/organization'
+    | '/vendor'
     | '/auth/callback'
     | '/hall/$id'
     | '/worker/availability'
@@ -364,6 +420,11 @@ export interface FileRouteTypes {
     | '/solutions'
     | '/terms'
     | '/_authenticated/worker'
+    | '/_authenticated/admin'
+    | '/_authenticated/customer'
+    | '/_authenticated/hall'
+    | '/_authenticated/organization'
+    | '/_authenticated/vendor'
     | '/auth/callback'
     | '/hall/$id'
     | '/_authenticated/worker/availability'
@@ -527,6 +588,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/vendor': {
+      id: '/_authenticated/vendor'
+      path: '/vendor'
+      fullPath: '/vendor'
+      preLoaderRoute: typeof AuthenticatedVendorRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/organization': {
+      id: '/_authenticated/organization'
+      path: '/organization'
+      fullPath: '/organization'
+      preLoaderRoute: typeof AuthenticatedOrganizationRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/hall': {
+      id: '/_authenticated/hall'
+      path: '/hall'
+      fullPath: '/hall'
+      preLoaderRoute: typeof AuthenticatedHallRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/customer': {
+      id: '/_authenticated/customer'
+      path: '/customer'
+      fullPath: '/customer'
+      preLoaderRoute: typeof AuthenticatedCustomerRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/worker': {
       id: '/_authenticated/worker'
       path: '/worker'
@@ -642,10 +738,20 @@ const AuthenticatedWorkerRouteRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedWorkerRouteRoute: typeof AuthenticatedWorkerRouteRouteWithChildren
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedCustomerRoute: typeof AuthenticatedCustomerRoute
+  AuthenticatedHallRoute: typeof AuthenticatedHallRoute
+  AuthenticatedOrganizationRoute: typeof AuthenticatedOrganizationRoute
+  AuthenticatedVendorRoute: typeof AuthenticatedVendorRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedWorkerRouteRoute: AuthenticatedWorkerRouteRouteWithChildren,
+  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedCustomerRoute: AuthenticatedCustomerRoute,
+  AuthenticatedHallRoute: AuthenticatedHallRoute,
+  AuthenticatedOrganizationRoute: AuthenticatedOrganizationRoute,
+  AuthenticatedVendorRoute: AuthenticatedVendorRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
