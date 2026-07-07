@@ -110,9 +110,9 @@ function RegisterPage() {
                 <CheckCircle2 className="h-7 w-7" />
               </div>
               <h2 className="mt-6 font-display text-3xl font-semibold">You're all set.</h2>
-              <p className="mt-2 text-muted-foreground">Your account has been created. Head to your workspace to complete onboarding.</p>
-              <Link to="/" className="mt-8 inline-flex items-center gap-2 rounded-full btn-brand btn-brand-hover px-5 py-3 text-sm font-semibold">
-                Go to workspace <ArrowRight className="h-4 w-4" />
+              <p className="mt-2 text-muted-foreground">Your account has been created. Opening your workspace…</p>
+              <Link to="/auth/callback" className="mt-8 inline-flex items-center gap-2 rounded-full btn-brand btn-brand-hover px-5 py-3 text-sm font-semibold">
+                Continue <ArrowRight className="h-4 w-4" />
               </Link>
             </motion.section>
           )}
