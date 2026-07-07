@@ -16,6 +16,7 @@ import { Route as ResearchRouteImport } from './routes/research'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as MarketplaceRouteImport } from './routes/marketplace'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as FeaturesRouteImport } from './routes/features'
@@ -25,6 +26,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as HallIdRouteImport } from './routes/hall.$id'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedWorkerRouteRouteImport } from './routes/_authenticated/worker/route'
 import { Route as AuthenticatedWorkerIndexRouteImport } from './routes/_authenticated/worker/index'
 import { Route as AuthenticatedWorkerSupportRouteImport } from './routes/_authenticated/worker/support'
@@ -72,6 +74,11 @@ const PricingRoute = PricingRouteImport.update({
   path: '/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MarketplaceRoute = MarketplaceRouteImport.update({
   id: '/marketplace',
   path: '/marketplace',
@@ -114,6 +121,11 @@ const IndexRoute = IndexRouteImport.update({
 const HallIdRoute = HallIdRouteImport.update({
   id: '/hall/$id',
   path: '/hall/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedWorkerRouteRoute =
@@ -190,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/features': typeof FeaturesRoute
   '/login': typeof LoginRoute
   '/marketplace': typeof MarketplaceRoute
+  '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
@@ -198,6 +211,7 @@ export interface FileRoutesByFullPath {
   '/solutions': typeof SolutionsRoute
   '/terms': typeof TermsRoute
   '/worker': typeof AuthenticatedWorkerRouteRouteWithChildren
+  '/auth/callback': typeof AuthCallbackRoute
   '/hall/$id': typeof HallIdRoute
   '/worker/availability': typeof AuthenticatedWorkerAvailabilityRoute
   '/worker/calendar': typeof AuthenticatedWorkerCalendarRoute
@@ -218,6 +232,7 @@ export interface FileRoutesByTo {
   '/features': typeof FeaturesRoute
   '/login': typeof LoginRoute
   '/marketplace': typeof MarketplaceRoute
+  '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
@@ -225,6 +240,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/solutions': typeof SolutionsRoute
   '/terms': typeof TermsRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/hall/$id': typeof HallIdRoute
   '/worker/availability': typeof AuthenticatedWorkerAvailabilityRoute
   '/worker/calendar': typeof AuthenticatedWorkerCalendarRoute
@@ -247,6 +263,7 @@ export interface FileRoutesById {
   '/features': typeof FeaturesRoute
   '/login': typeof LoginRoute
   '/marketplace': typeof MarketplaceRoute
+  '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
@@ -255,6 +272,7 @@ export interface FileRoutesById {
   '/solutions': typeof SolutionsRoute
   '/terms': typeof TermsRoute
   '/_authenticated/worker': typeof AuthenticatedWorkerRouteRouteWithChildren
+  '/auth/callback': typeof AuthCallbackRoute
   '/hall/$id': typeof HallIdRoute
   '/_authenticated/worker/availability': typeof AuthenticatedWorkerAvailabilityRoute
   '/_authenticated/worker/calendar': typeof AuthenticatedWorkerCalendarRoute
@@ -277,6 +295,7 @@ export interface FileRouteTypes {
     | '/features'
     | '/login'
     | '/marketplace'
+    | '/onboarding'
     | '/pricing'
     | '/privacy'
     | '/register'
@@ -285,6 +304,7 @@ export interface FileRouteTypes {
     | '/solutions'
     | '/terms'
     | '/worker'
+    | '/auth/callback'
     | '/hall/$id'
     | '/worker/availability'
     | '/worker/calendar'
@@ -305,6 +325,7 @@ export interface FileRouteTypes {
     | '/features'
     | '/login'
     | '/marketplace'
+    | '/onboarding'
     | '/pricing'
     | '/privacy'
     | '/register'
@@ -312,6 +333,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/solutions'
     | '/terms'
+    | '/auth/callback'
     | '/hall/$id'
     | '/worker/availability'
     | '/worker/calendar'
@@ -333,6 +355,7 @@ export interface FileRouteTypes {
     | '/features'
     | '/login'
     | '/marketplace'
+    | '/onboarding'
     | '/pricing'
     | '/privacy'
     | '/register'
@@ -341,6 +364,7 @@ export interface FileRouteTypes {
     | '/solutions'
     | '/terms'
     | '/_authenticated/worker'
+    | '/auth/callback'
     | '/hall/$id'
     | '/_authenticated/worker/availability'
     | '/_authenticated/worker/calendar'
@@ -363,6 +387,7 @@ export interface RootRouteChildren {
   FeaturesRoute: typeof FeaturesRoute
   LoginRoute: typeof LoginRoute
   MarketplaceRoute: typeof MarketplaceRoute
+  OnboardingRoute: typeof OnboardingRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   RegisterRoute: typeof RegisterRoute
@@ -370,6 +395,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SolutionsRoute: typeof SolutionsRoute
   TermsRoute: typeof TermsRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   HallIdRoute: typeof HallIdRoute
 }
 
@@ -422,6 +448,13 @@ declare module '@tanstack/react-router' {
       path: '/pricing'
       fullPath: '/pricing'
       preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/marketplace': {
@@ -485,6 +518,13 @@ declare module '@tanstack/react-router' {
       path: '/hall/$id'
       fullPath: '/hall/$id'
       preLoaderRoute: typeof HallIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/worker': {
@@ -620,6 +660,7 @@ const rootRouteChildren: RootRouteChildren = {
   FeaturesRoute: FeaturesRoute,
   LoginRoute: LoginRoute,
   MarketplaceRoute: MarketplaceRoute,
+  OnboardingRoute: OnboardingRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   RegisterRoute: RegisterRoute,
@@ -627,18 +668,9 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   SolutionsRoute: SolutionsRoute,
   TermsRoute: TermsRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   HallIdRoute: HallIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
