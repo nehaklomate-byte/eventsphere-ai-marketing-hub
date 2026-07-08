@@ -32,7 +32,9 @@ import { Route as AuthenticatedOrganizationRouteImport } from './routes/_authent
 import { Route as AuthenticatedHallRouteImport } from './routes/_authenticated/hall'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedWorkerRouteRouteImport } from './routes/_authenticated/worker/route'
+import { Route as AuthenticatedCustomerRouteRouteImport } from './routes/_authenticated/customer/route'
 import { Route as AuthenticatedWorkerIndexRouteImport } from './routes/_authenticated/worker/index'
+import { Route as AuthenticatedCustomerIndexRouteImport } from './routes/_authenticated/customer/index'
 import { Route as AuthenticatedWorkerSupportRouteImport } from './routes/_authenticated/worker/support'
 import { Route as AuthenticatedWorkerSettingsRouteImport } from './routes/_authenticated/worker/settings'
 import { Route as AuthenticatedWorkerProfileRouteImport } from './routes/_authenticated/worker/profile'
@@ -159,11 +161,23 @@ const AuthenticatedWorkerRouteRoute =
     path: '/worker',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCustomerRouteRoute =
+  AuthenticatedCustomerRouteRouteImport.update({
+    id: '/customer',
+    path: '/customer',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedWorkerIndexRoute =
   AuthenticatedWorkerIndexRouteImport.update({
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedWorkerRouteRoute,
+  } as any)
+const AuthenticatedCustomerIndexRoute =
+  AuthenticatedCustomerIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedCustomerRouteRoute,
   } as any)
 const AuthenticatedWorkerSupportRoute =
   AuthenticatedWorkerSupportRouteImport.update({
@@ -235,6 +249,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/solutions': typeof SolutionsRoute
   '/terms': typeof TermsRoute
+  '/customer': typeof AuthenticatedCustomerRouteRouteWithChildren
   '/worker': typeof AuthenticatedWorkerRouteRouteWithChildren
   '/admin': typeof AuthenticatedAdminRoute
   '/hall': typeof AuthenticatedHallRoute
@@ -251,6 +266,7 @@ export interface FileRoutesByFullPath {
   '/worker/profile': typeof AuthenticatedWorkerProfileRoute
   '/worker/settings': typeof AuthenticatedWorkerSettingsRoute
   '/worker/support': typeof AuthenticatedWorkerSupportRoute
+  '/customer/': typeof AuthenticatedCustomerIndexRoute
   '/worker/': typeof AuthenticatedWorkerIndexRoute
 }
 export interface FileRoutesByTo {
@@ -284,6 +300,7 @@ export interface FileRoutesByTo {
   '/worker/profile': typeof AuthenticatedWorkerProfileRoute
   '/worker/settings': typeof AuthenticatedWorkerSettingsRoute
   '/worker/support': typeof AuthenticatedWorkerSupportRoute
+  '/customer': typeof AuthenticatedCustomerIndexRoute
   '/worker': typeof AuthenticatedWorkerIndexRoute
 }
 export interface FileRoutesById {
@@ -304,6 +321,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/solutions': typeof SolutionsRoute
   '/terms': typeof TermsRoute
+  '/_authenticated/customer': typeof AuthenticatedCustomerRouteRouteWithChildren
   '/_authenticated/worker': typeof AuthenticatedWorkerRouteRouteWithChildren
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/hall': typeof AuthenticatedHallRoute
@@ -320,6 +338,7 @@ export interface FileRoutesById {
   '/_authenticated/worker/profile': typeof AuthenticatedWorkerProfileRoute
   '/_authenticated/worker/settings': typeof AuthenticatedWorkerSettingsRoute
   '/_authenticated/worker/support': typeof AuthenticatedWorkerSupportRoute
+  '/_authenticated/customer/': typeof AuthenticatedCustomerIndexRoute
   '/_authenticated/worker/': typeof AuthenticatedWorkerIndexRoute
 }
 export interface FileRouteTypes {
@@ -340,6 +359,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/solutions'
     | '/terms'
+    | '/customer'
     | '/worker'
     | '/admin'
     | '/hall'
@@ -356,6 +376,7 @@ export interface FileRouteTypes {
     | '/worker/profile'
     | '/worker/settings'
     | '/worker/support'
+    | '/customer/'
     | '/worker/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -389,6 +410,7 @@ export interface FileRouteTypes {
     | '/worker/profile'
     | '/worker/settings'
     | '/worker/support'
+    | '/customer'
     | '/worker'
   id:
     | '__root__'
@@ -408,6 +430,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/solutions'
     | '/terms'
+    | '/_authenticated/customer'
     | '/_authenticated/worker'
     | '/_authenticated/admin'
     | '/_authenticated/hall'
@@ -424,6 +447,7 @@ export interface FileRouteTypes {
     | '/_authenticated/worker/profile'
     | '/_authenticated/worker/settings'
     | '/_authenticated/worker/support'
+    | '/_authenticated/customer/'
     | '/_authenticated/worker/'
   fileRoutesById: FileRoutesById
 }
@@ -611,12 +635,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWorkerRouteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/customer': {
+      id: '/_authenticated/customer'
+      path: '/customer'
+      fullPath: '/customer'
+      preLoaderRoute: typeof AuthenticatedCustomerRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/worker/': {
       id: '/_authenticated/worker/'
       path: '/'
       fullPath: '/worker/'
       preLoaderRoute: typeof AuthenticatedWorkerIndexRouteImport
       parentRoute: typeof AuthenticatedWorkerRouteRoute
+    }
+    '/_authenticated/customer/': {
+      id: '/_authenticated/customer/'
+      path: '/'
+      fullPath: '/customer/'
+      preLoaderRoute: typeof AuthenticatedCustomerIndexRouteImport
+      parentRoute: typeof AuthenticatedCustomerRouteRoute
     }
     '/_authenticated/worker/support': {
       id: '/_authenticated/worker/support'
@@ -684,6 +722,20 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedCustomerRouteRouteChildren {
+  AuthenticatedCustomerIndexRoute: typeof AuthenticatedCustomerIndexRoute
+}
+
+const AuthenticatedCustomerRouteRouteChildren: AuthenticatedCustomerRouteRouteChildren =
+  {
+    AuthenticatedCustomerIndexRoute: AuthenticatedCustomerIndexRoute,
+  }
+
+const AuthenticatedCustomerRouteRouteWithChildren =
+  AuthenticatedCustomerRouteRoute._addFileChildren(
+    AuthenticatedCustomerRouteRouteChildren,
+  )
+
 interface AuthenticatedWorkerRouteRouteChildren {
   AuthenticatedWorkerAvailabilityRoute: typeof AuthenticatedWorkerAvailabilityRoute
   AuthenticatedWorkerCalendarRoute: typeof AuthenticatedWorkerCalendarRoute
@@ -718,6 +770,7 @@ const AuthenticatedWorkerRouteRouteWithChildren =
   )
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedCustomerRouteRoute: typeof AuthenticatedCustomerRouteRouteWithChildren
   AuthenticatedWorkerRouteRoute: typeof AuthenticatedWorkerRouteRouteWithChildren
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedHallRoute: typeof AuthenticatedHallRoute
@@ -726,6 +779,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedCustomerRouteRoute: AuthenticatedCustomerRouteRouteWithChildren,
   AuthenticatedWorkerRouteRoute: AuthenticatedWorkerRouteRouteWithChildren,
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedHallRoute: AuthenticatedHallRoute,
