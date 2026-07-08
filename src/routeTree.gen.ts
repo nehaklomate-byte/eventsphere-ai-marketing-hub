@@ -44,6 +44,14 @@ import { Route as AuthenticatedWorkerEarningsRouteImport } from './routes/_authe
 import { Route as AuthenticatedWorkerDocumentsRouteImport } from './routes/_authenticated/worker/documents'
 import { Route as AuthenticatedWorkerCalendarRouteImport } from './routes/_authenticated/worker/calendar'
 import { Route as AuthenticatedWorkerAvailabilityRouteImport } from './routes/_authenticated/worker/availability'
+import { Route as AuthenticatedCustomerWishlistRouteImport } from './routes/_authenticated/customer/wishlist'
+import { Route as AuthenticatedCustomerSettingsRouteImport } from './routes/_authenticated/customer/settings'
+import { Route as AuthenticatedCustomerReviewsRouteImport } from './routes/_authenticated/customer/reviews'
+import { Route as AuthenticatedCustomerProfileRouteImport } from './routes/_authenticated/customer/profile'
+import { Route as AuthenticatedCustomerPaymentsRouteImport } from './routes/_authenticated/customer/payments'
+import { Route as AuthenticatedCustomerNotificationsRouteImport } from './routes/_authenticated/customer/notifications'
+import { Route as AuthenticatedCustomerEventsRouteImport } from './routes/_authenticated/customer/events'
+import { Route as AuthenticatedCustomerBookingsRouteImport } from './routes/_authenticated/customer/bookings'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -232,6 +240,54 @@ const AuthenticatedWorkerAvailabilityRoute =
     path: '/availability',
     getParentRoute: () => AuthenticatedWorkerRouteRoute,
   } as any)
+const AuthenticatedCustomerWishlistRoute =
+  AuthenticatedCustomerWishlistRouteImport.update({
+    id: '/wishlist',
+    path: '/wishlist',
+    getParentRoute: () => AuthenticatedCustomerRouteRoute,
+  } as any)
+const AuthenticatedCustomerSettingsRoute =
+  AuthenticatedCustomerSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AuthenticatedCustomerRouteRoute,
+  } as any)
+const AuthenticatedCustomerReviewsRoute =
+  AuthenticatedCustomerReviewsRouteImport.update({
+    id: '/reviews',
+    path: '/reviews',
+    getParentRoute: () => AuthenticatedCustomerRouteRoute,
+  } as any)
+const AuthenticatedCustomerProfileRoute =
+  AuthenticatedCustomerProfileRouteImport.update({
+    id: '/profile',
+    path: '/profile',
+    getParentRoute: () => AuthenticatedCustomerRouteRoute,
+  } as any)
+const AuthenticatedCustomerPaymentsRoute =
+  AuthenticatedCustomerPaymentsRouteImport.update({
+    id: '/payments',
+    path: '/payments',
+    getParentRoute: () => AuthenticatedCustomerRouteRoute,
+  } as any)
+const AuthenticatedCustomerNotificationsRoute =
+  AuthenticatedCustomerNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AuthenticatedCustomerRouteRoute,
+  } as any)
+const AuthenticatedCustomerEventsRoute =
+  AuthenticatedCustomerEventsRouteImport.update({
+    id: '/events',
+    path: '/events',
+    getParentRoute: () => AuthenticatedCustomerRouteRoute,
+  } as any)
+const AuthenticatedCustomerBookingsRoute =
+  AuthenticatedCustomerBookingsRouteImport.update({
+    id: '/bookings',
+    path: '/bookings',
+    getParentRoute: () => AuthenticatedCustomerRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -257,6 +313,14 @@ export interface FileRoutesByFullPath {
   '/vendor': typeof AuthenticatedVendorRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/hall/$id': typeof HallIdRoute
+  '/customer/bookings': typeof AuthenticatedCustomerBookingsRoute
+  '/customer/events': typeof AuthenticatedCustomerEventsRoute
+  '/customer/notifications': typeof AuthenticatedCustomerNotificationsRoute
+  '/customer/payments': typeof AuthenticatedCustomerPaymentsRoute
+  '/customer/profile': typeof AuthenticatedCustomerProfileRoute
+  '/customer/reviews': typeof AuthenticatedCustomerReviewsRoute
+  '/customer/settings': typeof AuthenticatedCustomerSettingsRoute
+  '/customer/wishlist': typeof AuthenticatedCustomerWishlistRoute
   '/worker/availability': typeof AuthenticatedWorkerAvailabilityRoute
   '/worker/calendar': typeof AuthenticatedWorkerCalendarRoute
   '/worker/documents': typeof AuthenticatedWorkerDocumentsRoute
@@ -291,6 +355,14 @@ export interface FileRoutesByTo {
   '/vendor': typeof AuthenticatedVendorRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/hall/$id': typeof HallIdRoute
+  '/customer/bookings': typeof AuthenticatedCustomerBookingsRoute
+  '/customer/events': typeof AuthenticatedCustomerEventsRoute
+  '/customer/notifications': typeof AuthenticatedCustomerNotificationsRoute
+  '/customer/payments': typeof AuthenticatedCustomerPaymentsRoute
+  '/customer/profile': typeof AuthenticatedCustomerProfileRoute
+  '/customer/reviews': typeof AuthenticatedCustomerReviewsRoute
+  '/customer/settings': typeof AuthenticatedCustomerSettingsRoute
+  '/customer/wishlist': typeof AuthenticatedCustomerWishlistRoute
   '/worker/availability': typeof AuthenticatedWorkerAvailabilityRoute
   '/worker/calendar': typeof AuthenticatedWorkerCalendarRoute
   '/worker/documents': typeof AuthenticatedWorkerDocumentsRoute
@@ -329,6 +401,14 @@ export interface FileRoutesById {
   '/_authenticated/vendor': typeof AuthenticatedVendorRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/hall/$id': typeof HallIdRoute
+  '/_authenticated/customer/bookings': typeof AuthenticatedCustomerBookingsRoute
+  '/_authenticated/customer/events': typeof AuthenticatedCustomerEventsRoute
+  '/_authenticated/customer/notifications': typeof AuthenticatedCustomerNotificationsRoute
+  '/_authenticated/customer/payments': typeof AuthenticatedCustomerPaymentsRoute
+  '/_authenticated/customer/profile': typeof AuthenticatedCustomerProfileRoute
+  '/_authenticated/customer/reviews': typeof AuthenticatedCustomerReviewsRoute
+  '/_authenticated/customer/settings': typeof AuthenticatedCustomerSettingsRoute
+  '/_authenticated/customer/wishlist': typeof AuthenticatedCustomerWishlistRoute
   '/_authenticated/worker/availability': typeof AuthenticatedWorkerAvailabilityRoute
   '/_authenticated/worker/calendar': typeof AuthenticatedWorkerCalendarRoute
   '/_authenticated/worker/documents': typeof AuthenticatedWorkerDocumentsRoute
@@ -367,6 +447,14 @@ export interface FileRouteTypes {
     | '/vendor'
     | '/auth/callback'
     | '/hall/$id'
+    | '/customer/bookings'
+    | '/customer/events'
+    | '/customer/notifications'
+    | '/customer/payments'
+    | '/customer/profile'
+    | '/customer/reviews'
+    | '/customer/settings'
+    | '/customer/wishlist'
     | '/worker/availability'
     | '/worker/calendar'
     | '/worker/documents'
@@ -401,6 +489,14 @@ export interface FileRouteTypes {
     | '/vendor'
     | '/auth/callback'
     | '/hall/$id'
+    | '/customer/bookings'
+    | '/customer/events'
+    | '/customer/notifications'
+    | '/customer/payments'
+    | '/customer/profile'
+    | '/customer/reviews'
+    | '/customer/settings'
+    | '/customer/wishlist'
     | '/worker/availability'
     | '/worker/calendar'
     | '/worker/documents'
@@ -438,6 +534,14 @@ export interface FileRouteTypes {
     | '/_authenticated/vendor'
     | '/auth/callback'
     | '/hall/$id'
+    | '/_authenticated/customer/bookings'
+    | '/_authenticated/customer/events'
+    | '/_authenticated/customer/notifications'
+    | '/_authenticated/customer/payments'
+    | '/_authenticated/customer/profile'
+    | '/_authenticated/customer/reviews'
+    | '/_authenticated/customer/settings'
+    | '/_authenticated/customer/wishlist'
     | '/_authenticated/worker/availability'
     | '/_authenticated/worker/calendar'
     | '/_authenticated/worker/documents'
@@ -719,15 +823,88 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWorkerAvailabilityRouteImport
       parentRoute: typeof AuthenticatedWorkerRouteRoute
     }
+    '/_authenticated/customer/wishlist': {
+      id: '/_authenticated/customer/wishlist'
+      path: '/wishlist'
+      fullPath: '/customer/wishlist'
+      preLoaderRoute: typeof AuthenticatedCustomerWishlistRouteImport
+      parentRoute: typeof AuthenticatedCustomerRouteRoute
+    }
+    '/_authenticated/customer/settings': {
+      id: '/_authenticated/customer/settings'
+      path: '/settings'
+      fullPath: '/customer/settings'
+      preLoaderRoute: typeof AuthenticatedCustomerSettingsRouteImport
+      parentRoute: typeof AuthenticatedCustomerRouteRoute
+    }
+    '/_authenticated/customer/reviews': {
+      id: '/_authenticated/customer/reviews'
+      path: '/reviews'
+      fullPath: '/customer/reviews'
+      preLoaderRoute: typeof AuthenticatedCustomerReviewsRouteImport
+      parentRoute: typeof AuthenticatedCustomerRouteRoute
+    }
+    '/_authenticated/customer/profile': {
+      id: '/_authenticated/customer/profile'
+      path: '/profile'
+      fullPath: '/customer/profile'
+      preLoaderRoute: typeof AuthenticatedCustomerProfileRouteImport
+      parentRoute: typeof AuthenticatedCustomerRouteRoute
+    }
+    '/_authenticated/customer/payments': {
+      id: '/_authenticated/customer/payments'
+      path: '/payments'
+      fullPath: '/customer/payments'
+      preLoaderRoute: typeof AuthenticatedCustomerPaymentsRouteImport
+      parentRoute: typeof AuthenticatedCustomerRouteRoute
+    }
+    '/_authenticated/customer/notifications': {
+      id: '/_authenticated/customer/notifications'
+      path: '/notifications'
+      fullPath: '/customer/notifications'
+      preLoaderRoute: typeof AuthenticatedCustomerNotificationsRouteImport
+      parentRoute: typeof AuthenticatedCustomerRouteRoute
+    }
+    '/_authenticated/customer/events': {
+      id: '/_authenticated/customer/events'
+      path: '/events'
+      fullPath: '/customer/events'
+      preLoaderRoute: typeof AuthenticatedCustomerEventsRouteImport
+      parentRoute: typeof AuthenticatedCustomerRouteRoute
+    }
+    '/_authenticated/customer/bookings': {
+      id: '/_authenticated/customer/bookings'
+      path: '/bookings'
+      fullPath: '/customer/bookings'
+      preLoaderRoute: typeof AuthenticatedCustomerBookingsRouteImport
+      parentRoute: typeof AuthenticatedCustomerRouteRoute
+    }
   }
 }
 
 interface AuthenticatedCustomerRouteRouteChildren {
+  AuthenticatedCustomerBookingsRoute: typeof AuthenticatedCustomerBookingsRoute
+  AuthenticatedCustomerEventsRoute: typeof AuthenticatedCustomerEventsRoute
+  AuthenticatedCustomerNotificationsRoute: typeof AuthenticatedCustomerNotificationsRoute
+  AuthenticatedCustomerPaymentsRoute: typeof AuthenticatedCustomerPaymentsRoute
+  AuthenticatedCustomerProfileRoute: typeof AuthenticatedCustomerProfileRoute
+  AuthenticatedCustomerReviewsRoute: typeof AuthenticatedCustomerReviewsRoute
+  AuthenticatedCustomerSettingsRoute: typeof AuthenticatedCustomerSettingsRoute
+  AuthenticatedCustomerWishlistRoute: typeof AuthenticatedCustomerWishlistRoute
   AuthenticatedCustomerIndexRoute: typeof AuthenticatedCustomerIndexRoute
 }
 
 const AuthenticatedCustomerRouteRouteChildren: AuthenticatedCustomerRouteRouteChildren =
   {
+    AuthenticatedCustomerBookingsRoute: AuthenticatedCustomerBookingsRoute,
+    AuthenticatedCustomerEventsRoute: AuthenticatedCustomerEventsRoute,
+    AuthenticatedCustomerNotificationsRoute:
+      AuthenticatedCustomerNotificationsRoute,
+    AuthenticatedCustomerPaymentsRoute: AuthenticatedCustomerPaymentsRoute,
+    AuthenticatedCustomerProfileRoute: AuthenticatedCustomerProfileRoute,
+    AuthenticatedCustomerReviewsRoute: AuthenticatedCustomerReviewsRoute,
+    AuthenticatedCustomerSettingsRoute: AuthenticatedCustomerSettingsRoute,
+    AuthenticatedCustomerWishlistRoute: AuthenticatedCustomerWishlistRoute,
     AuthenticatedCustomerIndexRoute: AuthenticatedCustomerIndexRoute,
   }
 
