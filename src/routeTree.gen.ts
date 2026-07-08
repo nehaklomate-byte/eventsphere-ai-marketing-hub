@@ -30,7 +30,6 @@ import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedVendorRouteImport } from './routes/_authenticated/vendor'
 import { Route as AuthenticatedOrganizationRouteImport } from './routes/_authenticated/organization'
 import { Route as AuthenticatedHallRouteImport } from './routes/_authenticated/hall'
-import { Route as AuthenticatedCustomerRouteImport } from './routes/_authenticated/customer'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedWorkerRouteRouteImport } from './routes/_authenticated/worker/route'
 import { Route as AuthenticatedWorkerIndexRouteImport } from './routes/_authenticated/worker/index'
@@ -149,11 +148,6 @@ const AuthenticatedHallRoute = AuthenticatedHallRouteImport.update({
   path: '/hall',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedCustomerRoute = AuthenticatedCustomerRouteImport.update({
-  id: '/customer',
-  path: '/customer',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -243,7 +237,6 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/worker': typeof AuthenticatedWorkerRouteRouteWithChildren
   '/admin': typeof AuthenticatedAdminRoute
-  '/customer': typeof AuthenticatedCustomerRoute
   '/hall': typeof AuthenticatedHallRoute
   '/organization': typeof AuthenticatedOrganizationRoute
   '/vendor': typeof AuthenticatedVendorRoute
@@ -277,7 +270,6 @@ export interface FileRoutesByTo {
   '/solutions': typeof SolutionsRoute
   '/terms': typeof TermsRoute
   '/admin': typeof AuthenticatedAdminRoute
-  '/customer': typeof AuthenticatedCustomerRoute
   '/hall': typeof AuthenticatedHallRoute
   '/organization': typeof AuthenticatedOrganizationRoute
   '/vendor': typeof AuthenticatedVendorRoute
@@ -314,7 +306,6 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/_authenticated/worker': typeof AuthenticatedWorkerRouteRouteWithChildren
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
-  '/_authenticated/customer': typeof AuthenticatedCustomerRoute
   '/_authenticated/hall': typeof AuthenticatedHallRoute
   '/_authenticated/organization': typeof AuthenticatedOrganizationRoute
   '/_authenticated/vendor': typeof AuthenticatedVendorRoute
@@ -351,7 +342,6 @@ export interface FileRouteTypes {
     | '/terms'
     | '/worker'
     | '/admin'
-    | '/customer'
     | '/hall'
     | '/organization'
     | '/vendor'
@@ -385,7 +375,6 @@ export interface FileRouteTypes {
     | '/solutions'
     | '/terms'
     | '/admin'
-    | '/customer'
     | '/hall'
     | '/organization'
     | '/vendor'
@@ -421,7 +410,6 @@ export interface FileRouteTypes {
     | '/terms'
     | '/_authenticated/worker'
     | '/_authenticated/admin'
-    | '/_authenticated/customer'
     | '/_authenticated/hall'
     | '/_authenticated/organization'
     | '/_authenticated/vendor'
@@ -609,13 +597,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHallRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/customer': {
-      id: '/_authenticated/customer'
-      path: '/customer'
-      fullPath: '/customer'
-      preLoaderRoute: typeof AuthenticatedCustomerRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/admin': {
       id: '/_authenticated/admin'
       path: '/admin'
@@ -739,7 +720,6 @@ const AuthenticatedWorkerRouteRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedWorkerRouteRoute: typeof AuthenticatedWorkerRouteRouteWithChildren
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
-  AuthenticatedCustomerRoute: typeof AuthenticatedCustomerRoute
   AuthenticatedHallRoute: typeof AuthenticatedHallRoute
   AuthenticatedOrganizationRoute: typeof AuthenticatedOrganizationRoute
   AuthenticatedVendorRoute: typeof AuthenticatedVendorRoute
@@ -748,7 +728,6 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedWorkerRouteRoute: AuthenticatedWorkerRouteRouteWithChildren,
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
-  AuthenticatedCustomerRoute: AuthenticatedCustomerRoute,
   AuthenticatedHallRoute: AuthenticatedHallRoute,
   AuthenticatedOrganizationRoute: AuthenticatedOrganizationRoute,
   AuthenticatedVendorRoute: AuthenticatedVendorRoute,
