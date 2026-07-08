@@ -14,6 +14,364 @@ export type Database = {
   }
   public: {
     Tables: {
+      customer_bookings: {
+        Row: {
+          amount: number
+          created_at: string
+          event_date: string | null
+          event_id: string | null
+          id: string
+          kind: Database["public"]["Enums"]["customer_booking_kind"]
+          notes: string | null
+          payment_status: Database["public"]["Enums"]["customer_payment_status"]
+          status: Database["public"]["Enums"]["customer_booking_status"]
+          target_id: string | null
+          target_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          event_date?: string | null
+          event_id?: string | null
+          id?: string
+          kind: Database["public"]["Enums"]["customer_booking_kind"]
+          notes?: string | null
+          payment_status?: Database["public"]["Enums"]["customer_payment_status"]
+          status?: Database["public"]["Enums"]["customer_booking_status"]
+          target_id?: string | null
+          target_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          event_date?: string | null
+          event_id?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["customer_booking_kind"]
+          notes?: string | null
+          payment_status?: Database["public"]["Enums"]["customer_payment_status"]
+          status?: Database["public"]["Enums"]["customer_booking_status"]
+          target_id?: string | null
+          target_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_bookings_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "customer_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_events: {
+        Row: {
+          budget: number | null
+          created_at: string
+          event_date: string | null
+          event_type: string | null
+          guests: number | null
+          id: string
+          name: string
+          notes: string | null
+          status: Database["public"]["Enums"]["customer_event_status"]
+          updated_at: string
+          user_id: string
+          venue: string | null
+        }
+        Insert: {
+          budget?: number | null
+          created_at?: string
+          event_date?: string | null
+          event_type?: string | null
+          guests?: number | null
+          id?: string
+          name: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["customer_event_status"]
+          updated_at?: string
+          user_id: string
+          venue?: string | null
+        }
+        Update: {
+          budget?: number | null
+          created_at?: string
+          event_date?: string | null
+          event_type?: string | null
+          guests?: number | null
+          id?: string
+          name?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["customer_event_status"]
+          updated_at?: string
+          user_id?: string
+          venue?: string | null
+        }
+        Relationships: []
+      }
+      customer_notifications: {
+        Row: {
+          action_url: string | null
+          body: string | null
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["customer_notification_kind"]
+          metadata: Json
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          action_url?: string | null
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["customer_notification_kind"]
+          metadata?: Json
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          action_url?: string | null
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["customer_notification_kind"]
+          metadata?: Json
+          read_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      customer_payments: {
+        Row: {
+          amount: number
+          booking_id: string | null
+          created_at: string
+          currency: string
+          description: string
+          id: string
+          invoice_number: string | null
+          method: string | null
+          paid_at: string | null
+          receipt_url: string | null
+          status: Database["public"]["Enums"]["customer_payment_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          booking_id?: string | null
+          created_at?: string
+          currency?: string
+          description: string
+          id?: string
+          invoice_number?: string | null
+          method?: string | null
+          paid_at?: string | null
+          receipt_url?: string | null
+          status?: Database["public"]["Enums"]["customer_payment_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          booking_id?: string | null
+          created_at?: string
+          currency?: string
+          description?: string
+          id?: string
+          invoice_number?: string | null
+          method?: string | null
+          paid_at?: string | null
+          receipt_url?: string | null
+          status?: Database["public"]["Enums"]["customer_payment_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "customer_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_preferences: {
+        Row: {
+          created_at: string
+          email_notifications: boolean
+          id: string
+          language: string
+          marketing_opt_in: boolean
+          push_notifications: boolean
+          sms_notifications: boolean
+          theme: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_notifications?: boolean
+          id?: string
+          language?: string
+          marketing_opt_in?: boolean
+          push_notifications?: boolean
+          sms_notifications?: boolean
+          theme?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email_notifications?: boolean
+          id?: string
+          language?: string
+          marketing_opt_in?: boolean
+          push_notifications?: boolean
+          sms_notifications?: boolean
+          theme?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      customer_reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["customer_wishlist_kind"]
+          rating: number
+          target_id: string
+          target_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["customer_wishlist_kind"]
+          rating: number
+          target_id: string
+          target_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["customer_wishlist_kind"]
+          rating?: number
+          target_id?: string
+          target_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      customer_wishlist: {
+        Row: {
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["customer_wishlist_kind"]
+          target_id: string
+          target_image_url: string | null
+          target_meta: Json
+          target_name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["customer_wishlist_kind"]
+          target_id: string
+          target_image_url?: string | null
+          target_meta?: Json
+          target_name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["customer_wishlist_kind"]
+          target_id?: string
+          target_image_url?: string | null
+          target_meta?: Json
+          target_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      customers: {
+        Row: {
+          address_line1: string | null
+          address_line2: string | null
+          avatar_url: string | null
+          city: string | null
+          created_at: string
+          date_of_birth: string | null
+          full_name: string | null
+          gender: string | null
+          id: string
+          phone: string | null
+          pincode: string | null
+          profile_completion: number
+          state: string | null
+          status: Database["public"]["Enums"]["customer_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
+          avatar_url?: string | null
+          city?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          full_name?: string | null
+          gender?: string | null
+          id?: string
+          phone?: string | null
+          pincode?: string | null
+          profile_completion?: number
+          state?: string | null
+          status?: Database["public"]["Enums"]["customer_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address_line1?: string | null
+          address_line2?: string | null
+          avatar_url?: string | null
+          city?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          full_name?: string | null
+          gender?: string | null
+          id?: string
+          phone?: string | null
+          pincode?: string | null
+          profile_completion?: number
+          state?: string | null
+          status?: Database["public"]["Enums"]["customer_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       enquiries: {
         Row: {
           contact_email: string
@@ -905,6 +1263,29 @@ export type Database = {
         | "worker"
         | "customer"
       booking_status: "pending" | "confirmed" | "cancelled" | "completed"
+      customer_booking_kind: "hall" | "vendor" | "worker"
+      customer_booking_status:
+        | "pending"
+        | "confirmed"
+        | "in_progress"
+        | "completed"
+        | "cancelled"
+        | "reschedule_requested"
+      customer_event_status: "planning" | "upcoming" | "completed" | "cancelled"
+      customer_notification_kind:
+        | "booking"
+        | "payment"
+        | "offer"
+        | "system"
+        | "review"
+      customer_payment_status:
+        | "pending"
+        | "paid"
+        | "failed"
+        | "refunded"
+        | "partial"
+      customer_status: "active" | "inactive" | "suspended" | "deleted"
+      customer_wishlist_kind: "hall" | "vendor" | "worker"
       enquiry_status:
         | "new"
         | "contacted"
@@ -1072,6 +1453,32 @@ export const Constants = {
         "customer",
       ],
       booking_status: ["pending", "confirmed", "cancelled", "completed"],
+      customer_booking_kind: ["hall", "vendor", "worker"],
+      customer_booking_status: [
+        "pending",
+        "confirmed",
+        "in_progress",
+        "completed",
+        "cancelled",
+        "reschedule_requested",
+      ],
+      customer_event_status: ["planning", "upcoming", "completed", "cancelled"],
+      customer_notification_kind: [
+        "booking",
+        "payment",
+        "offer",
+        "system",
+        "review",
+      ],
+      customer_payment_status: [
+        "pending",
+        "paid",
+        "failed",
+        "refunded",
+        "partial",
+      ],
+      customer_status: ["active", "inactive", "suspended", "deleted"],
+      customer_wishlist_kind: ["hall", "vendor", "worker"],
       enquiry_status: [
         "new",
         "contacted",
