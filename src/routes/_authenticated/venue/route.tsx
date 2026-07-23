@@ -14,18 +14,35 @@ export const Route = createFileRoute("/_authenticated/venue")({
   // — this guard additionally protects direct-URL access, same pattern as
   // the Admin route guard).
   beforeLoad: async () => {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) throw redirect({ to: "/login" });
+   const { data: profile } = await supabase
+.from("profiles")
+.select(`
+primary_role,
+approval_status
+`)
+.eq("id", userData.user.id)
+.single();
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("primary_role")
-      .eq("id", userData.user.id)
-      .maybeSingle();
+if (!profile)
+    throw redirect({ to: "/login" });
 
-    if (profile?.primary_role !== "hall_owner") throw redirect({ to: "/" });
-    return { userId: userData.user.id };
-  },
+if (profile.primary_role !== "hall_owner")
+    throw redirect({ to: "/" });
+
+if (profile.approval_status === "pending")
+    throw redirect({
+        to: "/verification-pending",
+    });
+
+if (profile.approval_status === "rejected")
+    throw redirect({
+        to: "/verification-rejected",
+    });
+
+if (profile.approval_status === "suspended")
+    throw redirect({
+        to: "/account-suspended",
+    });
   component: VenueShell,
 });
 
