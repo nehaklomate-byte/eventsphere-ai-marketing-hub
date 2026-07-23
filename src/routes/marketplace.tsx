@@ -34,7 +34,7 @@ function Marketplace() {
   useEffect(() => {
     supabase.from("halls")
       .select("id,name,city,state,category,cover_url,gallery,price_per_day,max_guests,verified,rating,review_count")
-      .eq("status", "published").is("deleted_at", null)
+      .eq("status", "published").eq("verified", true).is("deleted_at", null)
       .order("verified", { ascending: false })
       .then(({ data }) => setHalls((data as unknown as Hall[]) ?? []));
   }, []);
