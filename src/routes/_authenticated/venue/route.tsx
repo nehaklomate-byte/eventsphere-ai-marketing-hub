@@ -23,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/venue")({
       .eq("id", userData.user.id)
       .maybeSingle();
 
-    if (profile?.primary_role !== "hall_owner") throw redirect({ to: "/" });
+    if (profile?.primary_role !== "hall_owner") throw redirect({ to: "/_authenticated/admin/verification.tsx" });
     return { userId: userData.user.id };
   },
   component: VenueShell,
