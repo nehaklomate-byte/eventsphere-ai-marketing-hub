@@ -4,7 +4,7 @@ export type PrimaryRole = "organization" | "hall_owner" | "vendor" | "worker" | 
 
 export const DASHBOARD_PATH: Record<PrimaryRole, string> = {
   organization: "/organization",
-  hall_owner: "/hall",
+  hall_owner: "/venue",
   vendor: "/vendor",
   worker: "/worker",
   customer: "/customer",
