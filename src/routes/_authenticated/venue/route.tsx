@@ -1,34 +1,48 @@
 import { createFileRoute, Outlet, Link, useRouterState, useNavigate, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import {
-  LayoutDashboard, Inbox, CalendarCheck, Building2, Settings, LogOut, Menu, X, Clock, ShieldAlert,
+  LayoutDashboard, Inbox, CalendarCheck, Building2, Settings, LogOut, Menu, X, Clock, ShieldAlert, MailWarning,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSession } from "@/lib/session";
 
+type AccountStatus = "pending_approval" | "approved" | "rejected";
+type HallRow = { id: string; verification_status: string; rejection_reason: string | null } | null;
+
 export const Route = createFileRoute("/_authenticated/venue")({
-  // Two-part guard:
-  //  1) role must be hall_owner (same as before)
-  //  2) UNLESS they're heading to /venue/profile, they must already have an
-  //     *approved* hall — otherwise they're bounced to /venue/profile to
-  //     finish/submit it. This was the bug reported: previously ANY
-  //     hall_owner landed straight on the full dashboard regardless of
-  //     verification_status, because nothing checked it at the route level
-  //     (the badge on the dashboard home page was only a visual hint, not
-  //     an actual gate).
+  // Three checks, in order:
+  //  1) role must be hall_owner
+  //  2) profiles.account_status must be 'approved' (Step 1 — admin has to
+  //     approve the account itself first). If not, they see a full-screen
+  //     "waiting for approval" state — no profile form, no dashboard, nothing.
+  //  3) once account-approved, the same "must be on /venue/profile until
+  //     the hall's verification_status is 'approved'" gate as before (Step 2).
   beforeLoad: async ({ location }) => {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) throw redirect({ to: "/login" });
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("primary_role")
+      .select("primary_role, account_status, account_rejection_reason")
       .eq("id", userData.user.id)
       .maybeSingle();
 
     if (profile?.primary_role !== "hall_owner") throw redirect({ to: "/" });
+
+    const accountStatus = (profile.account_status as AccountStatus | null) ?? "pending_approval";
+
+    if (accountStatus !== "approved") {
+      // Not even the profile form is reachable yet — return early with no
+      // hall lookup needed; the component renders the waiting screen itself.
+      return {
+        userId: userData.user.id,
+        accountStatus,
+        accountRejectionReason: profile.account_rejection_reason as string | null,
+        hall: null as HallRow,
+      };
+    }
 
     const { data: hall } = await supabase
       .from("halls")
@@ -41,12 +55,9 @@ export const Route = createFileRoute("/_authenticated/venue")({
 
     const isApproved = hall?.verification_status === "approved";
     const onProfilePage = location.pathname === "/venue/profile";
+    if (!isApproved && !onProfilePage) throw redirect({ to: "/venue/profile" });
 
-    if (!isApproved && !onProfilePage) {
-      throw redirect({ to: "/venue/profile" });
-    }
-
-    return { userId: userData.user.id, hall };
+    return { userId: userData.user.id, accountStatus, accountRejectionReason: null, hall: hall as HallRow };
   },
   component: VenueShell,
 });
@@ -60,12 +71,12 @@ const NAV = [
 ];
 
 function VenueShell() {
-  const { hall } = Route.useRouteContext() as { userId: string; hall: { verification_status: string; rejection_reason: string | null } | null };
+  const { accountStatus, accountRejectionReason, hall } = Route.useRouteContext() as {
+    userId: string; accountStatus: AccountStatus; accountRejectionReason: string | null; hall: HallRow;
+  };
   const { user } = useSession();
-  const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   async function signOut() {
     await qc.cancelQueries();
@@ -74,10 +85,55 @@ function VenueShell() {
     navigate({ to: "/login", replace: true } as never);
   }
 
+  // ---- Step 1 gate: account not yet approved — full-screen, no sidebar ----
+  if (accountStatus !== "approved") {
+    const rejected = accountStatus === "rejected";
+    return (
+      <div className="grid min-h-dvh place-items-center bg-muted/30 px-6">
+        <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 text-center">
+          <Link to="/" className="mx-auto mb-6 flex justify-center"><Logo className="h-8" /></Link>
+          {rejected ? (
+            <>
+              <ShieldAlert className="mx-auto mb-3 h-9 w-9 text-rose-500" />
+              <h1 className="font-display text-xl font-semibold">Account not approved</h1>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {accountRejectionReason || "Your account application wasn't approved. Please contact support for details."}
+              </p>
+            </>
+          ) : (
+            <>
+              <Clock className="mx-auto mb-3 h-9 w-9 text-amber-500" />
+              <h1 className="font-display text-xl font-semibold">Waiting for admin approval</h1>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Thanks for registering as a Venue Owner. An admin needs to approve your account before you can
+                access your dashboard — you'll get a notification the moment that happens.
+              </p>
+            </>
+          )}
+          <button onClick={signOut} className="mt-6 flex w-full items-center justify-center gap-2 rounded-full border border-input px-4 py-2.5 text-sm font-semibold hover:bg-accent">
+            <LogOut className="h-4 w-4" /> Logout
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return <VenueShellApproved hall={hall} user={user} signOut={signOut} />;
+}
+
+function VenueShellApproved({
+  hall, user, signOut,
+}: {
+  hall: HallRow;
+  user: ReturnType<typeof useSession>["user"];
+  signOut: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isApproved = hall?.verification_status === "approved";
+
   const isActive = (to: string, exact?: boolean) =>
     exact ? pathname === to : pathname === to || pathname.startsWith(to + "/");
-
-  const isApproved = hall?.verification_status === "approved";
 
   return (
     <div className="min-h-dvh bg-muted/30">
@@ -103,7 +159,7 @@ function VenueShell() {
               const Icon = it.icon;
               return (
                 <Link
-                  key={it.to}
+                  key={it.label}
                   to={it.soon || locked ? "/venue/profile" : (it.to as never)}
                   onClick={() => setOpen(false)}
                   className={`group flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition ${
@@ -142,12 +198,10 @@ function VenueShell() {
             <div className={`mb-6 flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold ${
               hall?.verification_status === "rejected" ? "bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300" : "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
             }`}>
-              {hall?.verification_status === "rejected" ? <ShieldAlert className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
-              {!hall
-                ? "Complete your venue profile and submit it for admin review — the rest of your dashboard unlocks once approved."
-                : hall.verification_status === "rejected"
-                ? `Your submission was rejected${hall.rejection_reason ? `: ${hall.rejection_reason}` : ""}. Update your details and it will be re-reviewed.`
-                : "Your venue is awaiting admin verification. Enquiries, bookings and other tools unlock once approved."}
+              {hall?.verification_status === "rejected" ? <ShieldAlert className="h-4 w-4" /> : <MailWarning className="h-4 w-4" />}
+              {hall?.verification_status === "rejected"
+                ? `Your profile submission was rejected${hall.rejection_reason ? `: ${hall.rejection_reason}` : ""}. Update your details to resubmit.`
+                : "Your account is approved — now complete your venue profile fully and submit it for verification. Other tools unlock once that's approved."}
             </div>
           )}
           <Outlet />
