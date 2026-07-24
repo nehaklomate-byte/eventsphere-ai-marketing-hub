@@ -38,6 +38,11 @@ function VenueProfilePage() {
     set("facilities", { ...current, [name]: !current[name] } as never);
   }
 
+  function setExtra(key: string, value: unknown) {
+    const current = (form.additional_info as Record<string, unknown>) ?? {};
+    set("additional_info", { ...current, [key]: value } as never);
+  }
+
   async function upload(bucket: string, key: string, file: File): Promise<string | null> {
     setUploading(key);
     try {
@@ -95,6 +100,7 @@ function VenueProfilePage() {
   }
 
   const facilities = (form.facilities as Record<string, boolean>) ?? {};
+  const extra = (form.additional_info as Record<string, unknown>) ?? {};
 
   return (
     <div className="space-y-8 pb-24">
@@ -177,6 +183,84 @@ function VenueProfilePage() {
             </button>
           ))}
         </div>
+      </Section>
+
+      {/* Additional details */}
+      <Section title="Additional details">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Nearby landmark / how to reach">
+            <Input value={extra.nearby_landmark as string ?? ""} onChange={(v) => setExtra("nearby_landmark", v)} placeholder="e.g. 500m from City Railway Station" />
+          </Field>
+          <Field label="Google Maps link">
+            <Input value={extra.google_maps_link as string ?? ""} onChange={(v) => setExtra("google_maps_link", v)} placeholder="https://maps.google.com/…" />
+          </Field>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Catering policy">
+            <Select value={extra.catering_policy as string ?? ""} onChange={(v) => setExtra("catering_policy", v)}
+              options={["In-house catering only", "Outside caterers allowed", "Both allowed"]} />
+          </Field>
+          <Field label="Decoration policy">
+            <Select value={extra.decoration_policy as string ?? ""} onChange={(v) => setExtra("decoration_policy", v)}
+              options={["In-house decorator only", "Outside decorators allowed", "Both allowed"]} />
+          </Field>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Field label="Alcohol permitted">
+            <Select value={extra.alcohol_policy as string ?? ""} onChange={(v) => setExtra("alcohol_policy", v)}
+              options={["Not allowed", "Allowed with license", "Allowed"]} />
+          </Field>
+          <Field label="Music / DJ curfew">
+            <Input value={extra.music_curfew as string ?? ""} onChange={(v) => setExtra("music_curfew", v)} placeholder="e.g. Until 10:30 PM" />
+          </Field>
+          <Field label="Power backup">
+            <Select value={extra.power_backup as string ?? ""} onChange={(v) => setExtra("power_backup", v)}
+              options={["Full backup included", "Partial backup", "Not available"]} />
+          </Field>
+        </div>
+        <Field label="Payment modes accepted">
+          <div className="flex flex-wrap gap-2">
+            {["Cash", "UPI", "Card", "Bank transfer", "Cheque"].map((mode) => {
+              const list = (extra.payment_modes as string[]) ?? [];
+              const on = list.includes(mode);
+              return (
+                <button key={mode} type="button"
+                  onClick={() => setExtra("payment_modes", on ? list.filter((m) => m !== mode) : [...list, mode])}
+                  className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition ${on ? "border-brand-violet bg-brand-violet text-white" : "border-border bg-background text-muted-foreground hover:bg-accent"}`}
+                >
+                  {mode}
+                </button>
+              );
+            })}
+          </div>
+        </Field>
+        <Field label="Event types you host">
+          <div className="flex flex-wrap gap-2">
+            {["Wedding", "Engagement", "Reception", "Birthday", "Corporate", "Anniversary", "Baby Shower", "Other"].map((type) => {
+              const list = (extra.event_types as string[]) ?? [];
+              const on = list.includes(type);
+              return (
+                <button key={type} type="button"
+                  onClick={() => setExtra("event_types", on ? list.filter((t) => t !== type) : [...list, type])}
+                  className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition ${on ? "border-brand-violet bg-brand-violet text-white" : "border-border bg-background text-muted-foreground hover:bg-accent"}`}
+                >
+                  {type}
+                </button>
+              );
+            })}
+          </div>
+        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Instagram handle">
+            <Input value={extra.instagram as string ?? ""} onChange={(v) => setExtra("instagram", v)} placeholder="@yourvenue" />
+          </Field>
+          <Field label="Facebook page">
+            <Input value={extra.facebook as string ?? ""} onChange={(v) => setExtra("facebook", v)} placeholder="facebook.com/yourvenue" />
+          </Field>
+        </div>
+        <Field label="Anything else customers should know">
+          <Textarea value={extra.extra_notes as string ?? ""} onChange={(v) => setExtra("extra_notes", v)} />
+        </Field>
       </Section>
 
       {/* Media */}
@@ -271,6 +355,19 @@ function Textarea({ value, onChange }: { value: string; onChange: (v: string) =>
       onChange={(e) => onChange(e.target.value)}
       className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet"
     />
+  );
+}
+
+function Select({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: string[] }) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet"
+    >
+      <option value="">Select…</option>
+      {options.map((o) => <option key={o} value={o}>{o}</option>)}
+    </select>
   );
 }
 
