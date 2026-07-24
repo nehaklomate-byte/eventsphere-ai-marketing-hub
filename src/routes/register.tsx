@@ -219,10 +219,12 @@ function RoleForm({ role, onBack, onDone }: { role: Role; onBack: () => void; on
 
   async function handleGoogle() {
     setServerErr(null);
-    // Persist chosen role so /auth/callback can attach it to the new profile
     sessionStorage.setItem("pending_primary_role", role);
-    const res = await lovable.auth.signInWithOAuth("google", { redirect_uri: `${window.location.origin}/auth/callback` });
-    if (res.error) setServerErr("Google sign-in failed. Please try again.");
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+    if (error) setServerErr("Google sign-in failed. Please try again.");
   }
 
   const pw = String(values.password ?? "");
