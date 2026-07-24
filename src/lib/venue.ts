@@ -55,6 +55,7 @@ export type Hall = {
   rating: number;
   review_count: number;
   created_at: string;
+  additional_info: Record<string, unknown>;
 };
 
 export type Enquiry = {
