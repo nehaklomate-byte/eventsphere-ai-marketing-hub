@@ -3,10 +3,10 @@ import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  ShieldCheck, FileText, MapPin, Mail, Phone, Check, X, Ban, ShieldAlert, RotateCcw, Loader2, Eye,
+  ShieldCheck, FileText, MapPin, Mail, Phone, Check, X, Ban, ShieldAlert, RotateCcw, Loader2, Eye, Download,
 } from "lucide-react";
 import {
-  fetchQueue, approve, reject, suspend, blacklist, restore, fetchFullRecord,
+  fetchQueue, approve, reject, suspend, blacklist, restore, fetchFullRecord, downloadCsv,
   ROLE_LABEL, type QueueRow, type VerificationRole, type VerificationStatus,
 } from "@/lib/admin";
 
@@ -80,13 +80,22 @@ function VerificationCenter() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="flex items-center gap-2 text-2xl md:text-3xl font-bold tracking-tight">
-          <ShieldCheck className="h-7 w-7 text-brand-violet" /> Verification Center
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          Review documents and approve, reject, suspend or blacklist Organization, Venue Owner, Vendor and Worker applications.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="flex items-center gap-2 text-2xl md:text-3xl font-bold tracking-tight">
+            <ShieldCheck className="h-7 w-7 text-brand-violet" /> Verification Center
+          </h1>
+          <p className="mt-1 text-muted-foreground">
+            Review documents and approve, reject, suspend or blacklist Organization, Venue Owner, Vendor and Worker applications.
+          </p>
+        </div>
+        <button
+          onClick={() => rows.length && downloadCsv(`verification-${roleTab}-${statusTab}-${new Date().toISOString().slice(0, 10)}.csv`, rows as unknown as Record<string, unknown>[])}
+          disabled={rows.length === 0}
+          className="flex items-center gap-1.5 rounded-full border border-input px-4 py-2 text-sm font-semibold hover:bg-accent disabled:opacity-40"
+        >
+          <Download className="h-4 w-4" /> Download CSV
+        </button>
       </div>
 
       {/* Role tabs */}
