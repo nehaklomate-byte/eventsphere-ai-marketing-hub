@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useRouterState, useNavigate, redirect } 
 import { useState } from "react";
 import {
   LayoutDashboard, ShieldCheck, Users, Building2, Landmark, Briefcase, HardHat,
-  Bell, Settings, LogOut, Menu, X,
+  Bell, Settings, LogOut, Menu, X, UserCheck,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,6 +39,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
 // out four "Coming soon" placeholders.
 const NAV = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { to: "/admin/accounts", label: "Account Approvals", icon: UserCheck },
   { to: "/admin/verification", label: "Verification Center", icon: ShieldCheck },
   { to: "/admin/verification", label: "Organizations", icon: Building2, search: { role: "organization" } },
   { to: "/admin/verification", label: "Venue Owners", icon: Landmark, search: { role: "venue" } },
