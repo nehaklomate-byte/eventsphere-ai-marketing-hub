@@ -134,3 +134,54 @@ export const blacklist = (role: VerificationRole, id: string, ownerId: string, r
 
 export const restore = (role: VerificationRole, id: string, ownerId: string) =>
   setStatus(role, id, ownerId, "approved", "restore");
+
+/* ============================================================
+ * Step 1 — Account approval (profiles.account_status).
+ * Separate from everything above: this gates whether a newly registered
+ * Organization/Venue Owner/Vendor/Worker can even open their dashboard or
+ * profile form at all, before they've submitted anything for review.
+ * ========================================================== */
+
+export type AccountRow = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  phone: string | null;
+  primary_role: string | null;
+  account_status: "pending_approval" | "approved" | "rejected";
+  account_rejection_reason: string | null;
+  created_at: string;
+};
+
+export async function fetchPendingAccounts(): Promise<AccountRow[]> {
+  const { data, error } = await supabase
+    .from("profiles" as never)
+    .select("id, full_name, email, phone, primary_role, account_status, account_rejection_reason, created_at" as never)
+    .eq("account_status" as never, "pending_approval" as never)
+    .order("created_at" as never, { ascending: false });
+  if (error) throw error;
+  return (data as unknown as AccountRow[]) ?? [];
+}
+
+export async function fetchPendingAccountCount(): Promise<number> {
+  const { count, error } = await supabase
+    .from("profiles" as never)
+    .select("id" as never, { count: "exact", head: true })
+    .eq("account_status" as never, "pending_approval" as never);
+  if (error) throw error;
+  return count ?? 0;
+}
+
+export async function approveAccount(userId: string): Promise<void> {
+  const { error } = await supabase.from("profiles" as never).update({ account_status: "approved" } as never).eq("id" as never, userId as never);
+  if (error) throw error;
+  await writeAudit("approve_account", "profiles", userId, null, { account_status: "approved" });
+  await notify(userId, "Account approved ✅", "Your account has been approved. Now complete your profile in full and submit it for verification.", "success");
+}
+
+export async function rejectAccount(userId: string, reason: string): Promise<void> {
+  const { error } = await supabase.from("profiles" as never).update({ account_status: "rejected", account_rejection_reason: reason } as never).eq("id" as never, userId as never);
+  if (error) throw error;
+  await writeAudit("reject_account", "profiles", userId, null, { account_status: "rejected", reason });
+  await notify(userId, "Account not approved", reason ? `Reason: ${reason}` : "Please contact support for details.", "error");
+}
