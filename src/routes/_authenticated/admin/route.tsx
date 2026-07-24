@@ -32,14 +32,19 @@ export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminShell,
 });
 
+// Organizations / Venue Owners / Vendors / Workers all open the same
+// Verification Center, pre-filtered to that role via the `role` search
+// param (verification.tsx already reads it) — a dedicated page per role
+// would just duplicate that screen, so this reuses it instead of stubbing
+// out four "Coming soon" placeholders.
 const NAV = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/admin/verification", label: "Verification Center", icon: ShieldCheck },
-  { to: "/admin/organizations", label: "Organizations", icon: Building2, soon: true },
-  { to: "/admin/venues", label: "Venue Owners", icon: Landmark, soon: true },
-  { to: "/admin/vendors", label: "Vendors", icon: Briefcase, soon: true },
-  { to: "/admin/workers", label: "Workers", icon: HardHat, soon: true },
-  { to: "/admin/users", label: "Users", icon: Users, soon: true },
+  { to: "/admin/verification", label: "Organizations", icon: Building2, search: { role: "organization" } },
+  { to: "/admin/verification", label: "Venue Owners", icon: Landmark, search: { role: "venue" } },
+  { to: "/admin/verification", label: "Vendors", icon: Briefcase, search: { role: "vendor" } },
+  { to: "/admin/verification", label: "Workers", icon: HardHat, search: { role: "worker" } },
+  { to: "/admin/users", label: "Users", icon: Users },
   { to: "/admin/notifications", label: "Broadcast Center", icon: Bell, soon: true },
   { to: "/admin/settings", label: "Settings", icon: Settings, soon: true },
 ];
@@ -80,12 +85,16 @@ function AdminShell() {
           </div>
           <nav className="flex flex-col gap-0.5 p-3">
             {NAV.map((it) => {
-              const active = isActive(it.to, it.exact);
+              const currentRole = new URLSearchParams(pathname === "/admin/verification" ? window.location.search : "").get("role");
+              const active = it.search
+                ? pathname === it.to && currentRole === it.search.role
+                : isActive(it.to, it.exact) && (it.to !== "/admin/verification" || !currentRole);
               const Icon = it.icon;
               return (
                 <Link
-                  key={it.to}
+                  key={it.label}
                   to={it.soon ? "/admin/verification" : (it.to as never)}
+                  search={it.search as never}
                   onClick={() => setOpen(false)}
                   className={`group flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition ${
                     active ? "bg-gradient-to-r from-brand-violet/15 to-secondary/10 text-foreground shadow-sm" : "text-muted-foreground hover:bg-accent hover:text-foreground"
