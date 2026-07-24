@@ -5,6 +5,7 @@ import { Eye, EyeOff, Loader2, Lock, Mail, ShieldCheck, Sparkles, CheckCircle2, 
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
+import { supabase as supabaseAuth } from "@/integrations/supabase/client";
 import { emailSchema } from "@/lib/validation";
 import { resolveDashboardPath, humanizeAuthError } from "@/lib/auth-redirect";
 import { z } from "zod";
