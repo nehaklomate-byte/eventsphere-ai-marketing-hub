@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ShieldCheck, Building2, Landmark, Briefcase, HardHat, ArrowUpRight } from "lucide-react";
-import { fetchPendingCounts, ROLE_LABEL, type VerificationRole } from "@/lib/admin";
+import { ShieldCheck, Building2, Landmark, Briefcase, HardHat, ArrowUpRight, UserCheck } from "lucide-react";
+import { fetchPendingCounts, fetchPendingAccountCount, ROLE_LABEL, type VerificationRole } from "@/lib/admin";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
   head: () => ({ meta: [{ title: "Admin Dashboard — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
@@ -21,6 +21,11 @@ function AdminDashboardHome() {
     queryFn: fetchPendingCounts,
     refetchInterval: 30_000,
   });
+  const { data: pendingAccounts } = useQuery({
+    queryKey: ["admin-pending-account-count"],
+    queryFn: fetchPendingAccountCount,
+    refetchInterval: 30_000,
+  });
 
   const totalPending = counts ? Object.values(counts).reduce((a, b) => a + b, 0) : 0;
 
@@ -35,6 +40,18 @@ function AdminDashboardHome() {
           Verify new applications, monitor platform health, and keep every role's dashboard access under control.
         </p>
       </div>
+
+      {!!pendingAccounts && pendingAccounts > 0 && (
+        <Link
+          to="/admin/accounts"
+          className="flex items-center justify-between rounded-2xl border border-blue-300/60 bg-blue-50 dark:bg-blue-950/20 px-6 py-4 text-sm font-semibold text-blue-800 dark:text-blue-300 hover:border-blue-400 transition"
+        >
+          <span className="flex items-center gap-2">
+            <UserCheck className="h-4 w-4" /> {pendingAccounts} new account{pendingAccounts === 1 ? "" : "s"} waiting for Step 1 approval
+          </span>
+          <ArrowUpRight className="h-4 w-4" />
+        </Link>
+      )}
 
       {totalPending > 0 && (
         <Link
