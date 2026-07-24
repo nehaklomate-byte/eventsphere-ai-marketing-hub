@@ -64,6 +64,12 @@ function VenueProfilePage() {
       if (publish !== undefined) patch.status = publish ? "published" : "draft";
       delete (patch as { id?: string }).id;
 
+      // A first-time submission or an edit after rejection goes back into
+      // the admin review queue. An already-approved venue keeps its status
+      // on routine edits, so owners aren't re-blocked for small changes.
+      const wasRejectedOrNew = !form.id || form.verification_status === "rejected";
+      if (wasRejectedOrNew) patch.verification_status = "pending";
+
       if (!form.id) {
         const created = await createHall(userData.user.id, form.name || "My Venue");
         await updateHall(created.id, patch);
@@ -71,7 +77,11 @@ function VenueProfilePage() {
       } else {
         await updateHall(form.id, patch);
       }
-      toast.success(publish === true ? "Venue published — now visible on the marketplace." : publish === false ? "Venue unpublished." : "Saved");
+      toast.success(
+        wasRejectedOrNew
+          ? "Submitted for admin review — you'll be notified once it's approved."
+          : publish === true ? "Venue published — now visible on the marketplace." : publish === false ? "Venue unpublished." : "Saved"
+      );
       qc.invalidateQueries({ queryKey: ["venue-halls"] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save");
