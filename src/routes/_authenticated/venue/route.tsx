@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, Link, useRouterState, useNavigate, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import {
-  LayoutDashboard, Inbox, CalendarCheck, Building2, Settings, LogOut, Menu, X,
+  LayoutDashboard, Inbox, CalendarCheck, Building2, Settings, LogOut, Menu, X, Clock, ShieldAlert,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,11 +9,16 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useSession } from "@/lib/session";
 
 export const Route = createFileRoute("/_authenticated/venue")({
-  // Requires profiles.primary_role = 'hall_owner' (the login redirect already
-  // sends hall_owner users to /venue — see DASHBOARD_PATH in auth-redirect.ts
-  // — this guard additionally protects direct-URL access, same pattern as
-  // the Admin route guard).
-  beforeLoad: async () => {
+  // Two-part guard:
+  //  1) role must be hall_owner (same as before)
+  //  2) UNLESS they're heading to /venue/profile, they must already have an
+  //     *approved* hall — otherwise they're bounced to /venue/profile to
+  //     finish/submit it. This was the bug reported: previously ANY
+  //     hall_owner landed straight on the full dashboard regardless of
+  //     verification_status, because nothing checked it at the route level
+  //     (the badge on the dashboard home page was only a visual hint, not
+  //     an actual gate).
+  beforeLoad: async ({ location }) => {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) throw redirect({ to: "/login" });
 
@@ -24,7 +29,24 @@ export const Route = createFileRoute("/_authenticated/venue")({
       .maybeSingle();
 
     if (profile?.primary_role !== "hall_owner") throw redirect({ to: "/" });
-    return { userId: userData.user.id };
+
+    const { data: hall } = await supabase
+      .from("halls")
+      .select("id, verification_status, rejection_reason")
+      .eq("owner_id", userData.user.id)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const isApproved = hall?.verification_status === "approved";
+    const onProfilePage = location.pathname === "/venue/profile";
+
+    if (!isApproved && !onProfilePage) {
+      throw redirect({ to: "/venue/profile" });
+    }
+
+    return { userId: userData.user.id, hall };
   },
   component: VenueShell,
 });
@@ -38,6 +60,7 @@ const NAV = [
 ];
 
 function VenueShell() {
+  const { hall } = Route.useRouteContext() as { userId: string; hall: { verification_status: string; rejection_reason: string | null } | null };
   const { user } = useSession();
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
@@ -53,6 +76,8 @@ function VenueShell() {
 
   const isActive = (to: string, exact?: boolean) =>
     exact ? pathname === to : pathname === to || pathname.startsWith(to + "/");
+
+  const isApproved = hall?.verification_status === "approved";
 
   return (
     <div className="min-h-dvh bg-muted/30">
@@ -73,21 +98,23 @@ function VenueShell() {
           </div>
           <nav className="flex flex-col gap-0.5 p-3">
             {NAV.map((it) => {
+              const locked = !isApproved && it.to !== "/venue/profile";
               const active = isActive(it.to, it.exact);
               const Icon = it.icon;
               return (
                 <Link
                   key={it.to}
-                  to={it.soon ? "/venue" : (it.to as never)}
+                  to={it.soon || locked ? "/venue/profile" : (it.to as never)}
                   onClick={() => setOpen(false)}
                   className={`group flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition ${
                     active ? "bg-gradient-to-r from-brand-violet/15 to-secondary/10 text-foreground shadow-sm" : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                  }`}
+                  } ${locked ? "opacity-50" : ""}`}
                 >
                   <span className="flex items-center gap-3">
                     <Icon className="h-4 w-4" /> {it.label}
                   </span>
                   {it.soon && <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">Soon</span>}
+                  {locked && !it.soon && <Clock className="h-3.5 w-3.5" />}
                 </Link>
               );
             })}
@@ -111,6 +138,18 @@ function VenueShell() {
         {open && <div className="fixed inset-0 z-40 bg-black/40 md:hidden" onClick={() => setOpen(false)} />}
 
         <main className="min-h-dvh flex-1 px-4 md:px-8 py-6 md:py-10">
+          {!isApproved && (
+            <div className={`mb-6 flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold ${
+              hall?.verification_status === "rejected" ? "bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300" : "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+            }`}>
+              {hall?.verification_status === "rejected" ? <ShieldAlert className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
+              {!hall
+                ? "Complete your venue profile and submit it for admin review — the rest of your dashboard unlocks once approved."
+                : hall.verification_status === "rejected"
+                ? `Your submission was rejected${hall.rejection_reason ? `: ${hall.rejection_reason}` : ""}. Update your details and it will be re-reviewed.`
+                : "Your venue is awaiting admin verification. Enquiries, bookings and other tools unlock once approved."}
+            </div>
+          )}
           <Outlet />
         </main>
       </div>
