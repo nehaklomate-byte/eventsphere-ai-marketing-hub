@@ -5,48 +5,35 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "@/lib/session";
 
-type AccountStatus = "pending_approval" | "approved" | "rejected";
-type HallRow = { id: string; verification_status: string; rejection_reason: string | null } | null;
-
+// beforeLoad here does the redirect-only gatekeeping (role check, and
+// bouncing to /venue/profile when the hall isn't approved yet). It
+// deliberately does NOT return data for the component to read via
+// Route.useRouteContext() — that pattern broke this project's TanStack
+// route-generator during the Vercel build ("SyntaxError: Unexpected
+// token" while crawling this file), silently leaving every deploy on a
+// stale build. The component instead re-fetches what it needs itself
+// with a normal useQuery, the same way every other dashboard page here
+// already does.
 export const Route = createFileRoute("/_authenticated/venue")({
-  // Three checks, in order:
-  //  1) role must be hall_owner
-  //  2) profiles.account_status must be 'approved' (Step 1 — admin has to
-  //     approve the account itself first). If not, they see a full-screen
-  //     "waiting for approval" state — no profile form, no dashboard, nothing.
-  //  3) once account-approved, the same "must be on /venue/profile until
-  //     the hall's verification_status is 'approved'" gate as before (Step 2).
   beforeLoad: async ({ location }) => {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) throw redirect({ to: "/login" });
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("primary_role, account_status, account_rejection_reason")
+      .select("primary_role, account_status")
       .eq("id", userData.user.id)
       .maybeSingle();
 
     if (profile?.primary_role !== "hall_owner") throw redirect({ to: "/" });
-
-    const accountStatus = (profile.account_status as AccountStatus | null) ?? "pending_approval";
-
-    if (accountStatus !== "approved") {
-      // Not even the profile form is reachable yet — return early with no
-      // hall lookup needed; the component renders the waiting screen itself.
-      return {
-        userId: userData.user.id,
-        accountStatus,
-        accountRejectionReason: profile.account_rejection_reason as string | null,
-        hall: null as HallRow,
-      };
-    }
+    if (profile.account_status !== "approved") return; // waiting screen renders itself, no redirect target needed
 
     const { data: hall } = await supabase
       .from("halls")
-      .select("id, verification_status, rejection_reason")
+      .select("id, verification_status")
       .eq("owner_id", userData.user.id)
       .is("deleted_at", null)
       .order("created_at", { ascending: false })
@@ -54,13 +41,35 @@ export const Route = createFileRoute("/_authenticated/venue")({
       .maybeSingle();
 
     const isApproved = hall?.verification_status === "approved";
-    const onProfilePage = location.pathname === "/venue/profile";
-    if (!isApproved && !onProfilePage) throw redirect({ to: "/venue/profile" });
-
-    return { userId: userData.user.id, accountStatus, accountRejectionReason: null, hall: hall as HallRow };
+    if (!isApproved && location.pathname !== "/venue/profile") {
+      throw redirect({ to: "/venue/profile" });
+    }
   },
   component: VenueShell,
 });
+
+type ProfileGate = { primary_role: string | null; account_status: "pending_approval" | "approved" | "rejected" | null; account_rejection_reason: string | null };
+type HallGate = { id: string; verification_status: string; rejection_reason: string | null } | null;
+
+async function fetchGateData(): Promise<{ profile: ProfileGate | null; hall: HallGate }> {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return { profile: null, hall: null };
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("primary_role, account_status, account_rejection_reason")
+    .eq("id", userData.user.id)
+    .maybeSingle();
+  if (profile?.account_status !== "approved") return { profile: profile as ProfileGate, hall: null };
+  const { data: hall } = await supabase
+    .from("halls")
+    .select("id, verification_status, rejection_reason")
+    .eq("owner_id", userData.user.id)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return { profile: profile as ProfileGate, hall: hall as HallGate };
+}
 
 const NAV = [
   { to: "/venue", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -71,12 +80,12 @@ const NAV = [
 ];
 
 function VenueShell() {
-  const { accountStatus, accountRejectionReason, hall } = Route.useRouteContext() as {
-    userId: string; accountStatus: AccountStatus; accountRejectionReason: string | null; hall: HallRow;
-  };
   const { user } = useSession();
+  const { data, isLoading } = useQuery({ queryKey: ["venue-gate"], queryFn: fetchGateData });
+  const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   async function signOut() {
     await qc.cancelQueries();
@@ -84,6 +93,13 @@ function VenueShell() {
     await supabase.auth.signOut();
     navigate({ to: "/login", replace: true } as never);
   }
+
+  if (isLoading) {
+    return <div className="grid min-h-dvh place-items-center bg-background"><Loader className="h-6 w-6" /></div>;
+  }
+
+  const accountStatus = data?.profile?.account_status ?? "pending_approval";
+  const hall = data?.hall ?? null;
 
   // ---- Step 1 gate: account not yet approved — full-screen, no sidebar ----
   if (accountStatus !== "approved") {
@@ -97,7 +113,7 @@ function VenueShell() {
               <ShieldAlert className="mx-auto mb-3 h-9 w-9 text-rose-500" />
               <h1 className="font-display text-xl font-semibold">Account not approved</h1>
               <p className="mt-2 text-sm text-muted-foreground">
-                {accountRejectionReason || "Your account application wasn't approved. Please contact support for details."}
+                {data?.profile?.account_rejection_reason || "Your account application wasn't approved. Please contact support for details."}
               </p>
             </>
           ) : (
@@ -118,20 +134,7 @@ function VenueShell() {
     );
   }
 
-  return <VenueShellApproved hall={hall} user={user} signOut={signOut} />;
-}
-
-function VenueShellApproved({
-  hall, user, signOut,
-}: {
-  hall: HallRow;
-  user: ReturnType<typeof useSession>["user"];
-  signOut: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isApproved = hall?.verification_status === "approved";
-
   const isActive = (to: string, exact?: boolean) =>
     exact ? pathname === to : pathname === to || pathname.startsWith(to + "/");
 
@@ -208,5 +211,14 @@ function VenueShellApproved({
         </main>
       </div>
     </div>
+  );
+}
+
+function Loader({ className }: { className?: string }) {
+  return (
+    <svg className={`${className} animate-spin text-brand-violet`} viewBox="0 0 24 24" fill="none">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
   );
 }
