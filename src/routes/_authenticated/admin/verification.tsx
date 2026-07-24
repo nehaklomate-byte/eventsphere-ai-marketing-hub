@@ -3,10 +3,10 @@ import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  ShieldCheck, FileText, MapPin, Mail, Phone, Check, X, Ban, ShieldAlert, RotateCcw, Loader2,
+  ShieldCheck, FileText, MapPin, Mail, Phone, Check, X, Ban, ShieldAlert, RotateCcw, Loader2, Eye,
 } from "lucide-react";
 import {
-  fetchQueue, approve, reject, suspend, blacklist, restore,
+  fetchQueue, approve, reject, suspend, blacklist, restore, fetchFullRecord,
   ROLE_LABEL, type QueueRow, type VerificationRole, type VerificationStatus,
 } from "@/lib/admin";
 
@@ -37,6 +37,7 @@ function VerificationCenter() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [reasonFor, setReasonFor] = useState<{ row: QueueRow; action: "reject" | "suspend" | "blacklist" } | null>(null);
   const [reasonText, setReasonText] = useState("");
+  const [detailsFor, setDetailsFor] = useState<QueueRow | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin-verification-queue", roleTab, statusTab],
@@ -138,6 +139,7 @@ function VerificationCenter() {
               onSuspend={() => openReasonDialog(row, "suspend")}
               onBlacklist={() => openReasonDialog(row, "blacklist")}
               onRestore={() => run(() => restore(row.role, row.id, row.user_id), row.id)}
+              onViewDetails={() => setDetailsFor(row)}
             />
           ))}
         </div>
@@ -168,12 +170,56 @@ function VerificationCenter() {
           </div>
         </div>
       )}
+
+      {detailsFor && <DetailsModal row={detailsFor} onClose={() => setDetailsFor(null)} />}
+    </div>
+  );
+}
+
+/** Every field submitted at registration — the full row from the real
+ * table (not just the summary columns the queue view carries). */
+function DetailsModal({ row, onClose }: { row: QueueRow; onClose: () => void }) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["admin-full-record", row.role, row.id],
+    queryFn: () => fetchFullRecord(row.role, row.id),
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onClick={onClose}>
+      <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-card p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="font-display text-lg font-semibold">{row.title} — full submission</h3>
+          <button onClick={onClose} className="rounded-full p-1.5 hover:bg-accent"><X className="h-4 w-4" /></button>
+        </div>
+
+        {isLoading ? (
+          <div className="py-10 text-center"><Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" /></div>
+        ) : error ? (
+          <p className="text-sm text-rose-500">Couldn't load full details: {error instanceof Error ? error.message : "unknown error"}</p>
+        ) : data ? (
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+            {Object.entries(data)
+              .filter(([key]) => !["id", "owner_id", "documents"].includes(key))
+              .map(([key, value]) => (
+                <div key={key} className="border-b border-border/60 pb-2">
+                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{key.replace(/_/g, " ")}</dt>
+                  <dd className="mt-0.5 break-words text-sm text-foreground">
+                    {value === null || value === "" ? <span className="text-muted-foreground/60">— empty —</span>
+                      : typeof value === "boolean" ? (value ? "Yes" : "No")
+                      : typeof value === "object" ? JSON.stringify(value)
+                      : String(value)}
+                  </dd>
+                </div>
+              ))}
+          </dl>
+        ) : null}
+      </div>
     </div>
   );
 }
 
 function ApplicationCard({
-  row, busy, onApprove, onReject, onSuspend, onBlacklist, onRestore,
+  row, busy, onApprove, onReject, onSuspend, onBlacklist, onRestore, onViewDetails,
 }: {
   row: QueueRow;
   busy: boolean;
@@ -182,6 +228,7 @@ function ApplicationCard({
   onSuspend: () => void;
   onBlacklist: () => void;
   onRestore: () => void;
+  onViewDetails: () => void;
 }) {
   const isActionable = row.verification_status === "pending";
   const isSuspendedOrBlacklisted = row.verification_status === "suspended" || row.verification_status === "blacklisted";
@@ -212,6 +259,12 @@ function ApplicationCard({
         </div>
 
         <div className="flex flex-wrap gap-2">
+          <button
+            onClick={onViewDetails}
+            className="flex items-center gap-1.5 rounded-full border border-input px-3.5 py-2 text-xs font-semibold hover:bg-accent"
+          >
+            <Eye className="h-3.5 w-3.5" /> View full details
+          </button>
           {isActionable && (
             <>
               <ActionButton busy={busy} onClick={onApprove} icon={Check} label="Approve" tone="success" />
