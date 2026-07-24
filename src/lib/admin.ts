@@ -167,13 +167,36 @@ export type AccountRow = {
 };
 
 export async function fetchPendingAccounts(): Promise<AccountRow[]> {
-  const { data, error } = await supabase
+  return fetchAccountsByStatus("pending_approval");
+}
+
+export async function fetchAccountsByStatus(status: "pending_approval" | "approved" | "rejected" | "all"): Promise<AccountRow[]> {
+  let q = supabase
     .from("profiles" as never)
     .select("id, full_name, email, phone, primary_role, account_status, account_rejection_reason, created_at" as never)
-    .eq("account_status" as never, "pending_approval" as never)
-    .order("created_at" as never, { ascending: false });
+    .neq("primary_role" as never, "customer" as never)
+    .neq("primary_role" as never, "admin" as never);
+  if (status !== "all") q = q.eq("account_status" as never, status as never);
+  const { data, error } = await q.order("created_at" as never, { ascending: false });
   if (error) throw error;
   return (data as unknown as AccountRow[]) ?? [];
+}
+
+/** The role-specific row (halls/vendors/workers/organizations) linked to a
+ * given profile — lets an admin review the full registration submission
+ * during Step 1, before the applicant has even reached Step 2. */
+export async function fetchRoleRecordByOwner(role: string, ownerId: string): Promise<Record<string, unknown> | null> {
+  const table = ROLE_TABLE[role as VerificationRole];
+  if (!table) return null;
+  const { data, error } = await supabase.from(table as never).select("*").eq("owner_id" as never, ownerId as never).maybeSingle();
+  if (error) throw error;
+  return (data as unknown as Record<string, unknown>) ?? null;
+}
+
+export function roleFromPrimaryRole(primaryRole: string | null): VerificationRole | null {
+  if (primaryRole === "hall_owner") return "venue";
+  if (primaryRole === "vendor" || primaryRole === "worker" || primaryRole === "organization") return primaryRole as VerificationRole;
+  return null;
 }
 
 export async function fetchPendingAccountCount(): Promise<number> {
@@ -197,4 +220,24 @@ export async function rejectAccount(userId: string, reason: string): Promise<voi
   if (error) throw error;
   await writeAudit("reject_account", "profiles", userId, null, { account_status: "rejected", reason });
   await notify(userId, "Account not approved", reason ? `Reason: ${reason}` : "Please contact support for details.", "error");
+}
+
+/** Generic CSV export — used by both Account Approvals and the
+ * Verification Center "Download CSV" buttons. Flattens objects/arrays to
+ * single cells so it opens cleanly in Excel/Sheets. */
+export function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
+  if (rows.length === 0) return;
+  const headers = Array.from(rows.reduce((set, r) => { Object.keys(r).forEach((k) => set.add(k)); return set; }, new Set<string>()));
+  const escape = (v: unknown) => {
+    const s = v === null || v === undefined ? "" : typeof v === "object" ? JSON.stringify(v) : String(v);
+    return `"${s.replace(/"/g, '""')}"`;
+  };
+  const csv = [headers.join(","), ...rows.map((r) => headers.map((h) => escape(r[h])).join(","))].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
