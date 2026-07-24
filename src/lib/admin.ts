@@ -57,6 +57,19 @@ export async function fetchQueue(opts?: { role?: VerificationRole; status?: Veri
   return (data as unknown as QueueRow[]) ?? [];
 }
 
+/**
+ * The queue view only carries a handful of summary columns (title, city,
+ * email…) — enough for the list, not enough to actually verify someone.
+ * This fetches the FULL row from the real table (halls/vendors/workers/
+ * organizations) so the admin can review every field the applicant submitted.
+ */
+export async function fetchFullRecord(role: VerificationRole, id: string): Promise<Record<string, unknown>> {
+  const table = ROLE_TABLE[role];
+  const { data, error } = await supabase.from(table as never).select("*").eq("id" as never, id as never).single();
+  if (error) throw error;
+  return data as unknown as Record<string, unknown>;
+}
+
 /** Pending-count per role, for the Admin dashboard home cards. */
 export async function fetchPendingCounts(): Promise<Record<VerificationRole, number>> {
   const { data, error } = await supabase
