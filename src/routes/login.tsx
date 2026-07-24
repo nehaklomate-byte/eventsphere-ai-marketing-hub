@@ -72,12 +72,14 @@ function LoginPage() {
     navigate({ to: path, replace: true } as never);
   }
 
-  async function handleGoogle() {
+ async function handleGoogle() {
     setGLoading(true); setError(null);
-    const res = await lovable.auth.signInWithOAuth("google", { redirect_uri: `${window.location.origin}/auth/callback` });
-    if (res.error) { setError("Google sign-in failed. Please try again."); setGLoading(false); return; }
-    if (res.redirected) return;
-    navigate({ to: "/auth/callback", replace: true } as never);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+    if (error) { setError("Google sign-in failed. Please try again."); setGLoading(false); }
+    // On success, Supabase redirects the browser to Google itself — no further code runs here.
   }
 
   if (!checked) return <div className="grid min-h-dvh place-items-center bg-background"><Loader2 className="h-6 w-6 animate-spin text-brand-violet" /></div>;
