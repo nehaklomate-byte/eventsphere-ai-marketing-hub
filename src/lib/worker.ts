@@ -68,6 +68,17 @@ export type WorkerTask = {
   resumed_at: string | null;
   completed_at: string | null;
   created_at: string;
+  // Attendance + photo-proof (check-in on starting work, check-out + work-proof on completing)
+  check_in_at: string | null;
+  check_in_photo_url: string | null;
+  check_in_lat: number | null;
+  check_in_lng: number | null;
+  check_out_at: string | null;
+  check_out_photo_url: string | null;
+  check_out_lat: number | null;
+  check_out_lng: number | null;
+  completion_photo_urls: string[];
+  completion_notes: string | null;
 };
 
 export type WorkerNotification = {
@@ -104,6 +115,36 @@ export async function fetchMyWorker(userId: string) {
     .maybeSingle();
   if (error) throw error;
   return data as unknown as WorkerRow | null;
+}
+
+/**
+ * Shared file upload for the worker module — used by Profile (portfolio,
+ * documents) and Jobs (check-in/check-out/work-proof photos). Same
+ * bucket + path convention everywhere so nothing is duplicated.
+ */
+export async function uploadWorkerFile(userId: string, bucket: string, keyPrefix: string, file: File): Promise<string> {
+  const path = `${userId}/${Date.now()}_${file.name}`;
+  const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true });
+  if (error) throw error;
+  const { data } = await supabase.storage.from(bucket).createSignedUrl(path, 60 * 60 * 24 * 365);
+  if (!data?.signedUrl) throw new Error("Could not generate a URL for the uploaded file.");
+  return data.signedUrl;
+}
+
+/**
+ * Best-effort GPS for attendance — resolves to `null` (never rejects) if
+ * the browser denies permission or geolocation is unavailable, so a
+ * missing location never blocks check-in/check-out.
+ */
+export function getBestEffortLocation(): Promise<{ lat: number; lng: number } | null> {
+  return new Promise((resolve) => {
+    if (!("geolocation" in navigator)) { resolve(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => resolve(null),
+      { timeout: 5000, maximumAge: 60000 },
+    );
+  });
 }
 
 export function computeCompletion(w: Partial<WorkerRow> | null): number {
