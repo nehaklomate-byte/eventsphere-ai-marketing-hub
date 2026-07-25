@@ -296,7 +296,7 @@ export async function inviteMember(
   // Note: this creates the DB row only. Actually sending the invite email
   // (magic link / signup link tied to this org_id) is a Phase 2 item —
   // wire it to a Supabase Edge Function or supabase.auth.admin.inviteUserByEmail.
-}
+
 
 export async function updateMemberRole(id: string, roleLabel: string, isAdminRole: boolean): Promise<void> {
   const { error } = await supabase.from("org_members").update({ role_label: roleLabel, is_admin_role: isAdminRole } as never).eq("id", id);
