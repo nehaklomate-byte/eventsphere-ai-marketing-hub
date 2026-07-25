@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveDashboardPath, DASHBOARD_PATH, type PrimaryRole } from "@/lib/auth-redirect";
+import { insertRoleRow, type Role } from "@/lib/registration";
 
 export const Route = createFileRoute("/auth/callback")({
   head: () => ({
@@ -47,8 +48,10 @@ function AuthCallback() {
     }
 
     async function complete(userId: string) {
-      const pending = (typeof window !== "undefined" && sessionStorage.getItem("pending_primary_role")) as PrimaryRole | null;
-      if (pending && DASHBOARD_PATH[pending]) {
+      // Case A: Google OAuth sign-up — role was chosen before the redirect,
+      // profile row exists (via the handle_new_user trigger) but with no role yet.
+      const pendingRole = (typeof window !== "undefined" && sessionStorage.getItem("pending_primary_role")) as PrimaryRole | null;
+      if (pendingRole && DASHBOARD_PATH[pendingRole]) {
         sessionStorage.removeItem("pending_primary_role");
         const { data: prof } = await supabase
           .from("profiles")
@@ -56,10 +59,34 @@ function AuthCallback() {
           .eq("id", userId)
           .maybeSingle();
         if (!prof?.primary_role) {
-          await supabase.from("profiles").update({ primary_role: pending }).eq("id", userId);
-          await supabase.from("user_roles").insert({ user_id: userId, role: pending }).select();
+          await supabase.from("profiles").update({ primary_role: pendingRole }).eq("id", userId);
+          await supabase.from("user_roles").insert({ user_id: userId, role: pendingRole }).select();
         }
       }
+
+      // Case B: email/password sign-up where email confirmation was
+      // required. register.tsx couldn't create the halls/vendors/workers/
+      // organizations row at signup time (no session yet = RLS blocks it),
+      // so it saved the submitted form here instead. Now that confirming
+      // the email has produced a real session, finish that step.
+      const pendingRegistrationRaw = typeof window !== "undefined" ? sessionStorage.getItem("pending_registration") : null;
+      if (pendingRegistrationRaw) {
+        sessionStorage.removeItem("pending_registration");
+        try {
+          const { role, data } = JSON.parse(pendingRegistrationRaw) as { role: Role; data: Record<string, string> };
+          if (role !== "customer") {
+            // Only insert if it doesn't already exist (e.g. user clicked the
+            // confirmation link twice, or completed it another way already).
+            const table = role === "hall_owner" ? "halls" : role === "organization" ? "organizations" : role === "vendor" ? "vendors" : "workers";
+            const { data: existing } = await supabase.from(table as never).select("id" as never).eq("owner_id" as never, userId as never).maybeSingle();
+            if (!existing) await insertRoleRow(role, userId, data);
+          }
+        } catch {
+          // Malformed/missing saved data — nothing to recover; the person
+          // can complete their profile manually from their dashboard instead.
+        }
+      }
+
       const path = await resolveDashboardPath(userId);
       if (!cancelled) navigate({ to: path, replace: true } as never);
     }
