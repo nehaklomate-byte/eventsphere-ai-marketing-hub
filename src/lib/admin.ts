@@ -84,25 +84,38 @@ export async function fetchPendingCounts(): Promise<Record<VerificationRole, num
 }
 
 async function writeAudit(action: string, table: string, id: string, oldValue: unknown, newValue: unknown) {
-  const { data: userData } = await supabase.auth.getUser();
-  await supabase.from("audit_logs" as never).insert({
-    actor_id: userData.user?.id ?? null,
-    actor_email: userData.user?.email ?? null,
-    action,
-    target_table: table,
-    target_id: id,
-    old_value: oldValue as never,
-    new_value: newValue as never,
-  } as never);
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    const { error } = await supabase.from("audit_logs" as never).insert({
+      actor_id: userData.user?.id ?? null,
+      actor_email: userData.user?.email ?? null,
+      action,
+      target_table: table,
+      target_id: id,
+      old_value: oldValue as never,
+      new_value: newValue as never,
+    } as never);
+    if (error) console.error("[audit log failed — core action still applied]", error);
+  } catch (e) {
+    console.error("[audit log failed — core action still applied]", e);
+  }
 }
 
 async function notify(userId: string, title: string, body: string, type: "info" | "success" | "warning" | "error") {
-  await supabase.from("platform_notifications" as never).insert({
-    user_id: userId,
-    title,
-    body,
-    type,
-  } as never);
+  try {
+    const { error } = await supabase.from("platform_notifications" as never).insert({
+      user_id: userId,
+      title,
+      body,
+      type,
+    } as never);
+    if (error) console.error("[notification failed — core action still applied]", error);
+  } catch (e) {
+    console.error("[notification failed — core action still applied]", e);
+  }
+  // Real email sending (Resend) comes later — deliberately not wired in
+  // today so a missing/unconfigured edge function can't interfere with
+  // getting the core Venue module working first.
 }
 
 async function setStatus(
