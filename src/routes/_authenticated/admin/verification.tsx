@@ -241,7 +241,7 @@ function ApplicationCard({
   onRestore: () => void;
   onViewDetails: () => void;
 }) {
-  const isActionable = row.verification_status === "pending";
+  const isActionable = row.verification_status === "pending" || row.verification_status === "rejected";
   const isSuspendedOrBlacklisted = row.verification_status === "suspended" || row.verification_status === "blacklisted";
 
   return (
