@@ -253,7 +253,7 @@ function HallDetail() {
               )}
             </div>
             <div className="mt-6">
-              <BookingAndEnquiry hallId={hall.id} pricePerDay={hall.price_per_day} advanceAmount={hall.advance_amount} />
+              <BookingAndEnquiry hallId={hall.id} hallName={hall.name} pricePerDay={hall.price_per_day} advanceAmount={hall.advance_amount} />
             </div>
           </div>
         </aside>
@@ -306,25 +306,31 @@ function facilityList(f: Record<string, boolean>) {
  * Book Now (real booking) + Ask a Question (enquiry) — toggle
  * ============================================================ */
 
-function BookingAndEnquiry({ hallId, pricePerDay, advanceAmount }: { hallId: string; pricePerDay: number | null; advanceAmount: number | null }) {
+function BookingAndEnquiry({
+  hallId, hallName, pricePerDay, advanceAmount,
+}: { hallId: string; hallName: string; pricePerDay: number | null; advanceAmount: number | null }) {
   const [mode, setMode] = useState<"booking" | "enquiry">("booking");
   return (
     <div>
       <div className="mb-4 grid grid-cols-2 gap-2">
         <button
+          type="button"
           onClick={() => setMode("booking")}
           className={`rounded-full px-4 py-2 text-sm font-semibold transition ${mode === "booking" ? "bg-brand-violet text-white" : "border border-input text-muted-foreground hover:bg-accent"}`}
         >
           Book Now
         </button>
         <button
+          type="button"
           onClick={() => setMode("enquiry")}
           className={`rounded-full px-4 py-2 text-sm font-semibold transition ${mode === "enquiry" ? "bg-brand-violet text-white" : "border border-input text-muted-foreground hover:bg-accent"}`}
         >
           Ask a Question
         </button>
       </div>
-      {mode === "booking" ? <BookingForm hallId={hallId} pricePerDay={pricePerDay} advanceAmount={advanceAmount} /> : <EnquiryForm hallId={hallId} />}
+      {mode === "booking"
+        ? <BookingForm hallId={hallId} hallName={hallName} pricePerDay={pricePerDay} advanceAmount={advanceAmount} />
+        : <EnquiryForm hallId={hallId} />}
     </div>
   );
 }
@@ -335,7 +341,9 @@ const bookingSchema = z.object({
   notes: z.string().max(500).optional(),
 });
 
-function BookingForm({ hallId, pricePerDay, advanceAmount }: { hallId: string; pricePerDay: number | null; advanceAmount: number | null }) {
+function BookingForm({
+  hallId, hallName, pricePerDay, advanceAmount,
+}: { hallId: string; hallName: string; pricePerDay: number | null; advanceAmount: number | null }) {
   const [state, setState] = useState({ event_date: "", guest_count: "", notes: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -359,10 +367,14 @@ function BookingForm({ hallId, pricePerDay, advanceAmount }: { hallId: string; p
       setNeedsLogin(true);
       return;
     }
+    // target_name is a NOT NULL column on customer_bookings — this was the
+    // exact cause of the earlier "23502 null value in column target_name"
+    // error: this field was missing from the insert entirely.
     const { error } = await supabase.from("customer_bookings" as never).insert({
       user_id: userRes.user.id,
       kind: "hall",
       target_id: hallId,
+      target_name: hallName,
       event_date: parsed.data.event_date,
       amount: pricePerDay ?? 0,
       status: "pending",
