@@ -2,7 +2,12 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Plus, CalendarDays } from "lucide-react";
-import { fetchMyOrganization, fetchOrgEvents, createOrgEvent, updateOrgEvent, type OrgEvent } from "@/lib/organization";
+import {
+  fetchMyOrganization, fetchOrgEvents, ensureEventForm, updateEventForm,
+  fetchFormFields, createFormField, updateFormField, deleteFormField, reorderFormFields,
+  FIELD_TYPES,
+} from "@/lib/organization";
+import type { FieldType, EventFormField } from "@/lib/organization";
 export const Route = createFileRoute("/_authenticated/organization/events/$eventId/form")({
 s
   head: () => ({ meta: [{ title: "Events — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
