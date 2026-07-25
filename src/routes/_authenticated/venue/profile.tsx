@@ -109,9 +109,11 @@ function VenueProfilePage() {
           <Building2 className="h-7 w-7 text-brand-violet" /> Venue Profile
         </h1>
         <p className="mt-1 text-muted-foreground">
-          {form.status === "published"
-            ? "Your venue is live and visible to customers on the marketplace."
-            : "Fill this in fully, then publish to appear in customer search results."}
+          {form.verification_status === "approved" && form.status === "published"
+            ? "Your venue is verified and visible to customers on the marketplace."
+            : form.verification_status === "pending"
+            ? "Submitted — waiting for admin verification."
+            : "Fill this in fully, then submit for verification to appear in customer search results."}
         </p>
       </div>
 
@@ -286,15 +288,22 @@ function VenueProfilePage() {
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 backdrop-blur md:pl-72">
         <div className="mx-auto flex max-w-5xl items-center justify-end gap-2 px-4 py-3 md:px-8">
           <button disabled={saving} onClick={() => handleSave()} className="flex items-center gap-1.5 rounded-full border border-input px-4 py-2 text-sm font-semibold hover:bg-accent disabled:opacity-50">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save draft
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save progress
           </button>
-          {form.status === "published" ? (
-            <button disabled={saving} onClick={() => handleSave(false)} className="flex items-center gap-1.5 rounded-full bg-zinc-800 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-900 disabled:opacity-50">
-              <EyeOff className="h-4 w-4" /> Unpublish
-            </button>
+          {form.verification_status === "approved" ? (
+            // Already verified — this is now just a visibility toggle, not a re-verification trigger.
+            form.status === "published" ? (
+              <button disabled={saving} onClick={() => handleSave(false)} className="flex items-center gap-1.5 rounded-full bg-zinc-800 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-900 disabled:opacity-50">
+                <EyeOff className="h-4 w-4" /> Hide from marketplace
+              </button>
+            ) : (
+              <button disabled={saving} onClick={() => handleSave(true)} className="flex items-center gap-1.5 rounded-full bg-brand-violet px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50">
+                <Eye className="h-4 w-4" /> Show on marketplace
+              </button>
+            )
           ) : (
             <button disabled={saving} onClick={() => handleSave(true)} className="flex items-center gap-1.5 rounded-full bg-brand-violet px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50">
-              <Eye className="h-4 w-4" /> Publish venue
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />} Submit for verification
             </button>
           )}
         </div>
