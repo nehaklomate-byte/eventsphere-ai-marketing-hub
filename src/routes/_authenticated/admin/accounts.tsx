@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { UserCheck, Check, X, Loader2, Mail, Phone, Eye, Download } from "lucide-react";
+import { renderFieldValue } from "./verification";
 import {
   fetchAccountsByStatus, approveAccount, rejectAccount, fetchRoleRecordByOwner, roleFromPrimaryRole, downloadCsv,
   type AccountRow,
@@ -231,12 +232,7 @@ function AccountDetailsModal({ row, onClose }: { row: AccountRow; onClose: () =>
               .map(([key, value]) => (
                 <div key={key} className="border-b border-border/60 pb-2">
                   <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{key.replace(/_/g, " ")}</dt>
-                  <dd className="mt-0.5 break-words text-sm text-foreground">
-                    {value === null || value === "" ? <span className="text-muted-foreground/60">— empty —</span>
-                      : typeof value === "boolean" ? (value ? "Yes" : "No")
-                      : typeof value === "object" ? JSON.stringify(value)
-                      : String(value)}
-                  </dd>
+                  <dd className="mt-0.5 break-words text-sm text-foreground">{renderFieldValue(value)}</dd>
                 </div>
               ))}
           </dl>
