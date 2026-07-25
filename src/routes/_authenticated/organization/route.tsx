@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, Link, useRouterState, useNavigate, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import {
-  LayoutDashboard, Users, Building2, CalendarDays, Settings, LogOut, Menu, X, Clock, ShieldAlert, MailWarning,
+  LayoutDashboard, Users, Building2, CalendarDays, Settings, LogOut, Menu, X, Clock, ShieldAlert, MailWarning, ShieldCheck,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
@@ -50,9 +50,9 @@ const NAV = [
   { to: "/organization", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/organization/departments", label: "Departments", icon: Building2 },
   { to: "/organization/members", label: "Team Members", icon: Users },
+  { to: "/organization/roles", label: "Roles & Permissions", icon: ShieldCheck },
   { to: "/organization/events", label: "Events", icon: CalendarDays },
-{ to: "/organization/settings", label: "Settings", icon: Settings },
- 
+  { to: "/organization/settings", label: "Settings", icon: Settings },
 ];
 
 function OrganizationShell() {
@@ -137,7 +137,7 @@ function OrganizationShell() {
               return (
                 <Link
                   key={it.label}
-                  to={it.soon ? "/organization" : (it.to as never)}
+                  to={it.to as never}
                   onClick={() => setOpen(false)}
                   className={`group flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition ${
                     active ? "bg-gradient-to-r from-brand-violet/15 to-secondary/10 text-foreground shadow-sm" : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -146,7 +146,6 @@ function OrganizationShell() {
                   <span className="flex items-center gap-3">
                     <Icon className="h-4 w-4" /> {it.label}
                   </span>
-                  {it.soon && <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">Soon</span>}
                 </Link>
               );
             })}
