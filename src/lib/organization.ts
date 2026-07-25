@@ -285,13 +285,14 @@ export async function inviteMember(
     org_id: orgId,
     invited_email: invitedEmail,
     full_name: opts?.fullName ?? null,
-    role_label: roleLabel,
+    role_id: roleId,
     is_admin_role: opts?.isAdminRole ?? false,
     department_id: opts?.departmentId ?? null,
     status: "invited",
     invited_by: userData.user?.id ?? null,
   } as never);
   if (error) throw error;
+}
   // Note: this creates the DB row only. Actually sending the invite email
   // (magic link / signup link tied to this org_id) is a Phase 2 item —
   // wire it to a Supabase Edge Function or supabase.auth.admin.inviteUserByEmail.
