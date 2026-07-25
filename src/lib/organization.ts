@@ -208,21 +208,19 @@ export type OrgMember = {
   created_at: string;
 };
 
-export type OrgEvent = {
+export type OrgMember = {
   id: string;
   org_id: string;
-  title: string;
-  event_type: string;
-  description: string | null;
-  mode: "online" | "offline" | "hybrid";
-  venue_hall_id: string | null;
-  custom_location: string | null;
-  start_at: string | null;
-  end_at: string | null;
-  registration_deadline: string | null;
-  max_participants: number | null;
-  status: "draft" | "published" | "ongoing" | "completed" | "cancelled";
-  created_by: string | null;
+  user_id: string | null;
+  invited_email: string;
+  full_name: string | null;
+  role_label: string;
+  role_id: string | null;
+  invite_token: string | null;
+  is_admin_role: boolean;
+  department_id: string | null;
+  status: "invited" | "active" | "removed";
+  invited_by: string | null;
   created_at: string;
 };
 
