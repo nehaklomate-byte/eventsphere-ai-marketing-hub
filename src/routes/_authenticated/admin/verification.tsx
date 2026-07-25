@@ -20,6 +20,13 @@ export const Route = createFileRoute("/_authenticated/admin/verification")({
 
 const ROLE_TABS: (VerificationRole | "all")[] = ["all", "organization", "venue", "vendor", "worker"];
 const STATUS_TABS: VerificationStatus[] = ["pending", "approved", "rejected", "suspended", "blacklisted"];
+// Display-only relabel: the DB/enum value stays "approved" (no migration
+// needed), but Step 2 (profile verification) showing "Approved" was easy to
+// confuse with Step 1's "Approved" tab in Account Approvals — so here it
+// reads "Verified", which is what this status actually means to a customer.
+const STATUS_DISPLAY_LABEL: Record<VerificationStatus, string> = {
+  pending: "pending", approved: "verified", rejected: "rejected", suspended: "suspended", blacklisted: "blacklisted",
+};
 
 const STATUS_STYLE: Record<VerificationStatus, string> = {
   pending: "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300",
@@ -123,7 +130,7 @@ function VerificationCenter() {
               statusTab === s ? "bg-foreground text-background" : "text-muted-foreground hover:bg-accent"
             }`}
           >
-            {s}
+            {STATUS_DISPLAY_LABEL[s]}
           </button>
         ))}
       </div>
@@ -134,7 +141,7 @@ function VerificationCenter() {
         </div>
       ) : rows.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-card/40 p-10 text-center text-sm text-muted-foreground">
-          No {statusTab} applications{roleTab !== "all" ? ` for ${ROLE_LABEL[roleTab]}s` : ""} right now.
+          No {STATUS_DISPLAY_LABEL[statusTab]} applications{roleTab !== "all" ? ` for ${ROLE_LABEL[roleTab]}s` : ""} right now.
         </div>
       ) : (
         <div className="space-y-4">
@@ -212,12 +219,7 @@ function DetailsModal({ row, onClose }: { row: QueueRow; onClose: () => void }) 
               .map(([key, value]) => (
                 <div key={key} className="border-b border-border/60 pb-2">
                   <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{key.replace(/_/g, " ")}</dt>
-                  <dd className="mt-0.5 break-words text-sm text-foreground">
-                    {value === null || value === "" ? <span className="text-muted-foreground/60">— empty —</span>
-                      : typeof value === "boolean" ? (value ? "Yes" : "No")
-                      : typeof value === "object" ? JSON.stringify(value)
-                      : String(value)}
-                  </dd>
+                  <dd className="mt-0.5 break-words text-sm text-foreground">{renderFieldValue(value)}</dd>
                 </div>
               ))}
           </dl>
@@ -251,7 +253,7 @@ function ApplicationCard({
               {ROLE_LABEL[row.role]}
             </span>
             <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${STATUS_STYLE[row.verification_status]}`}>
-              {row.verification_status}
+              {STATUS_DISPLAY_LABEL[row.verification_status]}
             </span>
           </div>
           <h3 className="mt-2 font-display text-lg font-semibold">{row.title}</h3>
@@ -336,4 +338,33 @@ function ActionButton({
       {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icon className="h-3.5 w-3.5" />} {label}
     </button>
   );
+}
+
+function isImageUrl(v: unknown): v is string {
+  return typeof v === "string" && /^https?:\/\/.+\.(png|jpe?g|webp|gif|avif)(\?.*)?$/i.test(v);
+}
+
+/** Renders a submitted field value — photo URLs (single or arrays, from
+ * gallery/logo_url/cover_url/stage_photos etc.) become real thumbnails
+ * instead of raw text/JSON, which is what admins actually need to review
+ * a submission properly. */
+export function renderFieldValue(value: unknown) {
+  if (value === null || value === "") return <span className="text-muted-foreground/60">— empty —</span>;
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+
+  if (isImageUrl(value)) {
+    return <a href={value} target="_blank" rel="noreferrer"><img src={value} alt="" className="h-20 w-20 rounded-lg object-cover border border-border" /></a>;
+  }
+  if (Array.isArray(value) && value.length > 0 && value.every(isImageUrl)) {
+    return (
+      <div className="flex flex-wrap gap-2">
+        {value.map((url, i) => (
+          <a key={i} href={url} target="_blank" rel="noreferrer"><img src={url} alt="" className="h-16 w-16 rounded-lg object-cover border border-border" /></a>
+        ))}
+      </div>
+    );
+  }
+  if (Array.isArray(value)) return value.length === 0 ? <span className="text-muted-foreground/60">— empty —</span> : value.join(", ");
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
 }
