@@ -52,6 +52,7 @@ const NAV = [
   { to: "/organization/members", label: "Team Members", icon: Users },
   { to: "/organization/events", label: "Events", icon: CalendarDays },
   { to: "/organization/settings", label: "Settings", icon: Settings, soon: true },
+  { to: "/organization/roles", label: "Roles & Permissions", icon: ShieldCheck },
 ];
 
 function OrganizationShell() {
