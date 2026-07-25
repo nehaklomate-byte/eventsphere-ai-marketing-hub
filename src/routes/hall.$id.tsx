@@ -252,7 +252,9 @@ function HallDetail() {
                 <p className="mt-3 text-xs text-muted-foreground">Advance to confirm: ₹{hall.advance_amount.toLocaleString("en-IN")}</p>
               )}
             </div>
-            <div className="mt-6"><EnquiryForm hallId={hall.id} /></div>
+            <div className="mt-6">
+              <BookingAndEnquiry hallId={hall.id} pricePerDay={hall.price_per_day} advanceAmount={hall.advance_amount} />
+            </div>
           </div>
         </aside>
       </div>
@@ -298,6 +300,127 @@ function facilityList(f: Record<string, boolean>) {
     { key: "parking", label: "Parking", icon: Car, available: true },
     { key: "rooms", label: "Guest rooms", icon: Bed, available: true },
   ];
+}
+
+/* ============================================================
+ * Book Now (real booking) + Ask a Question (enquiry) — toggle
+ * ============================================================ */
+
+function BookingAndEnquiry({ hallId, pricePerDay, advanceAmount }: { hallId: string; pricePerDay: number | null; advanceAmount: number | null }) {
+  const [mode, setMode] = useState<"booking" | "enquiry">("booking");
+  return (
+    <div>
+      <div className="mb-4 grid grid-cols-2 gap-2">
+        <button
+          onClick={() => setMode("booking")}
+          className={`rounded-full px-4 py-2 text-sm font-semibold transition ${mode === "booking" ? "bg-brand-violet text-white" : "border border-input text-muted-foreground hover:bg-accent"}`}
+        >
+          Book Now
+        </button>
+        <button
+          onClick={() => setMode("enquiry")}
+          className={`rounded-full px-4 py-2 text-sm font-semibold transition ${mode === "enquiry" ? "bg-brand-violet text-white" : "border border-input text-muted-foreground hover:bg-accent"}`}
+        >
+          Ask a Question
+        </button>
+      </div>
+      {mode === "booking" ? <BookingForm hallId={hallId} pricePerDay={pricePerDay} advanceAmount={advanceAmount} /> : <EnquiryForm hallId={hallId} />}
+    </div>
+  );
+}
+
+const bookingSchema = z.object({
+  event_date: z.string().min(1, "Pick a date"),
+  guest_count: z.string().regex(/^\d+$/, "Enter guest count"),
+  notes: z.string().max(500).optional(),
+});
+
+function BookingForm({ hallId, pricePerDay, advanceAmount }: { hallId: string; pricePerDay: number | null; advanceAmount: number | null }) {
+  const [state, setState] = useState({ event_date: "", guest_count: "", notes: "" });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [needsLogin, setNeedsLogin] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setErrors({}); setErr(null);
+    const parsed = bookingSchema.safeParse(state);
+    if (!parsed.success) {
+      const fe: Record<string, string> = {};
+      parsed.error.issues.forEach((i) => { fe[i.path[0] as string] = i.message; });
+      setErrors(fe); return;
+    }
+    setSubmitting(true);
+    const { data: userRes } = await supabase.auth.getUser();
+    if (!userRes.user) {
+      setSubmitting(false);
+      setNeedsLogin(true);
+      return;
+    }
+    const { error } = await supabase.from("customer_bookings" as never).insert({
+      user_id: userRes.user.id,
+      kind: "hall",
+      target_id: hallId,
+      event_date: parsed.data.event_date,
+      amount: pricePerDay ?? 0,
+      status: "pending",
+      payment_status: "pending",
+      notes: parsed.data.notes || null,
+    } as never);
+    setSubmitting(false);
+    if (error) { setErr("Could not create your booking. Please try again."); return; }
+    setDone(true);
+  }
+
+  if (needsLogin) {
+    return (
+      <div className="rounded-2xl border border-amber-300/60 bg-amber-50 dark:bg-amber-950/20 p-5 text-sm">
+        <p className="font-semibold text-amber-800 dark:text-amber-300">Please sign in to book this venue</p>
+        <Link to="/login" className="mt-3 inline-flex items-center justify-center gap-2 rounded-full btn-brand btn-brand-hover px-4 py-2.5 text-sm font-semibold w-full">
+          Sign in / Register
+        </Link>
+      </div>
+    );
+  }
+
+  if (done) {
+    return (
+      <div className="rounded-2xl border border-brand-violet/30 bg-accent/40 p-5 text-sm">
+        <div className="inline-flex items-center gap-2 font-semibold text-brand-violet"><CheckCircle2 className="h-4 w-4" /> Booking request sent</div>
+        <p className="mt-1 text-muted-foreground">The venue owner will confirm shortly. Track it anytime from My Bookings in your dashboard.</p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} noValidate className="space-y-3">
+      <h3 className="font-display text-base font-semibold">Request to book</h3>
+      {err && <div role="alert" className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive"><AlertCircle className="h-3.5 w-3.5 mt-0.5" />{err}</div>}
+      <div className="grid grid-cols-2 gap-3">
+        <Row label="Event date" error={errors.event_date}>
+          <input type="date" className="input" value={state.event_date} onChange={(e) => setState({ ...state, event_date: e.target.value })} />
+        </Row>
+        <Row label="Guests" error={errors.guest_count}>
+          <input type="number" className="input" value={state.guest_count} onChange={(e) => setState({ ...state, guest_count: e.target.value })} placeholder="e.g., 250" />
+        </Row>
+      </div>
+      <Row label="Notes for the venue (optional)" error={errors.notes}>
+        <textarea rows={3} className="input" value={state.notes} onChange={(e) => setState({ ...state, notes: e.target.value })} placeholder="Anything the venue should know" />
+      </Row>
+      {advanceAmount != null && advanceAmount > 0 && (
+        <p className="text-xs text-muted-foreground">An advance of ₹{advanceAmount.toLocaleString("en-IN")} will be requested once the venue confirms.</p>
+      )}
+      <button type="submit" disabled={submitting} className="w-full inline-flex items-center justify-center gap-2 rounded-full btn-brand btn-brand-hover px-4 py-2.5 text-sm font-semibold disabled:opacity-70">
+        {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Request booking
+      </button>
+      <style>{`
+        .input { width: 100%; border-radius: 10px; border: 1px solid var(--border); background: var(--background); padding: 8px 12px; font-size: 13px; outline: none; }
+        .input:focus { border-color: var(--brand-violet); box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand-violet) 22%, transparent); }
+      `}</style>
+    </form>
+  );
 }
 
 const enquirySchema = z.object({
