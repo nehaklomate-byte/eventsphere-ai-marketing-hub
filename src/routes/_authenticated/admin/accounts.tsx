@@ -147,7 +147,7 @@ function AccountApprovalsPage() {
                 >
                   <Eye className="h-3.5 w-3.5" /> View full details
                 </button>
-                {row.account_status === "pending_approval" && (
+               {(row.account_status === "pending_approval" || row.account_status === "rejected") && (
                   <>
                     <button
                       disabled={busyId === row.id}
