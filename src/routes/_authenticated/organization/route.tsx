@@ -7,7 +7,7 @@ import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "@/lib/session";
-
+ { to: "/organization/roles", label: "Roles & Permissions", icon: ShieldCheck },
 export const Route = createFileRoute("/_authenticated/organization")({
   beforeLoad: async () => {
     const { data: userData } = await supabase.auth.getUser();
@@ -52,7 +52,7 @@ const NAV = [
   { to: "/organization/members", label: "Team Members", icon: Users },
   { to: "/organization/events", label: "Events", icon: CalendarDays },
   { to: "/organization/settings", label: "Settings", icon: Settings, soon: true },
-  { to: "/organization/roles", label: "Roles & Permissions", icon: ShieldCheck },
+ 
 ];
 
 function OrganizationShell() {
