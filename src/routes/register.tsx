@@ -3,14 +3,14 @@ import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, ArrowRight, Building2, Store, UserCheck, Users2, User, CheckCircle2, Loader2,
-  Eye, EyeOff, ShieldCheck, AlertCircle, Sparkles,
+  Eye, EyeOff, ShieldCheck, AlertCircle, Sparkles, Mail,
 } from "lucide-react";
 import { z } from "zod";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { emailSchema, phoneSchema, pincodeSchema, passwordSchema, passwordStrength } from "@/lib/validation";
 import { DASHBOARD_PATH, resolveDashboardPath, humanizeAuthError } from "@/lib/auth-redirect";
+import { insertRoleRow, type Role } from "@/lib/registration";
 
 export const Route = createFileRoute("/register")({
   head: () => ({
@@ -26,8 +26,6 @@ export const Route = createFileRoute("/register")({
   component: RegisterPage,
 });
 
-type Role = "organization" | "hall_owner" | "vendor" | "worker" | "customer";
-
 const ROLES: { id: Role; title: string; desc: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: "organization", title: "Organization", desc: "Corporates, agencies and event planning teams.", icon: Building2 },
   { id: "hall_owner", title: "Hall Owner", desc: "Banquet halls, lawns, resorts and convention centers.", icon: Building2 },
@@ -41,6 +39,7 @@ function RegisterPage() {
   const [step, setStep] = useState<0 | 1 | 2>(0);
   const [role, setRole] = useState<Role | null>(null);
   const [checked, setChecked] = useState(false);
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
@@ -101,19 +100,36 @@ function RegisterPage() {
           )}
 
           {step === 1 && role && (
-            <RoleForm key={role} role={role} onBack={() => setStep(0)} onDone={() => setStep(2)} />
+            <RoleForm
+              key={role}
+              role={role}
+              onBack={() => setStep(0)}
+              onDone={(awaiting) => { setAwaitingConfirmation(awaiting); setStep(2); }}
+            />
           )}
 
           {step === 2 && (
             <motion.section key="done" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-auto max-w-lg text-center py-16">
               <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-gradient-brand text-white shadow-glow">
-                <CheckCircle2 className="h-7 w-7" />
+                {awaitingConfirmation ? <Mail className="h-7 w-7" /> : <CheckCircle2 className="h-7 w-7" />}
               </div>
-              <h2 className="mt-6 font-display text-3xl font-semibold">You're all set.</h2>
-              <p className="mt-2 text-muted-foreground">Your account has been created. Opening your workspace…</p>
-              <Link to="/auth/callback" className="mt-8 inline-flex items-center gap-2 rounded-full btn-brand btn-brand-hover px-5 py-3 text-sm font-semibold">
-                Continue <ArrowRight className="h-4 w-4" />
-              </Link>
+              {awaitingConfirmation ? (
+                <>
+                  <h2 className="mt-6 font-display text-3xl font-semibold">Check your email</h2>
+                  <p className="mt-2 text-muted-foreground">
+                    We've sent a confirmation link to your inbox. Click it to activate your account — your
+                    details are saved and will be submitted automatically the moment you confirm.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2 className="mt-6 font-display text-3xl font-semibold">You're all set.</h2>
+                  <p className="mt-2 text-muted-foreground">Your account has been created. Opening your workspace…</p>
+                  <Link to="/auth/callback" className="mt-8 inline-flex items-center gap-2 rounded-full btn-brand btn-brand-hover px-5 py-3 text-sm font-semibold">
+                    Continue <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </>
+              )}
             </motion.section>
           )}
         </AnimatePresence>
@@ -155,7 +171,7 @@ function SectionHeader({ eyebrow, title, description }: { eyebrow: string; title
 }
 
 /* --------- ROLE-SPECIFIC FORM --------- */
-function RoleForm({ role, onBack, onDone }: { role: Role; onBack: () => void; onDone: () => void }) {
+function RoleForm({ role, onBack, onDone }: { role: Role; onBack: () => void; onDone: (awaitingConfirmation: boolean) => void }) {
   const navigate = useNavigate();
   const [values, setValues] = useState<Record<string, string | boolean | undefined>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -183,7 +199,8 @@ function RoleForm({ role, onBack, onDone }: { role: Role; onBack: () => void; on
     setSubmitting(true);
     const data = parsed.data as Record<string, string>;
 
-    // 1. Sign up with role metadata (handle_new_user trigger creates profile + user_role)
+    // 1. Sign up with role metadata (handle_new_user trigger creates profile + user_role,
+    //    regardless of whether email confirmation is required — that part always works).
     const { data: auth, error: signErr } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
@@ -200,20 +217,25 @@ function RoleForm({ role, onBack, onDone }: { role: Role; onBack: () => void; on
       setServerErr(humanizeAuthError(signErr));
       setSubmitting(false); return;
     }
-    const userId = auth.user?.id;
-    if (!userId) {
-      // Email confirmation is required — user must click the link before signing in
+
+    if (!auth.session) {
+      // Email confirmation is required — there's no session yet, so we
+      // cannot insert the role-specific row now (RLS needs auth.uid() to
+      // check owner_id against, and there's no authenticated request
+      // context until the email is confirmed). Save everything and let
+      // /auth/callback finish this step once they confirm.
+      sessionStorage.setItem("pending_registration", JSON.stringify({ role, data }));
       setSubmitting(false);
-      setServerErr("Check your inbox to confirm your email, then sign in.");
+      onDone(true);
       return;
     }
 
-    // 2. Insert role-specific row (session exists because auto-confirm is on)
-    const err = await insertRoleRow(role, userId, data);
+    // Confirmation wasn't required (or was already satisfied) — a real
+    // session exists right now, so it's safe to insert immediately.
+    const err = await insertRoleRow(role, auth.session.user.id, data);
     setSubmitting(false);
     if (err) { setServerErr(err); return; }
-    onDone();
-    // Immediately route to the correct dashboard
+    onDone(false);
     navigate({ to: DASHBOARD_PATH[role], replace: true } as never);
   }
 
@@ -530,67 +552,3 @@ function buildSchema(role: Role) {
     path: ["confirm_password"], message: "Passwords do not match",
   });
 }
-
-async function insertRoleRow(role: Role, userId: string, data: Record<string, string>): Promise<string | null> {
-  try {
-    if (role === "organization") {
-      const { error } = await supabase.from("organizations").insert({
-        owner_id: userId, name: data.name, org_type: data.org_type, industry: data.industry ?? null,
-        owner_full_name: data.owner_full_name, email: data.email, phone: data.phone, alt_phone: data.alt_phone ?? null,
-        state: data.state ?? null, city: data.city ?? null, address: data.address ?? null, pincode: data.pincode ?? null,
-        website: data.website ?? null, gst_number: data.gst_number ?? null, business_reg_number: data.business_reg_number ?? null,
-      });
-      if (error) throw error;
-    } else if (role === "hall_owner") {
-      const { error } = await supabase.from("halls").insert({
-        owner_id: userId, name: data.name, owner_full_name: data.owner_full_name,
-        email: data.email, phone: data.phone, alt_phone: data.alt_phone ?? null, category: data.category,
-        min_guests: Number(data.min_guests), max_guests: Number(data.max_guests),
-        indoor_capacity: numOrNull(data.indoor_capacity), outdoor_capacity: numOrNull(data.outdoor_capacity),
-        dining_capacity: numOrNull(data.dining_capacity), parking_slots: numOrNull(data.parking_slots),
-        num_rooms: numOrNull(data.num_rooms), changing_rooms: numOrNull(data.changing_rooms),
-        price_per_day: numOrNull(data.price_per_day), price_per_hour: numOrNull(data.price_per_hour),
-        advance_amount: numOrNull(data.advance_amount),
-        working_hours: data.working_hours ?? null, cancellation_policy: data.cancellation_policy ?? null,
-        facilities: {
-          ac: !!data.ac, generator: !!data.generator, lift: !!data.lift, wheelchair: !!data.wheelchair,
-          wifi: !!data.wifi, decoration_allowed: !!data.decoration_allowed, outside_catering: !!data.outside_catering,
-        },
-        address: data.address ?? null, city: data.city, state: data.state, pincode: data.pincode,
-        google_maps_url: data.google_maps_url, website: data.website ?? null, status: "draft",
-      });
-      if (error) throw error;
-    } else if (role === "vendor") {
-      const { error } = await supabase.from("vendors").insert({
-        owner_id: userId, business_name: data.name, owner_full_name: data.owner_full_name,
-        category: data.category, years_experience: numOrNull(data.years_experience),
-        gst_number: data.gst_number ?? null, pan_number: data.pan_number ?? null,
-        email: data.email, phone: data.phone,
-        address: data.address ?? null, city: data.city, state: data.state, pincode: data.pincode,
-        instagram: data.instagram ?? null, facebook: data.facebook ?? null, website: data.website ?? null,
-        service_areas: splitList(data.service_areas), available_days: splitList(data.available_days),
-        status: "draft",
-      });
-      if (error) throw error;
-    } else if (role === "worker") {
-      const { error } = await supabase.from("workers").insert({
-        owner_id: userId, full_name: data.full_name, category: data.category,
-        skills: splitList(data.skills), years_experience: numOrNull(data.years_experience),
-        languages: splitList(data.languages),
-        phone: data.phone, email: data.email,
-        address: data.address ?? null, city: data.city, state: data.state, pincode: data.pincode,
-        daily_charges: numOrNull(data.daily_charges), hourly_charges: numOrNull(data.hourly_charges),
-        available_days: splitList(data.available_days),
-        emergency_contact: data.emergency_contact ?? null,
-        status: "draft",
-      });
-      if (error) throw error;
-    }
-    return null;
-  } catch (e) {
-    return (e as Error).message ?? "Could not save your details. Please try again.";
-  }
-}
-
-function numOrNull(v: string | undefined) { return v && v !== "" ? Number(v) : null; }
-function splitList(v: string | undefined): string[] { return (v ?? "").split(",").map((s) => s.trim()).filter(Boolean); }
