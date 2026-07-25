@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Plus, CalendarDays } from "lucide-react";
@@ -67,8 +67,8 @@ function OrgEventsPage() {
       <div>
         <h1 className="font-display text-2xl font-semibold">Events</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Create hackathons, fests, seminars, competitions or any event type — fully custom. This is Phase 1: basic
-          event creation. Participant registration, problem statements, rounds and certificates come in the next phase.
+          Create hackathons, fests, seminars, competitions or any event type — fully custom. Build each event's
+          registration form from the "Registration form" link on its card.
         </p>
       </div>
 
@@ -127,6 +127,9 @@ function OrgEventsPage() {
             </div>
             <div className="flex items-center gap-3">
               <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_BADGE[ev.status]}`}>{ev.status}</span>
+              <Link to={`/organization/events/${ev.id}/form`} className="rounded-full border border-input px-3 py-1.5 text-xs font-semibold hover:bg-accent">
+                Registration form
+              </Link>
               {(ev.status === "draft" || ev.status === "published") && (
                 <button onClick={() => handlePublish(ev)} className="rounded-full border border-input px-3 py-1.5 text-xs font-semibold hover:bg-accent">
                   {ev.status === "draft" ? "Publish" : "Unpublish"}
