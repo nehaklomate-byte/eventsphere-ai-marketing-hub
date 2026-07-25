@@ -225,15 +225,23 @@ export async function fetchPendingAccountCount(): Promise<number> {
 }
 
 export async function approveAccount(userId: string): Promise<void> {
-  const { error } = await supabase.from("profiles" as never).update({ account_status: "approved" } as never).eq("id" as never, userId as never);
+ const { data, error } = await supabase.from("profiles" as never).update({ account_status: "approved" } as never).eq("id" as never, userId as never).select("id");
   if (error) throw error;
+  if (!data || data.length === 0) throw new Error("Update blocked by RLS — check the 'Admin updates all profiles' policy on profiles.");
   await writeAudit("approve_account", "profiles", userId, null, { account_status: "approved" });
   await notify(userId, "Account approved ✅", "Your account has been approved. Now complete your profile in full and submit it for verification.", "success");
 }
 
 export async function rejectAccount(userId: string, reason: string): Promise<void> {
-  const { error } = await supabase.from("profiles" as never).update({ account_status: "rejected", account_rejection_reason: reason } as never).eq("id" as never, userId as never);
+  const { data, error } = await supabase
+    .from("profiles" as never)
+    .update({ account_status: "rejected", account_rejection_reason: reason } as never)
+    .eq("id" as never, userId as never)
+    .select("id");
   if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error("Update blocked by RLS — check the 'Admin updates all profiles' policy on profiles.");
+  }
   await writeAudit("reject_account", "profiles", userId, null, { account_status: "rejected", reason });
   await notify(userId, "Account not approved", reason ? `Reason: ${reason}` : "Please contact support for details.", "error");
 }
