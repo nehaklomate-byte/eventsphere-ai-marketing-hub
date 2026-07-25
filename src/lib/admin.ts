@@ -130,8 +130,11 @@ async function setStatus(
   const patch: Record<string, unknown> = { verification_status: status };
   if (reason !== undefined) patch.rejection_reason = reason || null;
 
-  const { error } = await supabase.from(table as never).update(patch as never).eq("id" as never, id as never);
+  const { data, error } = await supabase.from(table as never).update(patch as never).eq("id" as never, id as never).select("id");
   if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error("Update blocked — no row was changed. This usually means the admin RLS policy on this table isn't applied correctly.");
+  }
 
   await writeAudit(action, table, id, null, patch);
 
