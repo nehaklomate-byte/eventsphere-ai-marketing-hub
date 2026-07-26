@@ -82,6 +82,7 @@ export type HallBooking = {
   status: "pending" | "confirmed" | "in_progress" | "completed" | "cancelled" | "reschedule_requested";
   payment_status: "pending" | "paid" | "failed" | "refunded" | "partial";
   notes: string | null;
+  details: Record<string, unknown>;
   created_at: string;
 };
 
