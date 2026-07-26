@@ -81,7 +81,7 @@ function ProfilePage() {
       // submissions weren't reaching the admin queue — the toast said
       // "Submitted" even when nothing was actually saved).
       const { data, error } = await supabase.from("workers")
-        .update({ verification_status: "pending", ...form } as never).eq("owner_id", user!.id).select().maybeSingle();
+        .update({ ...form, verification_status: "pending" } as never).eq("owner_id", user!.id).select().maybeSingle();
       if (error) throw error;
       if (!data) throw new Error("Submission was blocked — please refresh the page and try again. If this keeps happening, contact support.");
     },
