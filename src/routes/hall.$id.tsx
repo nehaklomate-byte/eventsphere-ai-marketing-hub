@@ -303,8 +303,23 @@ function facilityList(f: Record<string, boolean>) {
 }
 
 /* ============================================================
- * Book Now (real booking) + Ask a Question (enquiry) — toggle
+ * Book Now (real booking, full event details) + Ask a Question
  * ============================================================ */
+
+const ORGANIZER_TYPES = [
+  "Individual", "Family", "College / University", "School", "Corporate Company", "Startup",
+  "Government Department", "NGO", "Event Management Company", "Religious Organization",
+  "Society / Community", "Other",
+];
+
+const EVENT_TYPES = [
+  "Wedding", "Reception", "Engagement", "Birthday Party", "Baby Shower", "Anniversary",
+  "Conference", "Seminar", "Workshop", "Hackathon", "Tech Fest", "Cultural Festival",
+  "Sports Tournament", "College Fest", "Annual Function", "Freshers", "Farewell",
+  "Placement Drive", "Training Program", "Award Ceremony", "Corporate Meeting", "Product Launch",
+  "Exhibition", "Government Program", "Awareness Campaign", "Medical Camp", "NGO Event",
+  "Religious Function", "Music Show", "Fashion Show", "Other",
+];
 
 function BookingAndEnquiry({
   hallId, hallName, pricePerDay, advanceAmount,
@@ -336,20 +351,36 @@ function BookingAndEnquiry({
 }
 
 const bookingSchema = z.object({
+  event_name: z.string().trim().min(2, "Enter an event name"),
+  organizer_type: z.string().min(1, "Select who's organizing"),
+  organizer_type_other: z.string().optional(),
+  event_type: z.string().min(1, "Select an event type"),
+  event_type_other: z.string().optional(),
+  contact_person: z.string().trim().min(2, "Enter contact person's name"),
+  contact_phone: phoneSchema,
+  contact_email: emailSchema,
   event_date: z.string().min(1, "Pick a date"),
+  start_time: z.string().min(1, "Pick a start time"),
+  end_time: z.string().min(1, "Pick an end time"),
   guest_count: z.string().regex(/^\d+$/, "Enter guest count"),
-  notes: z.string().max(500).optional(),
+  special_instructions: z.string().max(1000).optional(),
 });
 
 function BookingForm({
   hallId, hallName, pricePerDay, advanceAmount,
 }: { hallId: string; hallName: string; pricePerDay: number | null; advanceAmount: number | null }) {
-  const [state, setState] = useState({ event_date: "", guest_count: "", notes: "" });
+  const [state, setState] = useState({
+    event_name: "", organizer_type: "", organizer_type_other: "", event_type: "", event_type_other: "",
+    contact_person: "", contact_phone: "", contact_email: "", event_date: "", start_time: "", end_time: "",
+    guest_count: "", special_instructions: "",
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [needsLogin, setNeedsLogin] = useState(false);
+
+  const set = (k: string, v: string) => setState((s) => ({ ...s, [k]: v }));
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -367,19 +398,28 @@ function BookingForm({
       setNeedsLogin(true);
       return;
     }
-    // target_name is a NOT NULL column on customer_bookings — this was the
-    // exact cause of the earlier "23502 null value in column target_name"
-    // error: this field was missing from the insert entirely.
+    const d = parsed.data;
     const { error } = await supabase.from("customer_bookings" as never).insert({
       user_id: userRes.user.id,
       kind: "hall",
       target_id: hallId,
       target_name: hallName,
-      event_date: parsed.data.event_date,
+      event_date: d.event_date,
       amount: pricePerDay ?? 0,
       status: "pending",
       payment_status: "pending",
-      notes: parsed.data.notes || null,
+      notes: d.special_instructions || null,
+      details: {
+        event_name: d.event_name,
+        organizer_type: d.organizer_type === "Other" ? (d.organizer_type_other || "Other") : d.organizer_type,
+        event_type: d.event_type === "Other" ? (d.event_type_other || "Other") : d.event_type,
+        contact_person: d.contact_person,
+        contact_phone: d.contact_phone,
+        contact_email: d.contact_email,
+        start_time: d.start_time,
+        end_time: d.end_time,
+        guest_count: Number(d.guest_count),
+      },
     } as never);
     setSubmitting(false);
     if (error) { setErr("Could not create your booking. Please try again."); return; }
@@ -401,26 +441,76 @@ function BookingForm({
     return (
       <div className="rounded-2xl border border-brand-violet/30 bg-accent/40 p-5 text-sm">
         <div className="inline-flex items-center gap-2 font-semibold text-brand-violet"><CheckCircle2 className="h-4 w-4" /> Booking request sent</div>
-        <p className="mt-1 text-muted-foreground">The venue owner will confirm shortly. Track it anytime from My Bookings in your dashboard.</p>
+        <p className="mt-1 text-muted-foreground">The venue owner will review the full details and confirm shortly. Track it anytime from My Bookings in your dashboard.</p>
       </div>
     );
   }
 
   return (
-    <form onSubmit={submit} noValidate className="space-y-3">
+    <form onSubmit={submit} noValidate className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
       <h3 className="font-display text-base font-semibold">Request to book</h3>
       {err && <div role="alert" className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive"><AlertCircle className="h-3.5 w-3.5 mt-0.5" />{err}</div>}
-      <div className="grid grid-cols-2 gap-3">
-        <Row label="Event date" error={errors.event_date}>
-          <input type="date" className="input" value={state.event_date} onChange={(e) => setState({ ...state, event_date: e.target.value })} />
+
+      <Row label="Event name" error={errors.event_name}>
+        <input className="input" value={state.event_name} onChange={(e) => set("event_name", e.target.value)} placeholder="e.g., Priya & Rohan's Wedding" />
+      </Row>
+
+      <Row label="Who's organizing?" error={errors.organizer_type}>
+        <select className="input" value={state.organizer_type} onChange={(e) => set("organizer_type", e.target.value)}>
+          <option value="" disabled>Select…</option>
+          {ORGANIZER_TYPES.map((o) => <option key={o} value={o}>{o}</option>)}
+        </select>
+      </Row>
+      {state.organizer_type === "Other" && (
+        <Row label="Please specify">
+          <input className="input" value={state.organizer_type_other} onChange={(e) => set("organizer_type_other", e.target.value)} />
         </Row>
-        <Row label="Guests" error={errors.guest_count}>
-          <input type="number" className="input" value={state.guest_count} onChange={(e) => setState({ ...state, guest_count: e.target.value })} placeholder="e.g., 250" />
+      )}
+
+      <Row label="Event type" error={errors.event_type}>
+        <select className="input" value={state.event_type} onChange={(e) => set("event_type", e.target.value)}>
+          <option value="" disabled>Select…</option>
+          {EVENT_TYPES.map((o) => <option key={o} value={o}>{o}</option>)}
+        </select>
+      </Row>
+      {state.event_type === "Other" && (
+        <Row label="Please specify">
+          <input className="input" value={state.event_type_other} onChange={(e) => set("event_type_other", e.target.value)} />
+        </Row>
+      )}
+
+      <Row label="Contact person" error={errors.contact_person}>
+        <input className="input" value={state.contact_person} onChange={(e) => set("contact_person", e.target.value)} placeholder="Full name" />
+      </Row>
+      <div className="grid grid-cols-2 gap-3">
+        <Row label="Mobile number" error={errors.contact_phone}>
+          <input type="tel" className="input" value={state.contact_phone} onChange={(e) => set("contact_phone", e.target.value)} placeholder="10-digit mobile" />
+        </Row>
+        <Row label="Email" error={errors.contact_email}>
+          <input type="email" className="input" value={state.contact_email} onChange={(e) => set("contact_email", e.target.value)} placeholder="you@example.com" />
         </Row>
       </div>
-      <Row label="Notes for the venue (optional)" error={errors.notes}>
-        <textarea rows={3} className="input" value={state.notes} onChange={(e) => setState({ ...state, notes: e.target.value })} placeholder="Anything the venue should know" />
+
+      <div className="grid grid-cols-3 gap-3">
+        <Row label="Event date" error={errors.event_date}>
+          <input type="date" className="input" value={state.event_date} onChange={(e) => set("event_date", e.target.value)} />
+        </Row>
+        <Row label="Start time" error={errors.start_time}>
+          <input type="time" className="input" value={state.start_time} onChange={(e) => set("start_time", e.target.value)} />
+        </Row>
+        <Row label="End time" error={errors.end_time}>
+          <input type="time" className="input" value={state.end_time} onChange={(e) => set("end_time", e.target.value)} />
+        </Row>
+      </div>
+
+      <Row label="Expected guests" error={errors.guest_count}>
+        <input type="number" className="input" value={state.guest_count} onChange={(e) => set("guest_count", e.target.value)} placeholder="e.g., 250" />
       </Row>
+
+      <Row label="Special instructions (optional)" error={errors.special_instructions}>
+        <textarea rows={3} className="input" value={state.special_instructions} onChange={(e) => set("special_instructions", e.target.value)} placeholder="Anything the venue should know" />
+      </Row>
+
       {advanceAmount != null && advanceAmount > 0 && (
         <p className="text-xs text-muted-foreground">An advance of ₹{advanceAmount.toLocaleString("en-IN")} will be requested once the venue confirms.</p>
       )}
