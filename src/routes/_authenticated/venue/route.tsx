@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, Link, useRouterState, useNavigate, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import {
-  LayoutDashboard, Inbox, CalendarCheck, Building2, Settings, LogOut, Menu, X, Clock, ShieldAlert, MailWarning,
+  LayoutDashboard, Inbox, CalendarCheck, Building2, Settings, LogOut, Menu, X, Clock, ShieldAlert, MailWarning, HardHat,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,6 +57,7 @@ const NAV = [
   { to: "/venue", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/venue/enquiries", label: "Enquiries", icon: Inbox },
   { to: "/venue/bookings", label: "Bookings", icon: CalendarCheck },
+  { to: "/venue/hire-workers", label: "Hire Workers", icon: HardHat },
   { to: "/venue/profile", label: "Venue Profile", icon: Building2 },
   { to: "/venue/settings", label: "Settings", icon: Settings, soon: true },
 ];
