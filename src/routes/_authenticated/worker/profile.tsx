@@ -63,8 +63,9 @@ function ProfilePage() {
         } as never);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("workers").update(patch as never).eq("owner_id", user!.id);
+        const { data, error } = await supabase.from("workers").update(patch as never).eq("owner_id", user!.id).select().maybeSingle();
         if (error) throw error;
+        if (!data) throw new Error("Save was blocked — please refresh and try again.");
       }
     },
     onSuccess: () => { toast.success("Saved"); qc.invalidateQueries({ queryKey: ["me-worker", user?.id] }); },
@@ -73,9 +74,16 @@ function ProfilePage() {
 
   const submitForVerification = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("workers")
-        .update({ verification_status: "pending", ...form } as never).eq("owner_id", user!.id);
+      // IMPORTANT: Supabase/PostgREST does not raise an error when RLS
+      // blocks an update — it just matches zero rows and returns success
+      // with empty data. Without checking the returned row, a blocked
+      // submission looked identical to a real one (this is exactly why
+      // submissions weren't reaching the admin queue — the toast said
+      // "Submitted" even when nothing was actually saved).
+      const { data, error } = await supabase.from("workers")
+        .update({ verification_status: "pending", ...form } as never).eq("owner_id", user!.id).select().maybeSingle();
       if (error) throw error;
+      if (!data) throw new Error("Submission was blocked — please refresh the page and try again. If this keeps happening, contact support.");
     },
     onSuccess: () => { toast.success("Submitted for verification"); qc.invalidateQueries({ queryKey: ["me-worker", user?.id] }); },
     onError: (e: unknown) => toast.error((e as Error).message),
