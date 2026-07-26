@@ -488,3 +488,150 @@ export async function fetchPublishedForm(eventId: string): Promise<{ form: Event
   const fields = await fetchFormFields((form as unknown as EventForm).id);
   return { form: form as unknown as EventForm, fields };
 }
+// ============================================================
+// APPEND this whole block to the BOTTOM of src/lib/organization.ts.
+// Do NOT change anything above — this only adds new functions/types
+// for the Worker Job Marketplace (posting jobs + reviewing applicants).
+// Matches this file's existing conventions exactly: `org_id` column
+// name, no `as never` needed once your Supabase types are regenerated
+// (cast to `as never` below since these are brand-new tables that
+// aren't in your generated types yet — same pattern used for
+// org_event_forms/org_event_form_fields when those were first added).
+//
+// Requires migration 20260728100000_worker_job_marketplace.sql
+// (creates worker_job_postings + worker_job_applications, and the
+// accept_worker_application() RPC).
+//
+// Note on permissions: this uses the permission key "hire_workers"
+// via org_member_has_permission(), the same way "manage_departments"
+// etc. do. It works immediately even though it isn't in the PERMISSIONS
+// list above (that list only drives which checkboxes show up in your
+// role-builder UI) — if you want org owners to be able to grant/revoke
+// it per role from that UI, add this one line into the PERMISSIONS
+// array yourself wherever you'd like it to sit:
+//   { key: "hire_workers", label: "Post Jobs & Hire Workers" },
+// ============================================================
+
+export type JobPosting = {
+  id: string;
+  org_id: string | null;
+  vendor_id: string | null;
+  event_id: string | null;
+  posted_by: string;
+  title: string;
+  category: string;
+  description: string | null;
+  venue: string | null;
+  venue_address: string | null;
+  event_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  slots_needed: number;
+  slots_filled: number;
+  pay_amount: number | null;
+  pay_type: "hourly" | "daily" | "per_event";
+  status: "open" | "closed" | "cancelled";
+  created_at: string;
+};
+
+export type JobApplication = {
+  id: string;
+  posting_id: string;
+  worker_id: string;
+  worker_user_id: string;
+  cover_note: string | null;
+  status: "applied" | "shortlisted" | "accepted" | "rejected" | "withdrawn";
+  applied_at: string;
+  responded_at: string | null;
+  worker?: { full_name: string; category: string | null; years_experience: number | null; city: string | null; photo_url: string | null };
+};
+
+export async function fetchOrgPostings(orgId: string): Promise<JobPosting[]> {
+  const { data, error } = await supabase
+    .from("worker_job_postings" as never)
+    .select("*")
+    .eq("org_id" as never, orgId as never)
+    .order("created_at" as never, { ascending: false });
+  if (error) throw error;
+  return (data as unknown as JobPosting[]) ?? [];
+}
+
+export async function createJobPosting(
+  orgId: string,
+  patch: Omit<JobPosting, "id" | "org_id" | "vendor_id" | "posted_by" | "slots_filled" | "status" | "created_at">
+): Promise<JobPosting> {
+  const { data: userData } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from("worker_job_postings" as never)
+    .insert({ org_id: orgId, posted_by: userData.user?.id, ...patch } as never)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data as unknown as JobPosting;
+}
+
+export async function closePosting(id: string): Promise<void> {
+  // .select().maybeSingle() after the update is intentional: Supabase/
+  // PostgREST does not raise an error when RLS blocks an update — it
+  // just matches zero rows and returns success with no data. Checking
+  // for a returned row is the only reliable way to catch that.
+  const { data, error } = await supabase
+    .from("worker_job_postings" as never)
+    .update({ status: "cancelled" } as never)
+    .eq("id" as never, id as never)
+    .select()
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("Update was blocked — you may not have permission to manage this posting.");
+}
+
+/** Applications for one posting, joined with the applicant's worker profile for display. */
+export async function fetchApplicationsForPosting(postingId: string): Promise<JobApplication[]> {
+  const { data: apps, error } = await supabase
+    .from("worker_job_applications" as never)
+    .select("*")
+    .eq("posting_id" as never, postingId as never)
+    .order("applied_at" as never, { ascending: true });
+  if (error) throw error;
+  const list = (apps as unknown as JobApplication[]) ?? [];
+  if (list.length === 0) return list;
+
+  const { data: workers } = await supabase
+    .from("workers")
+    .select("id, full_name, category, years_experience, city, photo_url")
+    .in("id", list.map((a) => a.worker_id));
+  const byId = new Map((workers ?? []).map((w) => [w.id, w]));
+  return list.map((a) => ({ ...a, worker: byId.get(a.worker_id) as JobApplication["worker"] }));
+}
+
+export async function shortlistApplication(id: string): Promise<void> {
+  const { data, error } = await supabase
+    .from("worker_job_applications" as never)
+    .update({ status: "shortlisted", responded_at: new Date().toISOString() } as never)
+    .eq("id" as never, id as never)
+    .select()
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("Update was blocked — you may not have permission to manage this application.");
+}
+
+export async function rejectApplication(id: string): Promise<void> {
+  const { data, error } = await supabase
+    .from("worker_job_applications" as never)
+    .update({ status: "rejected", responded_at: new Date().toISOString() } as never)
+    .eq("id" as never, id as never)
+    .select()
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("Update was blocked — you may not have permission to manage this application.");
+}
+
+/** Accepting is atomic on the database side (via the accept_worker_application
+ * RPC) — it also creates the row in worker_tasks, so everything already
+ * built for workers (accept/reject, check-in/check-out, mandatory
+ * photo-proof) just works with zero extra wiring. */
+export async function acceptApplication(id: string): Promise<string> {
+  const { data, error } = await supabase.rpc("accept_worker_application" as never, { p_application_id: id } as never);
+  if (error) throw error;
+  return data as unknown as string;
+}
