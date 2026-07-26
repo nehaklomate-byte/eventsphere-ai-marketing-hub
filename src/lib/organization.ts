@@ -158,27 +158,50 @@ export async function fetchMembers(orgId: string): Promise<OrgMember[]> {
   return (data as unknown as OrgMember[]) ?? [];
 }
 
+// ============================================================
+// UPDATE this function in src/lib/organization.ts — REPLACE the existing
+// inviteMember function with this version (adds the auto-email call at
+// the end; everything else about it is unchanged).
+// ============================================================
+
 export async function inviteMember(
   orgId: string,
   invitedEmail: string,
   roleId: string,
-  opts?: { fullName?: string; isAdminRole?: boolean; departmentId?: string | null }
+  opts?: { fullName?: string; isAdminRole?: boolean; departmentId?: string | null; orgName?: string; roleName?: string }
 ): Promise<void> {
   const { data: userData } = await supabase.auth.getUser();
-  const { error } = await supabase.from("org_members").insert({
-    org_id: orgId,
-    invited_email: invitedEmail,
-    full_name: opts?.fullName ?? null,
-    role_id: roleId,
-    is_admin_role: opts?.isAdminRole ?? false,
-    department_id: opts?.departmentId ?? null,
-    status: "invited",
-    invited_by: userData.user?.id ?? null,
-  } as never);
+  const { data: inserted, error } = await supabase
+    .from("org_members")
+    .insert({
+      org_id: orgId,
+      invited_email: invitedEmail,
+      full_name: opts?.fullName ?? null,
+      role_id: roleId,
+      is_admin_role: opts?.isAdminRole ?? false,
+      department_id: opts?.departmentId ?? null,
+      status: "invited",
+      invited_by: userData.user?.id ?? null,
+    } as never)
+    .select("id, invite_token")
+    .single();
   if (error) throw error;
-  // Note: this creates the DB row only. Actually sending the invite email
-  // (magic link / signup link tied to this org_id) is a Phase 2 item —
-  // wire it to a Supabase Edge Function or supabase.auth.admin.inviteUserByEmail.
+
+  // Fire-and-forget the invite email. If it fails, the member row still
+  // exists and the "Copy invite link" button still works as a fallback.
+  const row = inserted as unknown as { id: string; invite_token: string };
+  try {
+    await supabase.functions.invoke("send-org-invite", {
+      body: {
+        email: invitedEmail,
+        orgName: opts?.orgName ?? "your organization",
+        roleName: opts?.roleName ?? "a team member",
+        token: row.invite_token,
+      },
+    });
+  } catch {
+    // Swallow — email sending failure shouldn't block the invite itself.
+  }
 }
 
 export async function updateMemberRole(id: string, roleLabel: string, isAdminRole: boolean): Promise<void> {
