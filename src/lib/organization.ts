@@ -635,3 +635,58 @@ export async function acceptApplication(id: string): Promise<string> {
   if (error) throw error;
   return data as unknown as string;
 }
+// ============================================================
+// ADD everything below to the BOTTOM of src/lib/organization.ts
+// (after fetchPublishedForm, which is currently the last function).
+// ALSO: update acceptInvite (see note below) and remove the duplicate
+// fetchMyActiveMemberships logic from team-member/route.tsx and
+// team-member/index.tsx — both should import it from here instead.
+// ============================================================
+
+export type MyMembership = {
+  id: string;
+  org_id: string;
+  org_name: string;
+  role: OrgRole | null;
+  status: OrgMember["status"];
+};
+
+/** Canonical "what orgs am I an active/pending member of" lookup — used by
+ * the Team Member dashboard shell and every permission-gated page inside it. */
+export async function fetchMyMemberships(): Promise<MyMembership[]> {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return [];
+  const { data, error } = await supabase
+    .from("org_members")
+    .select("id, org_id, status, org:organizations(name), role:org_roles(*)")
+    .eq("user_id", userData.user.id)
+    .in("status", ["active", "pending_confirmation"]);
+  if (error) throw error;
+  return ((data ?? []) as unknown as Array<{
+    id: string; org_id: string; status: OrgMember["status"];
+    org: { name: string } | null; role: OrgRole | null;
+  }>).map((r) => ({ id: r.id, org_id: r.org_id, org_name: r.org?.name ?? "Organization", role: r.role, status: r.status }));
+}
+
+// ---- Org-head confirmation queue (pending_confirmation -> active) ----
+
+export async function fetchPendingConfirmations(orgId: string): Promise<OrgMember[]> {
+  const { data, error } = await supabase
+    .from("org_members")
+    .select("*")
+    .eq("org_id", orgId)
+    .eq("status", "pending_confirmation")
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return (data as unknown as OrgMember[]) ?? [];
+}
+
+export async function confirmMember(id: string): Promise<void> {
+  const { error } = await supabase.from("org_members").update({ status: "active" } as never).eq("id", id);
+  if (error) throw error;
+}
+
+export async function rejectPendingMember(id: string): Promise<void> {
+  const { error } = await supabase.from("org_members").update({ status: "removed" } as never).eq("id", id);
+  if (error) throw error;
+}
