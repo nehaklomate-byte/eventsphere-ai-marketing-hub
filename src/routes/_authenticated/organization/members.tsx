@@ -51,9 +51,11 @@ function MembersPage() {
     setError(null);
     try {
       await inviteMember(org.id, email.trim(), roleId, {
-        fullName: fullName.trim() || undefined,
-        departmentId: departmentId || null,
-      });
+  fullName: fullName.trim() || undefined,
+  departmentId: departmentId || null,
+  orgName: org.name,
+  roleName: (roles ?? []).find((r) => r.id === roleId)?.name,
+});
       setEmail(""); setFullName(""); setRoleId(""); setDepartmentId("");
       await qc.invalidateQueries({ queryKey: ["organization-members", org.id] });
     } catch (err) {
