@@ -1,13 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Loader2, CheckCircle2, XCircle, Mail } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Mail, Eye, EyeOff } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
 import { lookupInvite, acceptInvite } from "@/lib/organization";
 
 export const Route = createFileRoute("/join-organization/$token")({
-  head: () => ({ meta: [{ title: "Join Organization — EventOrbit AI" }] }),
+  head: () => ({ meta: [{ title: "Join Organization - EventOrbit AI" }] }),
   component: JoinOrganizationPage,
 });
 
@@ -17,10 +17,12 @@ type Step =
 
 function JoinOrganizationPage() {
   const { token } = Route.useParams();
+  const navigate = useNavigate();
   const [step, setStep] = useState<Step>("loading");
   const [errorMsg, setErrorMsg] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -49,6 +51,10 @@ function JoinOrganizationPage() {
     check();
   }, [invite, isLoading]);
 
+  function goToMemberDashboard() {
+    navigate({ to: "/team-member", replace: true } as never);
+  }
+
   async function handleAccept() {
     if (!invite) return;
     try {
@@ -60,8 +66,6 @@ function JoinOrganizationPage() {
     }
   }
 
-  /** Quick signup, scoped to this invite only — no role picker, no long
-   *  form. Email is fixed to the invited address. */
   async function handleQuickSignup(e: React.FormEvent) {
     e.preventDefault();
     if (!invite) return;
@@ -79,11 +83,9 @@ function JoinOrganizationPage() {
       if (error) throw error;
 
       if (data.session) {
-        // Email confirmation is off (or auto-confirmed) — proceed right away.
         await acceptInvite(invite.id);
         setStep("done");
       } else {
-        // Email confirmation required before a session exists.
         setStep("check-inbox-confirm");
       }
     } catch (err) {
@@ -93,9 +95,6 @@ function JoinOrganizationPage() {
     }
   }
 
-  /** For people who already have an account but don't remember their
-   *  password — passwordless magic-link login instead of forcing them
-   *  to recall it. */
   async function handleMagicLink() {
     if (!invite) return;
     setSubmitting(true);
@@ -139,26 +138,38 @@ function JoinOrganizationPage() {
             <form onSubmit={handleQuickSignup} className="mt-6 space-y-3 text-left">
               <div>
                 <label className="text-sm font-medium">Set a password</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  minLength={8}
-                  required
-                  placeholder="At least 8 characters"
-                  className="mt-1.5 w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm"
-                />
+                <div className="relative mt-1.5">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    minLength={8}
+                    required
+                    placeholder="At least 8 characters"
+                    className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 pr-10 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((s) => !s)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium">Confirm password</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  minLength={8}
-                  required
-                  className="mt-1.5 w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm"
-                />
+                <div className="relative mt-1.5">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    minLength={8}
+                    required
+                    className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 pr-10 text-sm"
+                  />
+                </div>
               </div>
               {formError && <p className="text-sm text-rose-600">{formError}</p>}
               <button
@@ -166,7 +177,7 @@ function JoinOrganizationPage() {
                 disabled={submitting}
                 className="flex w-full items-center justify-center gap-2 rounded-full bg-brand-violet px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-violet/90 disabled:opacity-50"
               >
-                {submitting ? "Joining…" : `Join ${invite.org_name}`}
+                {submitting ? "Joining..." : `Join ${invite.org_name}`}
               </button>
             </form>
 
@@ -200,7 +211,7 @@ function JoinOrganizationPage() {
             <h1 className="font-display text-xl font-semibold">Check your email</h1>
             <p className="mt-2 text-sm text-muted-foreground">
               We sent a login link to <span className="font-medium text-foreground">{invite.invited_email}</span>.
-              Open it on this device — you'll land right back here, already logged in.
+              Open it on this device - you'll land right back here, already logged in.
             </p>
           </>
         )}
@@ -236,9 +247,9 @@ function JoinOrganizationPage() {
             <CheckCircle2 className="mx-auto mb-3 h-9 w-9 text-emerald-500" />
             <h1 className="font-display text-xl font-semibold">You're in!</h1>
             <p className="mt-2 text-sm text-muted-foreground">Your account is now linked to the organization.</p>
-            <Link to="/organization/members" className="mt-6 flex w-full items-center justify-center rounded-full bg-brand-violet px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-violet/90">
-              Go to dashboard
-            </Link>
+            <button onClick={goToMemberDashboard} className="mt-6 flex w-full items-center justify-center rounded-full bg-brand-violet px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-violet/90">
+              Go to my dashboard
+            </button>
           </>
         )}
 
