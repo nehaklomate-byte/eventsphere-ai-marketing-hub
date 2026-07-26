@@ -191,3 +191,84 @@ export function priorityTone(p: WorkerTask["priority"]) {
   };
   return m[p];
 }
+
+// ---- Job Marketplace (browse open postings, apply, track applications) ----
+// New tables, not yet in generated Supabase types — cast `as never`, same
+// pattern already used for other freshly-added tables in this codebase.
+
+export type OpenPosting = {
+  id: string;
+  org_id: string | null;
+  vendor_id: string | null;
+  title: string;
+  category: string;
+  description: string | null;
+  venue: string | null;
+  venue_address: string | null;
+  event_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  slots_needed: number;
+  slots_filled: number;
+  pay_amount: number | null;
+  pay_type: "hourly" | "daily" | "per_event";
+  status: "open" | "closed" | "cancelled";
+  created_at: string;
+  poster_name?: string;
+};
+
+export type MyApplication = {
+  id: string;
+  posting_id: string;
+  worker_id: string;
+  worker_user_id: string;
+  cover_note: string | null;
+  status: "applied" | "shortlisted" | "accepted" | "rejected" | "withdrawn";
+  applied_at: string;
+  responded_at: string | null;
+  posting?: OpenPosting;
+};
+
+/** Open postings, newest first, optionally narrowed to the worker's own category. */
+export async function fetchOpenPostings(category?: string): Promise<OpenPosting[]> {
+  let query = supabase.from("worker_job_postings" as never).select("*").eq("status" as never, "open" as never).order("created_at" as never, { ascending: false });
+  if (category) query = query.eq("category" as never, category as never);
+  const { data, error } = await query;
+  if (error) throw error;
+  const postings = (data as unknown as OpenPosting[]) ?? [];
+  if (postings.length === 0) return postings;
+
+  const orgIds = Array.from(new Set(postings.map((p) => p.org_id).filter(Boolean))) as string[];
+  if (orgIds.length === 0) return postings;
+  const { data: orgs } = await supabase.from("organizations").select("id, name").in("id", orgIds);
+  const nameById = new Map((orgs ?? []).map((o) => [o.id, o.name]));
+  return postings.map((p) => ({ ...p, poster_name: p.org_id ? nameById.get(p.org_id) : undefined }));
+}
+
+export async function fetchMyApplications(userId: string): Promise<MyApplication[]> {
+  const { data: apps, error } = await supabase
+    .from("worker_job_applications" as never)
+    .select("*")
+    .eq("worker_user_id" as never, userId as never)
+    .order("applied_at" as never, { ascending: false });
+  if (error) throw error;
+  const list = (apps as unknown as MyApplication[]) ?? [];
+  if (list.length === 0) return list;
+
+  const { data: postings } = await supabase.from("worker_job_postings" as never).select("*").in("id" as never, list.map((a) => a.posting_id) as never);
+  const byId = new Map(((postings as unknown as OpenPosting[]) ?? []).map((p) => [p.id, p]));
+  return list.map((a) => ({ ...a, posting: byId.get(a.posting_id) }));
+}
+
+export async function applyToPosting(postingId: string, workerId: string, workerUserId: string, coverNote: string): Promise<void> {
+  const { error } = await supabase.from("worker_job_applications" as never).insert({
+    posting_id: postingId, worker_id: workerId, worker_user_id: workerUserId, cover_note: coverNote || null,
+  } as never);
+  if (error) throw error;
+}
+
+export async function withdrawApplication(id: string): Promise<void> {
+  const { data, error } = await supabase.from("worker_job_applications" as never).update({ status: "withdrawn" } as never).eq("id" as never, id as never).select().maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("Update was blocked — please refresh and try again.");
+}
