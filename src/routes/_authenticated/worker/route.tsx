@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useRouterState, useNavigate, redirect } 
 import { useEffect, useState } from "react";
 import {
   LayoutDashboard, Briefcase, CalendarDays, Clock, Bell, Wallet, User, FileText,
-  Settings, LifeBuoy, LogOut, Menu, X, ShieldCheck, BadgeAlert, BadgeCheck,
+  Settings, LifeBuoy, LogOut, Menu, X, ShieldCheck, BadgeAlert, BadgeCheck, ShieldAlert, Loader2, Layers,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +22,7 @@ export const Route = createFileRoute("/_authenticated/worker")({
 const nav: { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean }[] = [
   { to: "/worker", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/worker/jobs", label: "Assigned Jobs", icon: Briefcase },
+  { to: "/worker/board", label: "Job Board", icon: Layers },
   { to: "/worker/calendar", label: "Calendar", icon: CalendarDays },
   { to: "/worker/availability", label: "Availability", icon: Clock },
   { to: "/worker/notifications", label: "Notifications", icon: Bell },
@@ -39,10 +40,27 @@ function WorkerShell() {
   const [open, setOpen] = useState(false);
   const qc = useQueryClient();
 
+  // Step 1 gate: an account that hasn't been approved by admin yet must
+  // never reach the dashboard/profile/jobs — this mirrors the same check
+  // already enforced in the Organization and Venue Owner shells.
+  const { data: gate, isLoading: gateLoading } = useQuery({
+    queryKey: ["worker-account-gate", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("account_status, account_rejection_reason")
+        .eq("id", user.id)
+        .maybeSingle();
+      return data as { account_status: "pending_approval" | "approved" | "rejected" | null; account_rejection_reason: string | null } | null;
+    },
+    enabled: !!user?.id,
+  });
+
   const { data: worker } = useQuery({
     queryKey: ["me-worker", user?.id],
     queryFn: () => fetchMyWorker(user!.id),
-    enabled: !!user?.id,
+    enabled: !!user?.id && gate?.account_status === "approved",
   });
 
   const { data: unread = 0 } = useQuery({
@@ -54,7 +72,7 @@ function WorkerShell() {
         .is("read_at" as never, null as never);
       return count ?? 0;
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && gate?.account_status === "approved",
     refetchInterval: 30000,
   });
 
@@ -82,6 +100,43 @@ function WorkerShell() {
   }
 
   const initials = user?.email?.[0]?.toUpperCase() ?? "W";
+
+  if (gateLoading) {
+    return <div className="grid min-h-dvh place-items-center bg-background"><Loader2 className="h-6 w-6 animate-spin text-brand-violet" /></div>;
+  }
+
+  const accountStatus = gate?.account_status ?? "pending_approval";
+  if (accountStatus !== "approved") {
+    const rejected = accountStatus === "rejected";
+    return (
+      <div className="grid min-h-dvh place-items-center bg-muted/30 px-6">
+        <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 text-center">
+          <Link to="/" className="mx-auto mb-6 flex justify-center"><Logo className="h-8" /></Link>
+          {rejected ? (
+            <>
+              <ShieldAlert className="mx-auto mb-3 h-9 w-9 text-rose-500" />
+              <h1 className="font-display text-xl font-semibold">Account not approved</h1>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {gate?.account_rejection_reason || "Your account application wasn't approved. Please contact support for details."}
+              </p>
+            </>
+          ) : (
+            <>
+              <Clock className="mx-auto mb-3 h-9 w-9 text-amber-500" />
+              <h1 className="font-display text-xl font-semibold">Waiting for admin approval</h1>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Thanks for registering. An admin needs to approve your account before you can access your worker
+                dashboard and complete your profile — you'll be notified the moment that happens.
+              </p>
+            </>
+          )}
+          <button onClick={signOut} className="mt-6 flex w-full items-center justify-center gap-2 rounded-full border border-input px-4 py-2.5 text-sm font-semibold hover:bg-accent">
+            <LogOut className="h-4 w-4" /> Sign out
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-dvh bg-muted/30">
