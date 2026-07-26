@@ -41,10 +41,12 @@ function TeamMemberInvitePage() {
     setSaving(true);
     setMessage(null);
     try {
-      await inviteMember(orgId, email.trim(), roleId, {
-        orgName: membership?.org_name,
-        roleName: (roles ?? []).find((r) => r.id === roleId)?.name,
-      });
+      await inviteMember(org.id, email.trim(), roleId, {
+  fullName: fullName.trim() || undefined,
+  departmentId: departmentId || null,
+  orgName: org.name,
+  roleName: (roles ?? []).find((r) => r.id === roleId)?.name,
+});
       setMessage({ type: "success", text: `Invited ${email}.` });
       setEmail(""); setRoleId("");
     } catch (err) {
