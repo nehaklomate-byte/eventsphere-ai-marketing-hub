@@ -338,7 +338,7 @@ export async function acceptInvite(memberId: string): Promise<void> {
   if (!userData.user) throw new Error("You must be logged in to accept an invite.");
   const { error } = await supabase
     .from("org_members")
-    .update({ status: "active", user_id: userData.user.id } as never)
+    .update({ status: "pending_confirmation", user_id: userData.user.id } as never)
     .eq("id", memberId);
   if (error) throw error;
 }
