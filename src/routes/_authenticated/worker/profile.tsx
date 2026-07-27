@@ -72,6 +72,27 @@ function ProfilePage() {
     onError: (e: unknown) => toast.error((e as Error).message),
   });
 
+  const togglePublish = useMutation({
+    mutationFn: async (publish: boolean) => {
+      // Two columns gate marketplace visibility for workers: the RLS
+      // policy that lets anon/authenticated visitors read the row checks
+      // `status = 'published'`, and the marketplace search additionally
+      // filters on `marketplace_visible = true`. Both need to flip
+      // together, or the profile silently stays invisible even though
+      // verification_status looks "approved".
+      const { data, error } = await supabase.from("workers")
+        .update({ status: publish ? "published" : "draft", marketplace_visible: publish } as never)
+        .eq("owner_id", user!.id).select().maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error("Update was blocked — please refresh and try again.");
+    },
+    onSuccess: (_data, publish) => {
+      toast.success(publish ? "You're live! Now visible on the marketplace." : "Hidden from the marketplace.");
+      qc.invalidateQueries({ queryKey: ["me-worker", user?.id] });
+    },
+    onError: (e: unknown) => toast.error((e as Error).message),
+  });
+
   const submitForVerification = useMutation({
     mutationFn: async () => {
       // IMPORTANT: Supabase/PostgREST does not raise an error when RLS
@@ -334,9 +355,24 @@ function ProfilePage() {
                 <ReviewRow label="Verification status" value={form.verification_status as string} />
               </div>
               {form.verification_status === "approved" ? (
-                <div className="mt-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 flex items-center gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                  <div className="text-sm"><strong>Profile approved.</strong> You appear on the marketplace and can receive jobs.</div>
+                <div className="mt-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                    <div className="text-sm"><strong>Profile approved.</strong> Publish it to appear on the marketplace and start receiving jobs.</div>
+                  </div>
+                  <button onClick={() => togglePublish.mutate(!(form.marketplace_visible && form.status === "published"))}
+                    disabled={togglePublish.isPending}
+                    className={`mt-4 inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold disabled:opacity-70 ${
+                      form.marketplace_visible && form.status === "published"
+                        ? "bg-zinc-800 text-white hover:bg-zinc-900"
+                        : "btn-brand btn-brand-hover text-white"
+                    }`}>
+                    {togglePublish.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {form.marketplace_visible && form.status === "published" ? "Hide from marketplace" : "Show on marketplace"}
+                  </button>
+                  {form.marketplace_visible && form.status === "published" && (
+                    <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-400">You're live — customers and venue owners can find and book you right now.</p>
+                  )}
                 </div>
               ) : form.verification_status === "pending" ? (
                 <div className="mt-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 flex items-center gap-3">
