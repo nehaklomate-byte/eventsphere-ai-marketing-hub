@@ -10,6 +10,20 @@ export const Route = createFileRoute("/_authenticated/worker/calendar")({
   component: CalendarPage,
 });
 
+/**
+ * Local YYYY-MM-DD, built from local date parts — NOT `d.toISOString()`.
+ * toISOString() converts to UTC first, which for IST (UTC+5:30) shifts
+ * local midnight back to the previous day, silently landing every task
+ * one cell later than its real event_date. event_date is a plain
+ * `date` column (no time/timezone), so it must be compared as local.
+ */
+function toLocalISO(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 function CalendarPage() {
   const { user } = useSession();
   const [cursor, setCursor] = useState(() => { const d = new Date(); d.setDate(1); return d; });
@@ -30,7 +44,7 @@ function CalendarPage() {
   const first = new Date(year, month, 1);
   const startDay = (first.getDay() + 6) % 7; // Mon = 0
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const todayISO = new Date().toISOString().slice(0, 10);
+  const todayISO = toLocalISO(new Date());
 
   const byDate = new Map<string, WorkerTask[]>();
   tasks.forEach((t) => {
@@ -77,7 +91,7 @@ function CalendarPage() {
         <div className="grid grid-cols-7 gap-2">
           {cells.map((d, i) => {
             if (!d) return <div key={i} className="h-24 rounded-xl bg-transparent" />;
-            const iso = d.toISOString().slice(0, 10);
+            const iso = toLocalISO(d);
             const list = byDate.get(iso) ?? [];
             const hasJobs = list.length > 0;
             return (
