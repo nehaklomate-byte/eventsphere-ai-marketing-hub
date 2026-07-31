@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, Link, useRouterState, useNavigate, redirect } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  LayoutDashboard, Inbox, CalendarCheck, Building2, Settings, LogOut, Menu, X, Clock, ShieldAlert, MailWarning, HardHat,
+  LayoutDashboard, Inbox, CalendarCheck, Building2, Settings, LogOut, Menu, X, Clock, ShieldAlert, MailWarning, HardHat, Bell,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
@@ -58,6 +58,7 @@ const NAV = [
   { to: "/venue/enquiries", label: "Enquiries", icon: Inbox },
   { to: "/venue/bookings", label: "Bookings", icon: CalendarCheck },
   { to: "/venue/hire-workers", label: "Hire Workers", icon: HardHat },
+  { to: "/venue/notifications", label: "Notifications", icon: Bell },
   { to: "/venue/profile", label: "Venue Profile", icon: Building2 },
   { to: "/venue/settings", label: "Settings", icon: Settings, soon: true },
 ];
@@ -69,6 +70,30 @@ function VenueShell() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  const { data: unread = 0 } = useQuery({
+    queryKey: ["venue-notif-unread", user?.id],
+    queryFn: async () => {
+      const { count } = await supabase.from("worker_notifications" as never)
+        .select("id", { count: "exact", head: true })
+        .eq("user_id" as never, user!.id as never)
+        .is("read_at" as never, null as never);
+      return count ?? 0;
+    },
+    enabled: !!user?.id,
+    refetchInterval: 30000,
+  });
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const ch = supabase.channel(`venue-notif-${user.id}`)
+      .on("postgres_changes",
+        { event: "*", schema: "public", table: "worker_notifications", filter: `user_id=eq.${user.id}` },
+        () => { qc.invalidateQueries({ queryKey: ["venue-notif-unread", user.id] }); qc.invalidateQueries({ queryKey: ["venue-notifications", user.id] }); }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [user?.id, qc]);
 
   async function signOut() {
     await qc.cancelQueries();
@@ -125,9 +150,15 @@ function VenueShell() {
     <div className="min-h-dvh bg-muted/30">
       <div className="md:hidden sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-background/90 backdrop-blur px-4">
         <Link to="/venue"><Logo className="h-7" /></Link>
-        <button onClick={() => setOpen(true)} aria-label="Open menu" className="rounded-lg p-2 hover:bg-accent">
-          <Menu className="h-5 w-5" />
-        </button>
+        <div className="flex items-center gap-1">
+          <Link to="/venue/notifications" className="relative inline-flex h-9 w-9 items-center justify-center rounded-full hover:bg-accent" aria-label="Notifications">
+            <Bell className="h-5 w-5" />
+            {unread > 0 && <span className="absolute -top-0.5 -right-0.5 min-w-[16px] rounded-full bg-rose-500 px-1 py-0.5 text-center text-[9px] font-bold text-white">{unread > 9 ? "9+" : unread}</span>}
+          </Link>
+          <button onClick={() => setOpen(true)} aria-label="Open menu" className="rounded-lg p-2 hover:bg-accent">
+            <Menu className="h-5 w-5" />
+          </button>
+        </div>
       </div>
 
       <div className="mx-auto flex max-w-[1400px]">
@@ -158,6 +189,9 @@ function VenueShell() {
                     <Icon className="h-4 w-4" /> {it.label}
                   </span>
                   {it.soon && <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">Soon</span>}
+                  {it.to === "/venue/notifications" && unread > 0 && (
+                    <span className="min-w-[20px] rounded-full bg-rose-500 px-1.5 py-0.5 text-center text-[10px] font-bold text-white">{unread > 99 ? "99+" : unread}</span>
+                  )}
                 </Link>
               );
             })}
