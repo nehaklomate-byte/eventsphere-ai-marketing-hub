@@ -164,8 +164,8 @@ function HireCard({ worker }: { worker: WorkerProfile }) {
       status: "pending",
       payment_amount: state.pay_amount ? Number(state.pay_amount) : null,
     } as never);
-    setSubmitting(false);
-    if (error) { setErr("Could not send the request. Please try again."); return; }
+   setSubmitting(false);
+    if (error) { setErr(error.message || "Could not send the request. Please try again."); return; }
     setSent(true);
   }
 
