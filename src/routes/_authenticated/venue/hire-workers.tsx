@@ -120,11 +120,11 @@ function HireWorkersPage() {
         </div>
       )}
 
-      {hireTarget && (
-        <HirePanel worker={hireTarget} halls={halls} userId={user!.id} onClose={() => setHireTarget(null)} />
+      {hireTarget && user?.id && (
+        <HirePanel worker={hireTarget} halls={halls} userId={user.id} onClose={() => setHireTarget(null)} />
       )}
 
-      <MyRequests userId={user!.id} />
+      {user?.id && <MyRequests userId={user.id} />}
     </div>
   );
 }
