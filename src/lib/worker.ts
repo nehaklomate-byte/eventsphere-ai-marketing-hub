@@ -122,6 +122,11 @@ export async function fetchMyWorker(userId: string) {
  * documents) and Jobs (check-in/check-out/work-proof photos). Same
  * bucket + path convention everywhere so nothing is duplicated.
  */
+/** Attendance/completion proof can be a photo or a video — this tells the two apart from the URL/filename so the right tag (<img> vs <video>) gets used wherever proof is shown (worker's own page, venue owner's proof viewer). */
+export function isVideoUrl(url: string): boolean {
+  return /\.(mp4|mov|webm|avi|mkv|m4v)(\?|$)/i.test(url);
+}
+
 export async function uploadWorkerFile(userId: string, bucket: string, keyPrefix: string, file: File): Promise<string> {
   const path = `${userId}/${Date.now()}_${file.name}`;
   const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true });
