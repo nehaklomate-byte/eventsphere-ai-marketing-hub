@@ -42,6 +42,7 @@ export type VendorRow = {
   verification_status: "pending" | "approved" | "rejected" | "suspended" | "blacklisted";
   rejection_reason: string | null;
   documents: string[];
+  payout_upi_id: string | null;
   created_at: string;
   updated_at: string;
 };
