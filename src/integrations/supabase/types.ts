@@ -14,10 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action: string
+          actor_email: string | null
+          actor_id: string | null
+          created_at: string
+          id: string
+          ip_address: string | null
+          new_value: Json | null
+          old_value: Json | null
+          target_id: string
+          target_table: string
+        }
+        Insert: {
+          action: string
+          actor_email?: string | null
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          new_value?: Json | null
+          old_value?: Json | null
+          target_id: string
+          target_table: string
+        }
+        Update: {
+          action?: string
+          actor_email?: string | null
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          new_value?: Json | null
+          old_value?: Json | null
+          target_id?: string
+          target_table?: string
+        }
+        Relationships: []
+      }
       customer_bookings: {
         Row: {
           amount: number
           created_at: string
+          details: Json
           event_date: string | null
           event_id: string | null
           id: string
@@ -33,6 +73,7 @@ export type Database = {
         Insert: {
           amount?: number
           created_at?: string
+          details?: Json
           event_date?: string | null
           event_id?: string | null
           id?: string
@@ -48,6 +89,7 @@ export type Database = {
         Update: {
           amount?: number
           created_at?: string
+          details?: Json
           event_date?: string | null
           event_id?: string | null
           id?: string
@@ -479,6 +521,7 @@ export type Database = {
       }
       halls: {
         Row: {
+          additional_info: Json
           address: string | null
           advance_amount: number | null
           alt_phone: string | null
@@ -493,6 +536,7 @@ export type Database = {
           deleted_at: string | null
           dining_capacity: number | null
           dining_photos: Json
+          documents: Json
           drone_photos: Json
           email: string | null
           facilities: Json
@@ -517,6 +561,7 @@ export type Database = {
           price_per_day: number | null
           price_per_hour: number | null
           rating: number
+          rejection_reason: string | null
           review_count: number
           room_photos: Json
           slug: string | null
@@ -525,13 +570,17 @@ export type Database = {
           state: string | null
           status: Database["public"]["Enums"]["hall_status"]
           updated_at: string
+          verification_status: Database["public"]["Enums"]["verification_status"]
           verified: boolean
+          verified_at: string | null
+          verified_by: string | null
           videos: Json
           washroom_photos: Json
           website: string | null
           working_hours: string | null
         }
         Insert: {
+          additional_info?: Json
           address?: string | null
           advance_amount?: number | null
           alt_phone?: string | null
@@ -546,6 +595,7 @@ export type Database = {
           deleted_at?: string | null
           dining_capacity?: number | null
           dining_photos?: Json
+          documents?: Json
           drone_photos?: Json
           email?: string | null
           facilities?: Json
@@ -570,6 +620,7 @@ export type Database = {
           price_per_day?: number | null
           price_per_hour?: number | null
           rating?: number
+          rejection_reason?: string | null
           review_count?: number
           room_photos?: Json
           slug?: string | null
@@ -578,13 +629,17 @@ export type Database = {
           state?: string | null
           status?: Database["public"]["Enums"]["hall_status"]
           updated_at?: string
+          verification_status?: Database["public"]["Enums"]["verification_status"]
           verified?: boolean
+          verified_at?: string | null
+          verified_by?: string | null
           videos?: Json
           washroom_photos?: Json
           website?: string | null
           working_hours?: string | null
         }
         Update: {
+          additional_info?: Json
           address?: string | null
           advance_amount?: number | null
           alt_phone?: string | null
@@ -599,6 +654,7 @@ export type Database = {
           deleted_at?: string | null
           dining_capacity?: number | null
           dining_photos?: Json
+          documents?: Json
           drone_photos?: Json
           email?: string | null
           facilities?: Json
@@ -623,6 +679,7 @@ export type Database = {
           price_per_day?: number | null
           price_per_hour?: number | null
           rating?: number
+          rejection_reason?: string | null
           review_count?: number
           room_photos?: Json
           slug?: string | null
@@ -631,7 +688,10 @@ export type Database = {
           state?: string | null
           status?: Database["public"]["Enums"]["hall_status"]
           updated_at?: string
+          verification_status?: Database["public"]["Enums"]["verification_status"]
           verified?: boolean
+          verified_at?: string | null
+          verified_by?: string | null
           videos?: Json
           washroom_photos?: Json
           website?: string | null
@@ -639,8 +699,224 @@ export type Database = {
         }
         Relationships: []
       }
+      org_departments: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          org_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          org_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          org_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_departments_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_events: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          custom_location: string | null
+          description: string | null
+          end_at: string | null
+          event_type: string
+          id: string
+          max_participants: number | null
+          mode: string
+          org_id: string
+          registration_deadline: string | null
+          start_at: string | null
+          status: string
+          title: string
+          venue_hall_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          custom_location?: string | null
+          description?: string | null
+          end_at?: string | null
+          event_type?: string
+          id?: string
+          max_participants?: number | null
+          mode?: string
+          org_id: string
+          registration_deadline?: string | null
+          start_at?: string | null
+          status?: string
+          title: string
+          venue_hall_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          custom_location?: string | null
+          description?: string | null
+          end_at?: string | null
+          event_type?: string
+          id?: string
+          max_participants?: number | null
+          mode?: string
+          org_id?: string
+          registration_deadline?: string | null
+          start_at?: string | null
+          status?: string
+          title?: string
+          venue_hall_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_events_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_events_venue_hall_id_fkey"
+            columns: ["venue_hall_id"]
+            isOneToOne: false
+            referencedRelation: "halls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_members: {
+        Row: {
+          created_at: string
+          department_id: string | null
+          full_name: string | null
+          id: string
+          invite_expires_at: string | null
+          invite_token: string | null
+          invited_by: string | null
+          invited_email: string
+          is_admin_role: boolean
+          org_id: string
+          role_id: string | null
+          role_label: string
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          department_id?: string | null
+          full_name?: string | null
+          id?: string
+          invite_expires_at?: string | null
+          invite_token?: string | null
+          invited_by?: string | null
+          invited_email: string
+          is_admin_role?: boolean
+          org_id: string
+          role_id?: string | null
+          role_label?: string
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          department_id?: string | null
+          full_name?: string | null
+          id?: string
+          invite_expires_at?: string | null
+          invite_token?: string | null
+          invited_by?: string | null
+          invited_email?: string
+          is_admin_role?: boolean
+          org_id?: string
+          role_id?: string | null
+          role_label?: string
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_members_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "org_departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_members_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_members_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "org_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_roles: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_admin_role: boolean
+          is_default: boolean
+          name: string
+          org_id: string
+          permissions: Json
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_admin_role?: boolean
+          is_default?: boolean
+          name: string
+          org_id: string
+          permissions?: Json
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_admin_role?: boolean
+          is_default?: boolean
+          name?: string
+          org_id?: string
+          permissions?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_roles_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
+          additional_info: Json
           address: string | null
           alt_phone: string | null
           business_reg_number: string | null
@@ -648,6 +924,7 @@ export type Database = {
           country: string | null
           created_at: string
           deleted_at: string | null
+          documents: Json
           email: string | null
           gst_number: string | null
           id: string
@@ -659,12 +936,17 @@ export type Database = {
           owner_id: string
           phone: string | null
           pincode: string | null
+          rejection_reason: string | null
           state: string | null
           updated_at: string
+          verification_status: Database["public"]["Enums"]["verification_status"]
           verified: boolean
+          verified_at: string | null
+          verified_by: string | null
           website: string | null
         }
         Insert: {
+          additional_info?: Json
           address?: string | null
           alt_phone?: string | null
           business_reg_number?: string | null
@@ -672,6 +954,7 @@ export type Database = {
           country?: string | null
           created_at?: string
           deleted_at?: string | null
+          documents?: Json
           email?: string | null
           gst_number?: string | null
           id?: string
@@ -683,12 +966,17 @@ export type Database = {
           owner_id: string
           phone?: string | null
           pincode?: string | null
+          rejection_reason?: string | null
           state?: string | null
           updated_at?: string
+          verification_status?: Database["public"]["Enums"]["verification_status"]
           verified?: boolean
+          verified_at?: string | null
+          verified_by?: string | null
           website?: string | null
         }
         Update: {
+          additional_info?: Json
           address?: string | null
           alt_phone?: string | null
           business_reg_number?: string | null
@@ -696,6 +984,7 @@ export type Database = {
           country?: string | null
           created_at?: string
           deleted_at?: string | null
+          documents?: Json
           email?: string | null
           gst_number?: string | null
           id?: string
@@ -707,15 +996,51 @@ export type Database = {
           owner_id?: string
           phone?: string | null
           pincode?: string | null
+          rejection_reason?: string | null
           state?: string | null
           updated_at?: string
+          verification_status?: Database["public"]["Enums"]["verification_status"]
           verified?: boolean
+          verified_at?: string | null
+          verified_by?: string | null
           website?: string | null
+        }
+        Relationships: []
+      }
+      platform_notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
         }
         Relationships: []
       }
       profiles: {
         Row: {
+          account_rejection_reason: string | null
+          account_status: Database["public"]["Enums"]["account_status"] | null
           alt_phone: string | null
           avatar_url: string | null
           created_at: string
@@ -729,6 +1054,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          account_rejection_reason?: string | null
+          account_status?: Database["public"]["Enums"]["account_status"] | null
           alt_phone?: string | null
           avatar_url?: string | null
           created_at?: string
@@ -742,6 +1069,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          account_rejection_reason?: string | null
+          account_status?: Database["public"]["Enums"]["account_status"] | null
           alt_phone?: string | null
           avatar_url?: string | null
           created_at?: string
@@ -777,21 +1106,184 @@ export type Database = {
         }
         Relationships: []
       }
+      vendor_notifications: {
+        Row: {
+          action_url: string | null
+          body: string | null
+          category: Database["public"]["Enums"]["notification_category"]
+          created_at: string
+          id: string
+          metadata: Json
+          read_at: string | null
+          task_id: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          action_url?: string | null
+          body?: string | null
+          category?: Database["public"]["Enums"]["notification_category"]
+          created_at?: string
+          id?: string
+          metadata?: Json
+          read_at?: string | null
+          task_id?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          action_url?: string | null
+          body?: string | null
+          category?: Database["public"]["Enums"]["notification_category"]
+          created_at?: string
+          id?: string
+          metadata?: Json
+          read_at?: string | null
+          task_id?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_notifications_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_tasks: {
+        Row: {
+          accepted_at: string | null
+          assigned_by: string
+          assigner_role: Database["public"]["Enums"]["app_role"] | null
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          end_time: string | null
+          event_date: string
+          event_name: string
+          id: string
+          organization_id: string | null
+          organization_name: string | null
+          paused_at: string | null
+          payment_amount: number | null
+          payment_status: string
+          priority: Database["public"]["Enums"]["task_priority"]
+          rejected_at: string | null
+          rejection_reason: string | null
+          resumed_at: string | null
+          start_time: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["task_status"]
+          task_name: string
+          updated_at: string
+          vendor_id: string
+          vendor_notes: string | null
+          vendor_user_id: string
+          venue: string | null
+          venue_address: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          assigned_by: string
+          assigner_role?: Database["public"]["Enums"]["app_role"] | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          end_time?: string | null
+          event_date: string
+          event_name: string
+          id?: string
+          organization_id?: string | null
+          organization_name?: string | null
+          paused_at?: string | null
+          payment_amount?: number | null
+          payment_status?: string
+          priority?: Database["public"]["Enums"]["task_priority"]
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          resumed_at?: string | null
+          start_time?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
+          task_name: string
+          updated_at?: string
+          vendor_id: string
+          vendor_notes?: string | null
+          vendor_user_id: string
+          venue?: string | null
+          venue_address?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          assigned_by?: string
+          assigner_role?: Database["public"]["Enums"]["app_role"] | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          end_time?: string | null
+          event_date?: string
+          event_name?: string
+          id?: string
+          organization_id?: string | null
+          organization_name?: string | null
+          paused_at?: string | null
+          payment_amount?: number | null
+          payment_status?: string
+          priority?: Database["public"]["Enums"]["task_priority"]
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          resumed_at?: string | null
+          start_time?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
+          task_name?: string
+          updated_at?: string
+          vendor_id?: string
+          vendor_notes?: string | null
+          vendor_user_id?: string
+          venue?: string | null
+          venue_address?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_tasks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_tasks_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendors: {
         Row: {
+          additional_info: Json
           address: string | null
           available_days: Json
+          blocked_dates: Json
           business_name: string
           category: string | null
           city: string | null
           created_at: string
           deleted_at: string | null
+          documents: Json
           email: string | null
           facebook: string | null
           gst_number: string | null
           id: string
           instagram: string | null
           logo_url: string | null
+          marketplace_visible: boolean
+          max_travel_km: number | null
           owner_full_name: string | null
           owner_id: string
           pan_number: string | null
@@ -799,30 +1291,43 @@ export type Database = {
           pincode: string | null
           portfolio: Json
           price_catalogue_url: string | null
+          profile_completion: number
           rating: number
+          rejection_reason: string | null
           review_count: number
           service_areas: Json
           state: string | null
           status: Database["public"]["Enums"]["hall_status"]
           updated_at: string
+          verification_status: Database["public"]["Enums"]["verification_status"]
           verified: boolean
+          verified_at: string | null
+          verified_by: string | null
           website: string | null
+          willing_to_travel: boolean
+          working_hours_end: string | null
+          working_hours_start: string | null
           years_experience: number | null
         }
         Insert: {
+          additional_info?: Json
           address?: string | null
           available_days?: Json
+          blocked_dates?: Json
           business_name: string
           category?: string | null
           city?: string | null
           created_at?: string
           deleted_at?: string | null
+          documents?: Json
           email?: string | null
           facebook?: string | null
           gst_number?: string | null
           id?: string
           instagram?: string | null
           logo_url?: string | null
+          marketplace_visible?: boolean
+          max_travel_km?: number | null
           owner_full_name?: string | null
           owner_id: string
           pan_number?: string | null
@@ -830,30 +1335,43 @@ export type Database = {
           pincode?: string | null
           portfolio?: Json
           price_catalogue_url?: string | null
+          profile_completion?: number
           rating?: number
+          rejection_reason?: string | null
           review_count?: number
           service_areas?: Json
           state?: string | null
           status?: Database["public"]["Enums"]["hall_status"]
           updated_at?: string
+          verification_status?: Database["public"]["Enums"]["verification_status"]
           verified?: boolean
+          verified_at?: string | null
+          verified_by?: string | null
           website?: string | null
+          willing_to_travel?: boolean
+          working_hours_end?: string | null
+          working_hours_start?: string | null
           years_experience?: number | null
         }
         Update: {
+          additional_info?: Json
           address?: string | null
           available_days?: Json
+          blocked_dates?: Json
           business_name?: string
           category?: string | null
           city?: string | null
           created_at?: string
           deleted_at?: string | null
+          documents?: Json
           email?: string | null
           facebook?: string | null
           gst_number?: string | null
           id?: string
           instagram?: string | null
           logo_url?: string | null
+          marketplace_visible?: boolean
+          max_travel_km?: number | null
           owner_full_name?: string | null
           owner_id?: string
           pan_number?: string | null
@@ -861,14 +1379,22 @@ export type Database = {
           pincode?: string | null
           portfolio?: Json
           price_catalogue_url?: string | null
+          profile_completion?: number
           rating?: number
+          rejection_reason?: string | null
           review_count?: number
           service_areas?: Json
           state?: string | null
           status?: Database["public"]["Enums"]["hall_status"]
           updated_at?: string
+          verification_status?: Database["public"]["Enums"]["verification_status"]
           verified?: boolean
+          verified_at?: string | null
+          verified_by?: string | null
           website?: string | null
+          willing_to_travel?: boolean
+          working_hours_end?: string | null
+          working_hours_start?: string | null
           years_experience?: number | null
         }
         Relationships: []
@@ -925,7 +1451,17 @@ export type Database = {
           accepted_at: string | null
           assigned_by: string
           assigner_role: Database["public"]["Enums"]["app_role"] | null
+          check_in_at: string | null
+          check_in_lat: number | null
+          check_in_lng: number | null
+          check_in_photo_url: string | null
+          check_out_at: string | null
+          check_out_lat: number | null
+          check_out_lng: number | null
+          check_out_photo_url: string | null
           completed_at: string | null
+          completion_notes: string | null
+          completion_photo_urls: Json
           created_at: string
           description: string | null
           end_time: string | null
@@ -936,6 +1472,7 @@ export type Database = {
           organization_name: string | null
           paused_at: string | null
           payment_amount: number | null
+          payment_status: string
           priority: Database["public"]["Enums"]["task_priority"]
           rejected_at: string | null
           rejection_reason: string | null
@@ -955,7 +1492,17 @@ export type Database = {
           accepted_at?: string | null
           assigned_by: string
           assigner_role?: Database["public"]["Enums"]["app_role"] | null
+          check_in_at?: string | null
+          check_in_lat?: number | null
+          check_in_lng?: number | null
+          check_in_photo_url?: string | null
+          check_out_at?: string | null
+          check_out_lat?: number | null
+          check_out_lng?: number | null
+          check_out_photo_url?: string | null
           completed_at?: string | null
+          completion_notes?: string | null
+          completion_photo_urls?: Json
           created_at?: string
           description?: string | null
           end_time?: string | null
@@ -966,6 +1513,7 @@ export type Database = {
           organization_name?: string | null
           paused_at?: string | null
           payment_amount?: number | null
+          payment_status?: string
           priority?: Database["public"]["Enums"]["task_priority"]
           rejected_at?: string | null
           rejection_reason?: string | null
@@ -985,7 +1533,17 @@ export type Database = {
           accepted_at?: string | null
           assigned_by?: string
           assigner_role?: Database["public"]["Enums"]["app_role"] | null
+          check_in_at?: string | null
+          check_in_lat?: number | null
+          check_in_lng?: number | null
+          check_in_photo_url?: string | null
+          check_out_at?: string | null
+          check_out_lat?: number | null
+          check_out_lng?: number | null
+          check_out_photo_url?: string | null
           completed_at?: string | null
+          completion_notes?: string | null
+          completion_photo_urls?: Json
           created_at?: string
           description?: string | null
           end_time?: string | null
@@ -996,6 +1554,7 @@ export type Database = {
           organization_name?: string | null
           paused_at?: string | null
           payment_amount?: number | null
+          payment_status?: string
           priority?: Database["public"]["Enums"]["task_priority"]
           rejected_at?: string | null
           rejection_reason?: string | null
@@ -1030,6 +1589,7 @@ export type Database = {
       }
       workers: {
         Row: {
+          additional_info: Json
           address: string | null
           agency_description: string | null
           agency_gst: string | null
@@ -1080,6 +1640,7 @@ export type Database = {
           preferred_language: string | null
           profile_completion: number
           rating: number
+          rejection_reason: string | null
           review_count: number
           selfie_url: string | null
           skills: Json
@@ -1100,6 +1661,7 @@ export type Database = {
           years_experience: number | null
         }
         Insert: {
+          additional_info?: Json
           address?: string | null
           agency_description?: string | null
           agency_gst?: string | null
@@ -1150,6 +1712,7 @@ export type Database = {
           preferred_language?: string | null
           profile_completion?: number
           rating?: number
+          rejection_reason?: string | null
           review_count?: number
           selfie_url?: string | null
           skills?: Json
@@ -1170,6 +1733,7 @@ export type Database = {
           years_experience?: number | null
         }
         Update: {
+          additional_info?: Json
           address?: string | null
           agency_description?: string | null
           agency_gst?: string | null
@@ -1220,6 +1784,7 @@ export type Database = {
           preferred_language?: string | null
           profile_completion?: number
           rating?: number
+          rejection_reason?: string | null
           review_count?: number
           selfie_url?: string | null
           skills?: Json
@@ -1243,7 +1808,25 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      admin_verification_queue: {
+        Row: {
+          city: string | null
+          created_at: string | null
+          documents: Json | null
+          email: string | null
+          id: string | null
+          phone: string | null
+          rejection_reason: string | null
+          role: string | null
+          state: string | null
+          title: string | null
+          user_id: string | null
+          verification_status:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
@@ -1253,8 +1836,21 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_org_manager: {
+        Args: { p_org_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      is_org_member: {
+        Args: { p_org_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      org_member_has_permission: {
+        Args: { p_org_id: string; p_permission: string; p_user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
+      account_status: "pending_approval" | "approved" | "rejected"
       app_role:
         | "admin"
         | "organization"
@@ -1315,7 +1911,13 @@ export type Database = {
         | "completed"
         | "rejected"
         | "cancelled"
-      verification_status: "unsubmitted" | "pending" | "approved" | "rejected"
+      verification_status:
+        | "unsubmitted"
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "suspended"
+        | "blacklisted"
       worker_type: "individual" | "agency"
     }
     CompositeTypes: {
@@ -1444,6 +2046,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_status: ["pending_approval", "approved", "rejected"],
       app_role: [
         "admin",
         "organization",
@@ -1511,7 +2114,14 @@ export const Constants = {
         "rejected",
         "cancelled",
       ],
-      verification_status: ["unsubmitted", "pending", "approved", "rejected"],
+      verification_status: [
+        "unsubmitted",
+        "pending",
+        "approved",
+        "rejected",
+        "suspended",
+        "blacklisted",
+      ],
       worker_type: ["individual", "agency"],
     },
   },
