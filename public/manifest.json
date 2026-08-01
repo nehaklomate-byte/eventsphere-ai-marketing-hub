@@ -1,0 +1,16 @@
+{
+  "name": "EventOrbit AI",
+  "short_name": "EventOrbit",
+  "description": "Plan, manage and book venues, vendors and workers for any event.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0B1B5A",
+  "theme_color": "#0B1B5A",
+  "icons": [
+    { "src": "/favicon.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/favicon.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/favicon.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
