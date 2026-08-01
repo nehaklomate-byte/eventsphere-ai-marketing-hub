@@ -173,7 +173,7 @@ function MyRequests({ userId }: { userId: string }) {
               <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1.5 text-xs font-semibold text-emerald-700">
                 <CheckCircle2 className="h-3.5 w-3.5" /> Paid
               </span>
-            ) : r.status === "accepted" && r.payment_amount ? (
+            ) : (r.status === "accepted" || r.status === "completed") && r.payment_amount ? (
               <button onClick={() => handlePay(r)} disabled={payingId === r.id}
                 className="inline-flex items-center gap-1.5 rounded-full btn-brand btn-brand-hover px-4 py-2 text-xs font-semibold text-white disabled:opacity-70">
                 {payingId === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <IndianRupee className="h-3.5 w-3.5" />} Pay Now
