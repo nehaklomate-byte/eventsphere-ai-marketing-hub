@@ -5,8 +5,9 @@ import {
   Settings, LifeBuoy, LogOut, Menu, X, ShieldCheck, BadgeAlert, BadgeCheck, ShieldAlert, Loader2, Layers,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { PayoutBanner } from "@/components/PayoutBanner";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { fetchMyWorker, computeCompletion } from "@/lib/worker";
 import { useSession } from "@/lib/session";
 
@@ -91,6 +92,15 @@ function WorkerShell() {
 
   const completion = computeCompletion(worker as never);
   const vStatus = worker?.verification_status ?? "unsubmitted";
+
+  const savePayout = useMutation({
+    mutationFn: async (upi: string) => {
+      if (!worker?.id) throw new Error("Worker profile not found");
+      const { error } = await supabase.from("workers").update({ payout_upi_id: upi }).eq("id", worker.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["me-worker", user?.id] }),
+  });
 
   async function signOut() {
     await qc.cancelQueries();
@@ -218,6 +228,9 @@ function WorkerShell() {
           </div>
         </header>
         <main className="p-4 md:p-8">
+          {worker && !worker.payout_upi_id && (
+            <PayoutBanner saving={savePayout.isPending} onSave={(upi) => savePayout.mutateAsync(upi)} />
+          )}
           {completion < 60 && vStatus === "unsubmitted" && location.pathname !== "/worker/profile" && (
             <div className="mb-6 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 flex flex-wrap items-center justify-between gap-3">
               <div>
