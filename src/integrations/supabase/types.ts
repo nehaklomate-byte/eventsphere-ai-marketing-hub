@@ -731,6 +731,98 @@ export type Database = {
           },
         ]
       }
+      org_event_form_fields: {
+        Row: {
+          created_at: string
+          field_type: string
+          form_id: string
+          id: string
+          is_required: boolean
+          label: string
+          options: Json
+          order_index: number
+          placeholder: string | null
+        }
+        Insert: {
+          created_at?: string
+          field_type?: string
+          form_id: string
+          id?: string
+          is_required?: boolean
+          label: string
+          options?: Json
+          order_index?: number
+          placeholder?: string | null
+        }
+        Update: {
+          created_at?: string
+          field_type?: string
+          form_id?: string
+          id?: string
+          is_required?: boolean
+          label?: string
+          options?: Json
+          order_index?: number
+          placeholder?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_event_form_fields_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "org_event_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_event_forms: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          is_published: boolean
+          max_team_size: number
+          min_team_size: number
+          org_id: string
+          team_mode: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          is_published?: boolean
+          max_team_size?: number
+          min_team_size?: number
+          org_id: string
+          team_mode?: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          is_published?: boolean
+          max_team_size?: number
+          min_team_size?: number
+          org_id?: string
+          team_mode?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_event_forms_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "org_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_event_forms_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_events: {
         Row: {
           created_at: string
