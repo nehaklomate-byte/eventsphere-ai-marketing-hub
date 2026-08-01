@@ -3,12 +3,13 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  HardHat, MapPin, Star, Search, Wallet, Send, X, Loader2, Briefcase,
+  HardHat, MapPin, Star, Search, Wallet, Send, X, Loader2, Briefcase, IndianRupee, CheckCircle2, Clock3,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
 import { fetchMyHalls } from "@/lib/venue";
 import { WORKER_CATEGORIES } from "@/lib/worker";
+import { payForWorkerTask } from "@/lib/razorpay";
 
 export const Route = createFileRoute("/_authenticated/venue/hire-workers")({
   head: () => ({ meta: [{ title: "Hire Workers — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
@@ -31,6 +32,21 @@ async function fetchVerifiedWorkers(category: string): Promise<MarketWorker[]> {
   const { data, error } = await q;
   if (error) throw error;
   return (data as unknown as MarketWorker[]) ?? [];
+}
+
+type MyRequest = {
+  id: string; task_name: string; event_name: string; event_date: string;
+  status: string; payment_status: string; payment_amount: number | null;
+  worker: { full_name: string } | null;
+};
+
+async function fetchMyRequests(userId: string): Promise<MyRequest[]> {
+  const { data, error } = await supabase.from("worker_tasks" as never)
+    .select("id,task_name,event_name,event_date,status,payment_status,payment_amount,worker:workers(full_name)")
+    .eq("assigned_by" as never, userId as never)
+    .order("event_date" as never, { ascending: false }).limit(30);
+  if (error) throw error;
+  return (data as unknown as MyRequest[]) ?? [];
 }
 
 function HireWorkersPage() {
@@ -107,6 +123,69 @@ function HireWorkersPage() {
       {hireTarget && (
         <HirePanel worker={hireTarget} halls={halls} userId={user!.id} onClose={() => setHireTarget(null)} />
       )}
+
+      <MyRequests userId={user!.id} />
+    </div>
+  );
+}
+
+function MyRequests({ userId }: { userId: string }) {
+  const qc = useQueryClient();
+  const { data: requests = [] } = useQuery({ queryKey: ["my-worker-requests", userId], queryFn: () => fetchMyRequests(userId), enabled: !!userId });
+  const [payingId, setPayingId] = useState<string | null>(null);
+
+  async function handlePay(r: MyRequest) {
+    setPayingId(r.id);
+    try {
+      await payForWorkerTask({ workerTaskId: r.id });
+      toast.success("Payment successful!");
+      qc.invalidateQueries({ queryKey: ["my-worker-requests", userId] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Payment failed");
+    } finally {
+      setPayingId(null);
+    }
+  }
+
+  if (requests.length === 0) return null;
+
+  const statusTone: Record<string, string> = {
+    pending: "bg-amber-500/15 text-amber-700", accepted: "bg-blue-500/15 text-blue-700",
+    in_progress: "bg-blue-500/15 text-blue-700", completed: "bg-emerald-500/15 text-emerald-700",
+    rejected: "bg-rose-500/15 text-rose-700", cancelled: "bg-rose-500/15 text-rose-700",
+  };
+
+  return (
+    <div className="space-y-3">
+      <h2 className="text-lg font-semibold">Your booking requests</h2>
+      <div className="space-y-2">
+        {requests.map((r) => (
+          <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4">
+            <div className="min-w-0">
+              <div className="text-sm font-semibold">{r.task_name} <span className="text-muted-foreground font-normal">— {r.worker?.full_name ?? "Worker"}</span></div>
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <span>{new Date(r.event_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
+                <span className={`rounded-full px-2 py-0.5 font-semibold capitalize ${statusTone[r.status] ?? "bg-muted text-muted-foreground"}`}>{r.status.replace("_", " ")}</span>
+                {r.payment_amount != null && <span className="font-semibold text-foreground">₹{r.payment_amount.toLocaleString("en-IN")}</span>}
+              </div>
+            </div>
+            {r.payment_status === "paid" ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+                <CheckCircle2 className="h-3.5 w-3.5" /> Paid
+              </span>
+            ) : r.status === "accepted" && r.payment_amount ? (
+              <button onClick={() => handlePay(r)} disabled={payingId === r.id}
+                className="inline-flex items-center gap-1.5 rounded-full btn-brand btn-brand-hover px-4 py-2 text-xs font-semibold text-white disabled:opacity-70">
+                {payingId === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <IndianRupee className="h-3.5 w-3.5" />} Pay Now
+              </button>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs font-semibold text-muted-foreground">
+                <Clock3 className="h-3.5 w-3.5" /> Awaiting acceptance
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
