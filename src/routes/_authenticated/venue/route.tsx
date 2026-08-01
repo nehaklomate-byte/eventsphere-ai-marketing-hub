@@ -4,8 +4,9 @@ import {
   LayoutDashboard, Inbox, CalendarCheck, Building2, Settings, LogOut, Menu, X, Clock, ShieldAlert, MailWarning, HardHat, Bell,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { PayoutBanner } from "@/components/PayoutBanner";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useSession } from "@/lib/session";
 
 // beforeLoad only gates Step 1 (account_status). Step 2 (hall
@@ -30,7 +31,7 @@ export const Route = createFileRoute("/_authenticated/venue")({
   component: VenueShell,
 });
 
-type ProfileGate = { account_status: "pending_approval" | "approved" | "rejected" | null; account_rejection_reason: string | null };
+type ProfileGate = { account_status: "pending_approval" | "approved" | "rejected" | null; account_rejection_reason: string | null; payout_upi_id: string | null };
 type HallGate = { id: string; verification_status: string; rejection_reason: string | null } | null;
 
 async function fetchGateData(): Promise<{ profile: ProfileGate | null; hall: HallGate }> {
@@ -38,7 +39,7 @@ async function fetchGateData(): Promise<{ profile: ProfileGate | null; hall: Hal
   if (!userData.user) return { profile: null, hall: null };
   const { data: profile } = await supabase
     .from("profiles")
-    .select("account_status, account_rejection_reason")
+    .select("account_status, account_rejection_reason, payout_upi_id")
     .eq("id", userData.user.id)
     .maybeSingle();
   if (profile?.account_status !== "approved") return { profile: profile as ProfileGate, hall: null };
@@ -101,6 +102,15 @@ function VenueShell() {
     await supabase.auth.signOut();
     navigate({ to: "/login", replace: true } as never);
   }
+
+  const savePayout = useMutation({
+    mutationFn: async (upi: string) => {
+      if (!user?.id) throw new Error("Not signed in");
+      const { error } = await supabase.from("profiles").update({ payout_upi_id: upi }).eq("id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["venue-gate"] }),
+  });
 
   if (isLoading) {
     return <div className="grid min-h-dvh place-items-center bg-background"><Loader /></div>;
@@ -215,6 +225,9 @@ function VenueShell() {
         {open && <div className="fixed inset-0 z-40 bg-black/40 md:hidden" onClick={() => setOpen(false)} />}
 
         <main className="min-h-dvh flex-1 px-4 md:px-8 py-6 md:py-10">
+          {data?.profile && !data.profile.payout_upi_id && (
+            <PayoutBanner saving={savePayout.isPending} onSave={(upi) => savePayout.mutateAsync(upi)} />
+          )}
           {!isVerified && (
             <div className={`mb-6 flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold ${
               hall?.verification_status === "rejected" ? "bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300" : "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
