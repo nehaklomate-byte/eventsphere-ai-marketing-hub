@@ -35,7 +35,7 @@ export async function payForWorkerTask(opts: {
   const accessToken = sessionData.session?.access_token;
   if (!accessToken) throw new Error("You need to be logged in to pay.");
 
-  const { data: fnResp, error: fnErr } = await supabase.functions.invoke("supabase-functions-deploy-razorpay-create-order", {
+  const { data: fnResp, error: fnErr } = await supabase.functions.invoke("razorpay-create-order", {
     body: { worker_task_id: opts.workerTaskId },
   });
   if (fnErr) throw new Error(fnErr.message || "Could not start the payment.");
@@ -58,7 +58,7 @@ export async function payForWorkerTask(opts: {
       prefill: { name: opts.payerName, email: opts.payerEmail, contact: opts.payerPhone },
       theme: { color: "#7c3aed" },
       handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
-        const { data: verifyResp, error: verifyErr } = await supabase.functions.invoke("supabase-functions-deploy-razorpay-verify-payment", {
+        const { data: verifyResp, error: verifyErr } = await supabase.functions.invoke("razorpay-verify-payment", {
           body: {
             worker_task_id: opts.workerTaskId,
             razorpay_order_id: response.razorpay_order_id,
