@@ -8,7 +8,7 @@ import {
   Camera, X, MapPinned, ImagePlus,
 } from "lucide-react";
 import { toast } from "sonner";
-import { statusTone, priorityTone, uploadWorkerFile, getBestEffortLocation, type WorkerTask } from "@/lib/worker";
+import { statusTone, priorityTone, uploadWorkerFile, isVideoUrl, getBestEffortLocation, type WorkerTask } from "@/lib/worker";
 import { EmptyState } from "./index";
 
 export const Route = createFileRoute("/_authenticated/worker/jobs")({
@@ -204,7 +204,11 @@ function JobsPage() {
 function PhotoThumb({ url, label }: { url: string; label: string }) {
   return (
     <a href={url} target="_blank" rel="noreferrer" className="block">
-      <img src={url} alt={label} className="h-14 w-14 rounded-lg object-cover border border-border" />
+      {isVideoUrl(url) ? (
+        <video src={url} muted className="h-14 w-14 rounded-lg object-cover border border-border" />
+      ) : (
+        <img src={url} alt={label} className="h-14 w-14 rounded-lg object-cover border border-border" />
+      )}
       <div className="mt-0.5 text-center text-[9px] text-muted-foreground">{label}</div>
     </a>
   );
@@ -249,19 +253,23 @@ function CheckInPanel({ task, userId, busy, onCancel, onConfirm }: {
         </div>
         <p className="mt-1 text-sm text-muted-foreground">Take a quick photo at the venue — this is your attendance record for "{task.task_name}".</p>
 
-        <input ref={inputRef} type="file" accept="image/*" capture="environment" className="hidden"
+        <input ref={inputRef} type="file" accept="image/*,video/*" capture="environment" className="hidden"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
 
         {photoUrl ? (
           <div className="mt-4 relative inline-block">
-            <img src={photoUrl} alt="Check-in" className="h-40 w-40 rounded-xl object-cover border border-border" />
+            {isVideoUrl(photoUrl) ? (
+              <video src={photoUrl} controls className="h-40 w-40 rounded-xl object-cover border border-border" />
+            ) : (
+              <img src={photoUrl} alt="Check-in" className="h-40 w-40 rounded-xl object-cover border border-border" />
+            )}
             <button onClick={() => setPhotoUrl(null)} className="absolute -top-2 -right-2 rounded-full bg-background border border-border p-1 shadow"><X className="h-3.5 w-3.5" /></button>
           </div>
         ) : (
           <button onClick={() => inputRef.current?.click()} disabled={uploading}
             className="mt-4 flex h-40 w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border text-muted-foreground hover:bg-accent">
             {uploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Camera className="h-6 w-6" />}
-            <span className="text-xs font-medium">{uploading ? "Uploading…" : "Tap to take a photo"}</span>
+            <span className="text-xs font-medium">{uploading ? "Uploading…" : "Tap to take a photo or video"}</span>
           </button>
         )}
 
@@ -331,13 +339,17 @@ function CompletePanel({ task, userId, busy, onCancel, onConfirm }: {
         <p className="mt-1 text-sm text-muted-foreground">Proof photos are required — this confirms your work on "{task.task_name}" to the organization and admin.</p>
 
         <div className="mt-4">
-          <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground">Work-proof photo(s) <span className="text-destructive">*</span></label>
-          <input ref={proofRef} type="file" accept="image/*" capture="environment" className="hidden"
+          <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground">Work-proof photo/video <span className="text-destructive">*</span></label>
+          <input ref={proofRef} type="file" accept="image/*,video/*" capture="environment" className="hidden"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) handleProof(f); if (proofRef.current) proofRef.current.value = ""; }} />
           <div className="mt-2 flex flex-wrap gap-2">
             {proofUrls.map((u, i) => (
               <div key={i} className="relative">
-                <img src={u} alt={`Proof ${i + 1}`} className="h-16 w-16 rounded-lg object-cover border border-border" />
+                {isVideoUrl(u) ? (
+                  <video src={u} muted className="h-16 w-16 rounded-lg object-cover border border-border" />
+                ) : (
+                  <img src={u} alt={`Proof ${i + 1}`} className="h-16 w-16 rounded-lg object-cover border border-border" />
+                )}
                 <button onClick={() => setProofUrls((arr) => arr.filter((_, idx) => idx !== i))} className="absolute -top-1.5 -right-1.5 rounded-full bg-background border border-border p-0.5"><X className="h-3 w-3" /></button>
               </div>
             ))}
@@ -349,12 +361,16 @@ function CompletePanel({ task, userId, busy, onCancel, onConfirm }: {
         </div>
 
         <div className="mt-4">
-          <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground">Check-out photo <span className="text-destructive">*</span></label>
-          <input ref={checkOutRef} type="file" accept="image/*" capture="environment" className="hidden"
+          <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground">Check-out photo/video <span className="text-destructive">*</span></label>
+          <input ref={checkOutRef} type="file" accept="image/*,video/*" capture="environment" className="hidden"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCheckOut(f); }} />
           {checkOutUrl ? (
             <div className="mt-2 relative inline-block">
-              <img src={checkOutUrl} alt="Check-out" className="h-20 w-20 rounded-lg object-cover border border-border" />
+              {isVideoUrl(checkOutUrl) ? (
+                <video src={checkOutUrl} controls className="h-20 w-20 rounded-lg object-cover border border-border" />
+              ) : (
+                <img src={checkOutUrl} alt="Check-out" className="h-20 w-20 rounded-lg object-cover border border-border" />
+              )}
               <button onClick={() => setCheckOutUrl(null)} className="absolute -top-1.5 -right-1.5 rounded-full bg-background border border-border p-0.5"><X className="h-3 w-3" /></button>
             </div>
           ) : (
