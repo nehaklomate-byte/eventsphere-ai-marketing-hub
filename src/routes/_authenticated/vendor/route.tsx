@@ -4,8 +4,9 @@ import {
   LayoutDashboard, Store, Settings, LogOut, Menu, X, ShieldCheck, BadgeAlert, BadgeCheck, ShieldAlert, Loader2, Clock,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { PayoutBanner } from "@/components/PayoutBanner";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { fetchMyVendor, computeVendorCompletion } from "@/lib/vendor";
 import { useSession } from "@/lib/session";
 
@@ -61,6 +62,15 @@ function VendorShell() {
 
   const completion = computeVendorCompletion(vendor ?? {});
   const vStatus = vendor?.verification_status ?? "pending";
+
+  const savePayout = useMutation({
+    mutationFn: async (upi: string) => {
+      if (!vendor?.id) throw new Error("Vendor profile not found");
+      const { error } = await supabase.from("vendors").update({ payout_upi_id: upi }).eq("id", vendor.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["me-vendor", user?.id] }),
+  });
 
   async function signOut() {
     await qc.cancelQueries();
@@ -180,6 +190,9 @@ function VendorShell() {
           <div />
         </header>
         <main className="p-4 md:p-8">
+          {vendor && !vendor.payout_upi_id && (
+            <PayoutBanner saving={savePayout.isPending} onSave={(upi) => savePayout.mutateAsync(upi)} />
+          )}
           {completion < 60 && vStatus !== "approved" && location.pathname !== "/vendor/profile" && (
             <div className="mb-6 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 flex flex-wrap items-center justify-between gap-3">
               <div>
