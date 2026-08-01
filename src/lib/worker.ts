@@ -43,6 +43,7 @@ export type WorkerRow = {
   emergency_contact_relation: string | null;
   work_images: unknown;
   certificates: unknown;
+  payout_upi_id: string | null;
 };
 
 export type WorkerTask = {
