@@ -16,17 +16,13 @@ alter table public.worker_tasks
 
 create index if not exists idx_worker_tasks_razorpay_order on public.worker_tasks(razorpay_order_id);
 
--- Tracks the platform → worker payout for each paid task. Starts as a
--- manual step: admin/venue owner transfers the money (UPI/bank) outside
--- Razorpay and records the reference here. Can be automated later with
--- RazorpayX Payouts without changing this table's shape.
 create table if not exists public.worker_payouts (
   id uuid primary key default gen_random_uuid(),
   worker_task_id uuid not null references public.worker_tasks(id) on delete cascade unique,
   worker_id uuid not null references public.workers(id) on delete cascade,
   amount numeric(10,2) not null,
   status text not null default 'pending' check (status in ('pending','paid')),
-  payout_reference text,      -- UTR / transaction ref once paid manually
+  payout_reference text,
   paid_by uuid references auth.users(id),
   paid_at timestamptz,
   created_at timestamptz not null default now()
@@ -34,28 +30,24 @@ create table if not exists public.worker_payouts (
 
 alter table public.worker_payouts enable row level security;
 
--- Whoever assigned the task (and paid for it) can see the payout row.
-create policy if not exists "assigner can view payout" on public.worker_payouts
+drop policy if exists "assigner can view payout" on public.worker_payouts;
+create policy "assigner can view payout" on public.worker_payouts
   for select using (
     exists (select 1 from public.worker_tasks t where t.id = worker_task_id and t.assigned_by = auth.uid())
   );
 
--- The worker being paid can see their own payout rows.
-create policy if not exists "worker can view own payout" on public.worker_payouts
+drop policy if exists "worker can view own payout" on public.worker_payouts;
+create policy "worker can view own payout" on public.worker_payouts
   for select using (
     exists (select 1 from public.workers w where w.id = worker_id and w.owner_id = auth.uid())
   );
 
--- Only the original assigner can mark a payout as paid (manual step for now).
-create policy if not exists "assigner can update payout" on public.worker_payouts
+drop policy if exists "assigner can update payout" on public.worker_payouts;
+create policy "assigner can update payout" on public.worker_payouts
   for update using (
     exists (select 1 from public.worker_tasks t where t.id = worker_task_id and t.assigned_by = auth.uid())
   );
 
--- Inserts happen only from the razorpay-verify-payment Edge Function
--- (service role), never directly from the client.
-
--- Auto-create the payout row the moment a task's payment turns 'paid'.
 create or replace function public.tg_worker_task_create_payout()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
