@@ -1,54 +1,117 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Store, ShieldCheck, ArrowUpRight, Loader2 } from "lucide-react";
 import { useSession } from "@/lib/session";
-import { fetchMyVendor, computeVendorCompletion } from "@/lib/vendor";
+import { Briefcase, CheckCircle2, AlertCircle, Wallet, Bell, TrendingUp, Calendar, Store } from "lucide-react";
+import { fetchMyVendor, computeVendorCompletion, fetchMyVendorTasks, type VendorTask } from "@/lib/vendor";
 
 export const Route = createFileRoute("/_authenticated/vendor/")({
   head: () => ({ meta: [{ title: "Vendor Dashboard — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
   component: VendorDashboardHome,
 });
 
+function StatCard({ icon: Icon, label, value, tone = "brand" }: { icon: typeof Briefcase; label: string; value: string | number; tone?: string }) {
+  const tones: Record<string, string> = {
+    brand: "from-brand-violet/15 to-secondary/10 text-brand-violet",
+    green: "from-emerald-500/15 to-emerald-500/5 text-emerald-600",
+    amber: "from-amber-500/15 to-amber-500/5 text-amber-600",
+    blue: "from-blue-500/15 to-blue-500/5 text-blue-600",
+  };
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5 shadow-soft">
+      <div className={`grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br ${tones[tone]}`}><Icon className="h-5 w-5" /></div>
+      <div className="mt-3 text-2xl font-bold text-foreground">{value}</div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+    </div>
+  );
+}
+
 function VendorDashboardHome() {
   const { user } = useSession();
   const { data: vendor, isLoading } = useQuery({ queryKey: ["me-vendor", user?.id], queryFn: () => fetchMyVendor(user!.id), enabled: !!user?.id });
+  const { data: tasks = [] } = useQuery({ queryKey: ["vendor-tasks", user?.id], queryFn: () => fetchMyVendorTasks(user!.id), enabled: !!user?.id });
 
-  if (isLoading) return <div className="grid place-items-center py-20"><Loader2 className="h-6 w-6 animate-spin text-brand-violet" /></div>;
+  const today = new Date().toISOString().slice(0, 10);
+  const todayJobs = tasks.filter((t) => t.event_date === today && !["completed", "cancelled", "rejected"].includes(t.status));
+  const upcoming = tasks.filter((t) => t.event_date > today && !["completed", "cancelled", "rejected"].includes(t.status));
+  const completed = tasks.filter((t) => t.status === "completed");
+  const pending = tasks.filter((t) => t.status === "pending");
+  const todayEarnings = completed.filter((t) => t.event_date === today).reduce((s, t) => s + Number(t.payment_amount ?? 0), 0);
+  const monthEarnings = completed.filter((t) => t.event_date.slice(0, 7) === today.slice(0, 7)).reduce((s, t) => s + Number(t.payment_amount ?? 0), 0);
 
   const completion = computeVendorCompletion(vendor ?? {});
-  const isLive = vendor?.verification_status === "approved" && vendor?.status === "published";
+
+  if (isLoading) {
+    return <div className="grid gap-4 md:grid-cols-4">{[0, 1, 2, 3].map((i) => <div key={i} className="h-28 rounded-2xl border border-border bg-card animate-pulse" />)}</div>;
+  }
 
   return (
     <div className="space-y-8">
-      <div className="rounded-3xl border border-border bg-gradient-to-br from-brand-violet/10 via-secondary/5 to-background p-8 md:p-10">
-        <span className="inline-flex rounded-full bg-white/60 dark:bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-brand-violet">
-          Vendor workspace
-        </span>
-        <h1 className="mt-4 font-display text-3xl md:text-4xl font-semibold tracking-tight">{vendor?.business_name ?? "Welcome"}</h1>
-        <p className="mt-2 max-w-2xl text-muted-foreground">
-          Complete your profile, get verified, then publish it to appear in customer and venue-owner searches.
-        </p>
+      <div>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Welcome back, {vendor?.business_name ?? "there"} 👋</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Here's what's happening with your business today.</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Link to="/vendor/profile" className="group rounded-2xl border border-border bg-card p-6 transition hover:border-brand-violet/40 hover:shadow-soft">
-          <div className="flex items-center justify-between">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-brand-violet/10 text-brand-violet"><Store className="h-5 w-5" /></div>
-            <ArrowUpRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
-          </div>
-          <h3 className="mt-4 font-display text-lg font-semibold">{completion}% profile complete</h3>
-          <p className="mt-1 text-sm text-muted-foreground">Fill in every section to get verified faster.</p>
-        </Link>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatCard icon={Calendar} label="Today's bookings" value={todayJobs.length} tone="brand" />
+        <StatCard icon={TrendingUp} label="Upcoming" value={upcoming.length} tone="blue" />
+        <StatCard icon={CheckCircle2} label="Completed" value={completed.length} tone="green" />
+        <StatCard icon={AlertCircle} label="Pending action" value={pending.length} tone="amber" />
+        <StatCard icon={Wallet} label="Today's earnings" value={`₹${todayEarnings.toLocaleString("en-IN")}`} tone="green" />
+        <StatCard icon={Wallet} label="This month" value={`₹${monthEarnings.toLocaleString("en-IN")}`} tone="brand" />
+        <StatCard icon={Store} label="Profile" value={`${completion}%`} tone="blue" />
+        <StatCard icon={Bell} label="Verification" value={vendor?.verification_status ?? "—"} tone="amber" />
+      </div>
 
-        <Link to="/vendor/profile" className="group rounded-2xl border border-border bg-card p-6 transition hover:border-brand-violet/40 hover:shadow-soft">
-          <div className="flex items-center justify-between">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-brand-violet/10 text-brand-violet"><ShieldCheck className="h-5 w-5" /></div>
-            <ArrowUpRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2 rounded-2xl border border-border bg-card p-6 shadow-soft">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Today's bookings</h2>
+            <Link to="/vendor/jobs" className="text-xs font-semibold text-brand-violet hover:underline">View all →</Link>
           </div>
-          <h3 className="mt-4 font-display text-lg font-semibold">{isLive ? "Live on marketplace" : vendor?.verification_status === "approved" ? "Verified — not published yet" : "Verification pending"}</h3>
-          <p className="mt-1 text-sm text-muted-foreground">{isLive ? "Customers and venue owners can find you right now." : "Head to your profile's Review tab to continue."}</p>
-        </Link>
+          {todayJobs.length === 0 ? (
+            <EmptyState icon={Briefcase} title="No bookings today" body="Upcoming bookings from venues, organizations and customers will show here." />
+          ) : (
+            <div className="space-y-3">{todayJobs.slice(0, 5).map((t) => <TaskRow key={t.id} t={t} />)}</div>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-soft">
+          <h2 className="text-lg font-semibold mb-4">Profile health</h2>
+          <div className="text-sm text-muted-foreground mb-3">Complete your profile to appear on the marketplace and receive more bookings.</div>
+          <div className="h-2 rounded-full bg-border overflow-hidden">
+            <div className="h-full bg-gradient-brand" style={{ width: `${completion}%` }} />
+          </div>
+          <div className="mt-2 text-xs text-muted-foreground">{completion}% complete</div>
+          <Link to="/vendor/profile" className="mt-4 inline-flex rounded-full btn-brand btn-brand-hover px-4 py-2 text-xs font-semibold text-white">
+            {completion === 100 ? "Review profile" : "Continue profile"}
+          </Link>
+        </div>
       </div>
     </div>
+  );
+}
+
+export function EmptyState({ icon: Icon, title, body }: { icon: typeof Briefcase; title: string; body: string }) {
+  return (
+    <div className="text-center py-10">
+      <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-muted"><Icon className="h-5 w-5 text-muted-foreground" /></div>
+      <div className="mt-3 text-sm font-semibold text-foreground">{title}</div>
+      <div className="mt-1 text-xs text-muted-foreground">{body}</div>
+    </div>
+  );
+}
+
+function TaskRow({ t }: { t: VendorTask }) {
+  return (
+    <Link to="/vendor/jobs" className="block rounded-xl border border-border p-3 hover:bg-accent/50 transition-colors">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-sm font-semibold truncate">{t.task_name}</div>
+          <div className="text-xs text-muted-foreground truncate">{t.event_name} · {t.venue ?? "TBD"}</div>
+          <div className="mt-1 text-[11px] text-muted-foreground">{t.start_time ?? "—"} – {t.end_time ?? "—"}</div>
+        </div>
+        <span className="rounded-full bg-brand-violet/10 text-brand-violet px-2 py-0.5 text-[10px] font-semibold">{t.priority}</span>
+      </div>
+    </Link>
   );
 }

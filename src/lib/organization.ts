@@ -52,7 +52,7 @@ export type OrgMember = {
   invite_token: string | null;
   is_admin_role: boolean;
   department_id: string | null;
-  status: "invited" | "active" | "removed";
+  status: "invited" | "active" | "pending_confirmation" | "removed";
   invited_by: string | null;
   created_at: string;
 };

@@ -88,7 +88,7 @@ function WorkerDetail() {
               <div className="mt-6">
                 <h2 className="font-display text-lg font-semibold mb-2">Skills</h2>
                 <div className="flex flex-wrap gap-2">
-                  {worker.skills.map((s) => <span key={s} className="rounded-full bg-accent px-3 py-1 text-xs font-medium">{s}</span>)}
+                  {(worker.skills as string[]).map((s: string) => <span key={s} className="rounded-full bg-accent px-3 py-1 text-xs font-medium">{s}</span>)}
                 </div>
               </div>
             )}
@@ -109,7 +109,7 @@ function WorkerDetail() {
               <div className="mt-8">
                 <h2 className="font-display text-lg font-semibold mb-3">Work photos</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {worker.work_images.map((url, i) => (
+                  {(worker.work_images as string[]).map((url: string, i: number) => (
                     <img key={i} src={url} alt={`Work ${i + 1}`} className="h-32 w-full rounded-xl object-cover border border-border" />
                   ))}
                 </div>

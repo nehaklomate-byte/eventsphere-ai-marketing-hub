@@ -132,3 +132,114 @@ export function computeVendorCompletion(form: Partial<VendorRow>): number {
   }).length;
   return Math.round((filled / fields.length) * 100);
 }
+
+export const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+export function vendorStatusTone(status: VendorTask["status"]) {
+  const m: Record<VendorTask["status"], string> = {
+    pending: "bg-amber-500/10 text-amber-700 border-amber-500/20",
+    accepted: "bg-blue-500/10 text-blue-700 border-blue-500/20",
+    in_progress: "bg-indigo-500/10 text-indigo-700 border-indigo-500/20",
+    paused: "bg-slate-500/10 text-slate-700 border-slate-500/20",
+    completed: "bg-emerald-500/10 text-emerald-700 border-emerald-500/20",
+    rejected: "bg-rose-500/10 text-rose-700 border-rose-500/20",
+    cancelled: "bg-zinc-500/10 text-zinc-700 border-zinc-500/20",
+  };
+  return m[status];
+}
+
+export function vendorPriorityTone(p: VendorTask["priority"]) {
+  const m: Record<VendorTask["priority"], string> = {
+    low: "bg-slate-500/10 text-slate-700",
+    normal: "bg-blue-500/10 text-blue-700",
+    high: "bg-orange-500/10 text-orange-700",
+    urgent: "bg-red-500/10 text-red-700",
+  };
+  return m[p];
+}
+
+/** Every vendor task for the signed-in vendor — shared by dashboard, calendar and earnings. */
+export async function fetchMyVendorTasks(userId: string): Promise<VendorTask[]> {
+  const { data, error } = await supabase
+    .from("vendor_tasks")
+    .select("*")
+    .eq("vendor_user_id", userId)
+    .order("event_date", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as unknown as VendorTask[];
+}
+
+// ---- Vendor job marketplace (browse open postings, apply, track applications) ----
+
+export type VendorPosting = {
+  id: string;
+  org_id: string | null;
+  hall_id: string | null;
+  title: string;
+  category: string;
+  description: string | null;
+  venue: string | null;
+  venue_address: string | null;
+  event_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  slots_needed: number;
+  slots_filled: number;
+  pay_amount: number | null;
+  pay_type: "hourly" | "daily" | "per_event";
+  status: "open" | "closed" | "cancelled";
+  created_at: string;
+  poster_name?: string;
+};
+
+export type VendorApplication = {
+  id: string;
+  posting_id: string;
+  vendor_id: string;
+  vendor_user_id: string;
+  cover_note: string | null;
+  status: "applied" | "shortlisted" | "accepted" | "rejected" | "withdrawn";
+  applied_at: string;
+  responded_at: string | null;
+  posting?: VendorPosting;
+};
+
+export async function fetchOpenVendorPostings(category?: string): Promise<VendorPosting[]> {
+  let query = supabase.from("vendor_job_postings").select("*").eq("status", "open").order("created_at", { ascending: false });
+  if (category) query = query.eq("category", category);
+  const { data, error } = await query;
+  if (error) throw error;
+  const postings = (data ?? []) as unknown as VendorPosting[];
+  const orgIds = Array.from(new Set(postings.map((p) => p.org_id).filter(Boolean))) as string[];
+  if (orgIds.length === 0) return postings;
+  const { data: orgs } = await supabase.from("organizations").select("id, name").in("id", orgIds);
+  const nameById = new Map((orgs ?? []).map((o) => [o.id, o.name]));
+  return postings.map((p) => ({ ...p, poster_name: p.org_id ? nameById.get(p.org_id) : undefined }));
+}
+
+export async function fetchMyVendorApplications(userId: string): Promise<VendorApplication[]> {
+  const { data, error } = await supabase
+    .from("vendor_job_applications")
+    .select("*")
+    .eq("vendor_user_id", userId)
+    .order("applied_at", { ascending: false });
+  if (error) throw error;
+  const list = (data ?? []) as unknown as VendorApplication[];
+  if (list.length === 0) return list;
+  const { data: postings } = await supabase.from("vendor_job_postings").select("*").in("id", list.map((a) => a.posting_id));
+  const byId = new Map(((postings ?? []) as unknown as VendorPosting[]).map((p) => [p.id, p]));
+  return list.map((a) => ({ ...a, posting: byId.get(a.posting_id) }));
+}
+
+export async function applyToVendorPosting(postingId: string, vendorId: string, vendorUserId: string, coverNote: string): Promise<void> {
+  const { error } = await supabase.from("vendor_job_applications").insert({
+    posting_id: postingId, vendor_id: vendorId, vendor_user_id: vendorUserId, cover_note: coverNote || null,
+  });
+  if (error) throw error;
+}
+
+export async function withdrawVendorApplication(id: string): Promise<void> {
+  const { data, error } = await supabase.from("vendor_job_applications").update({ status: "withdrawn" }).eq("id", id).select().maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("Update was blocked — please refresh and try again.");
+}
