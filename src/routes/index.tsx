@@ -12,9 +12,9 @@ import { Counter } from "@/components/Counter";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "EventSphere AI — Plan • Manage • Connect" },
+      { title: "EventOrbit AI — Plan • Manage • Connect" },
       { name: "description", content: "The intelligent event operations platform. Plan weddings, corporate events, festivals and more — halls, vendors, workers, budgets and attendees in one place." },
-      { property: "og:title", content: "EventSphere AI — Plan • Manage • Connect" },
+      { property: "og:title", content: "EventOrbit AI — Plan • Manage • Connect" },
       { property: "og:description", content: "One intelligent cloud platform for every event." },
       { property: "og:url", content: "/" },
     ],
@@ -65,7 +65,7 @@ function Hero() {
             <span className="text-gradient-brand">One Intelligent Platform.</span>
           </h1>
           <p className="mt-6 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
-            EventSphere AI helps organizations, halls, vendors and event professionals manage planning, bookings, teams, budgets and operations from one unified cloud platform.
+            EventOrbit AI helps organizations, halls, vendors and event professionals manage planning, bookings, teams, budgets and operations from one unified cloud platform.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link to="/register" className="group inline-flex items-center gap-2 rounded-full btn-brand btn-brand-hover px-5 py-3 text-sm font-semibold">
@@ -109,7 +109,7 @@ function HeroPreview() {
             <span className="h-2.5 w-2.5 rounded-full bg-yellow-400/70" />
             <span className="h-2.5 w-2.5 rounded-full bg-green-400/70" />
           </div>
-          <div className="ml-3 text-xs text-muted-foreground">app.eventsphere.ai / dashboard</div>
+          <div className="ml-3 text-xs text-muted-foreground">app.eventorbit.ai / dashboard</div>
         </div>
         <div className="grid grid-cols-3 gap-3 p-4">
           {[
@@ -191,7 +191,7 @@ function Stats() {
   return (
     <section className="mx-auto max-w-7xl px-5 md:px-8 py-20">
       <motion.div {...fadeUp} className="max-w-2xl">
-        <SectionEyebrow>Why EventSphere</SectionEyebrow>
+        <SectionEyebrow>Why EventOrbit</SectionEyebrow>
         <h2 className="mt-3 font-display text-3xl md:text-4xl font-semibold">Purpose-built for the way events actually run.</h2>
         <p className="mt-3 text-muted-foreground">Replace scattered spreadsheets, WhatsApp threads and manual paperwork with a single system your entire team can trust.</p>
       </motion.div>
@@ -359,7 +359,7 @@ function Marketplace() {
 /* ---------------- HOW IT WORKS ---------------- */
 function HowItWorks() {
   const steps = [
-    { icon: Users2, title: "Customer", desc: "Discovers EventSphere and creates a request." },
+    { icon: Users2, title: "Customer", desc: "Discovers EventOrbit and creates a request." },
     { icon: Search, title: "Search Venue", desc: "Filter by capacity, city, budget and date." },
     { icon: MousePointerClick, title: "Book", desc: "Reserve instantly with transparent pricing." },
     { icon: CheckCircle2, title: "Organizer Confirmation", desc: "Vendors and staff confirm and sync calendars." },
@@ -443,7 +443,7 @@ function Research() {
             <SectionEyebrow>Research</SectionEyebrow>
             <h2 className="mt-3 font-display text-3xl md:text-4xl font-semibold">Built with the industry, not for it.</h2>
             <p className="mt-4 text-muted-foreground">
-              EventSphere AI is collaborating with organizers, hall owners, vendors and government bodies across India to deeply understand event operations. Your insights directly shape our roadmap.
+              EventOrbit AI is collaborating with organizers, hall owners, vendors and government bodies across India to deeply understand event operations. Your insights directly shape our roadmap.
             </p>
             <Link to="/research" className="mt-6 inline-flex items-center gap-2 rounded-full btn-brand btn-brand-hover px-5 py-3 text-sm font-semibold">
               Participate in Research Survey <ArrowRight className="h-4 w-4" />
@@ -484,7 +484,7 @@ function Testimonials() {
       <motion.div {...fadeUp} className="max-w-2xl">
         <SectionEyebrow>Advisory network</SectionEyebrow>
         <h2 className="mt-3 font-display text-3xl md:text-4xl font-semibold">Built alongside operators, not in a vacuum.</h2>
-        <p className="mt-3 text-muted-foreground">EventSphere AI is being shaped in the open with venues, planners and institutions who run events every week.</p>
+        <p className="mt-3 text-muted-foreground">EventOrbit AI is being shaped in the open with venues, planners and institutions who run events every week.</p>
       </motion.div>
       <div className="mt-12 grid gap-5 md:grid-cols-3">
         {items.map((t, i) => (
@@ -542,7 +542,7 @@ function BlogPreview() {
 /* ---------------- FAQ ---------------- */
 function FAQ() {
   const faqs = [
-    { q: "When will EventSphere AI launch publicly?", a: "We're currently in private beta with select partners. Join early access to receive an invite as we roll out cohorts through 2026." },
+    { q: "When will EventOrbit AI launch publicly?", a: "We're currently in private beta with select partners. Join early access to receive an invite as we roll out cohorts through 2026." },
     { q: "Which events does the platform support?", a: "Weddings, corporate events, college festivals, birthdays, cultural and government events — with tailored templates for each." },
     { q: "Can venue owners list their halls?", a: "Yes. Halls can be onboarded through our partner program with calendar sync, dynamic pricing and payout support." },
     { q: "Do you support workers and vendors?", a: "Vendors and on-ground workers can create profiles, receive bookings, manage payments and build a verified reputation." },
