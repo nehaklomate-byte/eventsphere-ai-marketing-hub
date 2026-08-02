@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, Link, useRouterState, useNavigate, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
-  LayoutDashboard, Store, Settings, LogOut, Menu, X, ShieldCheck, BadgeAlert, BadgeCheck, ShieldAlert, Loader2, Clock,
+  LayoutDashboard, Store, Settings, LogOut, Menu, X, ShieldCheck, BadgeAlert, BadgeCheck, ShieldAlert, Loader2, Clock, Briefcase, Bell,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { PayoutBanner } from "@/components/PayoutBanner";
@@ -24,6 +24,8 @@ export const Route = createFileRoute("/_authenticated/vendor")({
 
 const nav: { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean }[] = [
   { to: "/vendor", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { to: "/vendor/jobs", label: "Assigned Jobs", icon: Briefcase },
+  { to: "/vendor/notifications", label: "Notifications", icon: Bell },
   { to: "/vendor/profile", label: "Vendor Profile", icon: Store },
   { to: "/vendor/settings", label: "Settings", icon: Settings },
 ];
@@ -59,6 +61,30 @@ function VendorShell() {
   });
 
   useEffect(() => { setOpen(false); }, [location.pathname]);
+
+  const { data: unread = 0 } = useQuery({
+    queryKey: ["vendor-notif-unread", user?.id],
+    queryFn: async () => {
+      const { count } = await supabase.from("vendor_notifications" as never)
+        .select("id", { count: "exact", head: true })
+        .eq("user_id" as never, user!.id as never)
+        .is("read_at" as never, null as never);
+      return count ?? 0;
+    },
+    enabled: !!user?.id,
+    refetchInterval: 30000,
+  });
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const ch = supabase.channel(`vendor-notif-${user.id}`)
+      .on("postgres_changes",
+        { event: "*", schema: "public", table: "vendor_notifications", filter: `user_id=eq.${user.id}` },
+        () => { qc.invalidateQueries({ queryKey: ["vendor-notif-unread", user.id] }); qc.invalidateQueries({ queryKey: ["vendor-notifications", user.id] }); }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [user?.id, qc]);
 
   const completion = computeVendorCompletion(vendor ?? {});
   const vStatus = vendor?.verification_status ?? "pending";
@@ -169,6 +195,9 @@ function VendorShell() {
               <Link key={n.to} to={n.to as never}
                 className={`group flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${active ? "bg-brand-violet/10 text-brand-violet" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}>
                 <span className="flex items-center gap-3"><Icon className="h-4 w-4" />{n.label}</span>
+                {n.to === "/vendor/notifications" && unread > 0 && (
+                  <span className="min-w-[20px] rounded-full bg-rose-500 px-1.5 py-0.5 text-center text-[10px] font-bold text-white">{unread > 99 ? "99+" : unread}</span>
+                )}
               </Link>
             );
           })}
@@ -187,7 +216,10 @@ function VendorShell() {
         <header className="sticky top-0 z-20 h-16 flex items-center justify-between border-b border-border bg-background/80 backdrop-blur px-4 md:px-8">
           <button className="lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-full hover:bg-accent" onClick={() => setOpen(true)} aria-label="Open menu"><Menu className="h-5 w-5" /></button>
           <div className="hidden md:block text-sm text-muted-foreground">Vendor workspace</div>
-          <div />
+          <Link to={"/vendor/notifications" as never} className="relative inline-flex h-9 w-9 items-center justify-center rounded-full hover:bg-accent" aria-label="Notifications">
+            <Bell className="h-5 w-5" />
+            {unread > 0 && <span className="absolute -top-0.5 -right-0.5 min-w-[16px] rounded-full bg-rose-500 px-1 py-0.5 text-center text-[9px] font-bold text-white">{unread > 9 ? "9+" : unread}</span>}
+          </Link>
         </header>
         <main className="p-4 md:p-8">
           {vendor && !vendor.payout_upi_id && (
