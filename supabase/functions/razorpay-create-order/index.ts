@@ -24,17 +24,21 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization") ?? "";
+    // Client-scoped supabase client — RLS makes sure the caller can only
+    // touch worker_tasks rows they themselves created (assigned_by = them).
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { worker_task_id } = await req.json();
+    const { worker_task_id, entity_type } = await req.json();
     if (!worker_task_id) {
       return new Response(JSON.stringify({ error: "worker_task_id is required" }), { status: 400, headers: corsHeaders });
     }
+    // "worker" (default, backward compatible) or "vendor" — same flow, different table.
+    const table = entity_type === "vendor" ? "vendor_tasks" : "worker_tasks";
 
     const { data: task, error: taskErr } = await supabase
-      .from("worker_tasks")
+      .from(table)
       .select("id, payment_amount, payment_status, status, task_name")
       .eq("id", worker_task_id)
       .maybeSingle();
@@ -42,7 +46,7 @@ serve(async (req) => {
     if (taskErr || !task) {
       return new Response(JSON.stringify({ error: "Task not found or you don't have access to it" }), { status: 404, headers: corsHeaders });
     }
-    if (task.status !== "accepted") {
+    if (task.status !== "accepted" && task.status !== "completed") {
       return new Response(JSON.stringify({ error: "Worker hasn't accepted this task yet — you can only pay after acceptance." }), { status: 400, headers: corsHeaders });
     }
     if (task.payment_status === "paid") {
@@ -75,7 +79,7 @@ serve(async (req) => {
     const order = await orderRes.json();
 
     const { error: updateErr } = await supabase
-      .from("worker_tasks")
+      .from(table)
       .update({ razorpay_order_id: order.id })
       .eq("id", worker_task_id);
     if (updateErr) {
@@ -86,7 +90,7 @@ serve(async (req) => {
       order_id: order.id,
       amount: amountPaise,
       currency: "INR",
-      key_id: RAZORPAY_KEY_ID,
+      key_id: RAZORPAY_KEY_ID, // public, safe to send to the client
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), { status: 500, headers: corsHeaders });
