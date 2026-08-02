@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, Link, useRouterState, useNavigate, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
-  LayoutDashboard, Inbox, CalendarCheck, Building2, Settings, LogOut, Menu, X, Clock, ShieldAlert, MailWarning, HardHat, Bell,
+  LayoutDashboard, Inbox, CalendarCheck, Building2, Settings, LogOut, Menu, X, Clock, ShieldAlert, MailWarning, HardHat, Bell, Store,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { PayoutBanner } from "@/components/PayoutBanner";
@@ -59,6 +59,7 @@ const NAV = [
   { to: "/venue/enquiries", label: "Enquiries", icon: Inbox },
   { to: "/venue/bookings", label: "Bookings", icon: CalendarCheck },
   { to: "/venue/hire-workers", label: "Hire Workers", icon: HardHat },
+  { to: "/venue/hire-vendors", label: "Hire Vendors", icon: Store },
   { to: "/venue/notifications", label: "Notifications", icon: Bell },
   { to: "/venue/profile", label: "Venue Profile", icon: Building2 },
   { to: "/venue/settings", label: "Settings", icon: Settings, soon: true },
@@ -75,11 +76,13 @@ function VenueShell() {
   const { data: unread = 0 } = useQuery({
     queryKey: ["venue-notif-unread", user?.id],
     queryFn: async () => {
-      const { count } = await supabase.from("worker_notifications" as never)
-        .select("id", { count: "exact", head: true })
-        .eq("user_id" as never, user!.id as never)
-        .is("read_at" as never, null as never);
-      return count ?? 0;
+      const [w, v] = await Promise.all([
+        supabase.from("worker_notifications" as never).select("id", { count: "exact", head: true })
+          .eq("user_id" as never, user!.id as never).is("read_at" as never, null as never),
+        supabase.from("vendor_notifications" as never).select("id", { count: "exact", head: true })
+          .eq("user_id" as never, user!.id as never).is("read_at" as never, null as never),
+      ]);
+      return (w.count ?? 0) + (v.count ?? 0);
     },
     enabled: !!user?.id,
     refetchInterval: 30000,
@@ -90,6 +93,10 @@ function VenueShell() {
     const ch = supabase.channel(`venue-notif-${user.id}`)
       .on("postgres_changes",
         { event: "*", schema: "public", table: "worker_notifications", filter: `user_id=eq.${user.id}` },
+        () => { qc.invalidateQueries({ queryKey: ["venue-notif-unread", user.id] }); qc.invalidateQueries({ queryKey: ["venue-notifications", user.id] }); }
+      )
+      .on("postgres_changes",
+        { event: "*", schema: "public", table: "vendor_notifications", filter: `user_id=eq.${user.id}` },
         () => { qc.invalidateQueries({ queryKey: ["venue-notif-unread", user.id] }); qc.invalidateQueries({ queryKey: ["venue-notifications", user.id] }); }
       )
       .subscribe();
