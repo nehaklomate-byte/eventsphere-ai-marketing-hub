@@ -65,6 +65,7 @@ import { Route as AuthenticatedVendorProfileRouteImport } from './routes/_authen
 import { Route as AuthenticatedVendorNotificationsRouteImport } from './routes/_authenticated/vendor/notifications'
 import { Route as AuthenticatedVendorJobsRouteImport } from './routes/_authenticated/vendor/jobs'
 import { Route as AuthenticatedVendorHireWorkersRouteImport } from './routes/_authenticated/vendor/hire-workers'
+import { Route as AuthenticatedVendorCalendarRouteImport } from './routes/_authenticated/vendor/calendar'
 import { Route as AuthenticatedTeamMemberMembersRouteImport } from './routes/_authenticated/team-member/members'
 import { Route as AuthenticatedTeamMemberEventsRouteImport } from './routes/_authenticated/team-member/events'
 import { Route as AuthenticatedTeamMemberDepartmentsRouteImport } from './routes/_authenticated/team-member/departments'
@@ -394,6 +395,12 @@ const AuthenticatedVendorHireWorkersRoute =
     path: '/hire-workers',
     getParentRoute: () => AuthenticatedVendorRouteRoute,
   } as any)
+const AuthenticatedVendorCalendarRoute =
+  AuthenticatedVendorCalendarRouteImport.update({
+    id: '/calendar',
+    path: '/calendar',
+    getParentRoute: () => AuthenticatedVendorRouteRoute,
+  } as any)
 const AuthenticatedTeamMemberMembersRoute =
   AuthenticatedTeamMemberMembersRouteImport.update({
     id: '/members',
@@ -561,6 +568,7 @@ export interface FileRoutesByFullPath {
   '/team-member/departments': typeof AuthenticatedTeamMemberDepartmentsRoute
   '/team-member/events': typeof AuthenticatedTeamMemberEventsRoute
   '/team-member/members': typeof AuthenticatedTeamMemberMembersRoute
+  '/vendor/calendar': typeof AuthenticatedVendorCalendarRoute
   '/vendor/hire-workers': typeof AuthenticatedVendorHireWorkersRoute
   '/vendor/jobs': typeof AuthenticatedVendorJobsRoute
   '/vendor/notifications': typeof AuthenticatedVendorNotificationsRoute
@@ -631,6 +639,7 @@ export interface FileRoutesByTo {
   '/team-member/departments': typeof AuthenticatedTeamMemberDepartmentsRoute
   '/team-member/events': typeof AuthenticatedTeamMemberEventsRoute
   '/team-member/members': typeof AuthenticatedTeamMemberMembersRoute
+  '/vendor/calendar': typeof AuthenticatedVendorCalendarRoute
   '/vendor/hire-workers': typeof AuthenticatedVendorHireWorkersRoute
   '/vendor/jobs': typeof AuthenticatedVendorJobsRoute
   '/vendor/notifications': typeof AuthenticatedVendorNotificationsRoute
@@ -710,6 +719,7 @@ export interface FileRoutesById {
   '/_authenticated/team-member/departments': typeof AuthenticatedTeamMemberDepartmentsRoute
   '/_authenticated/team-member/events': typeof AuthenticatedTeamMemberEventsRoute
   '/_authenticated/team-member/members': typeof AuthenticatedTeamMemberMembersRoute
+  '/_authenticated/vendor/calendar': typeof AuthenticatedVendorCalendarRoute
   '/_authenticated/vendor/hire-workers': typeof AuthenticatedVendorHireWorkersRoute
   '/_authenticated/vendor/jobs': typeof AuthenticatedVendorJobsRoute
   '/_authenticated/vendor/notifications': typeof AuthenticatedVendorNotificationsRoute
@@ -789,6 +799,7 @@ export interface FileRouteTypes {
     | '/team-member/departments'
     | '/team-member/events'
     | '/team-member/members'
+    | '/vendor/calendar'
     | '/vendor/hire-workers'
     | '/vendor/jobs'
     | '/vendor/notifications'
@@ -859,6 +870,7 @@ export interface FileRouteTypes {
     | '/team-member/departments'
     | '/team-member/events'
     | '/team-member/members'
+    | '/vendor/calendar'
     | '/vendor/hire-workers'
     | '/vendor/jobs'
     | '/vendor/notifications'
@@ -937,6 +949,7 @@ export interface FileRouteTypes {
     | '/_authenticated/team-member/departments'
     | '/_authenticated/team-member/events'
     | '/_authenticated/team-member/members'
+    | '/_authenticated/vendor/calendar'
     | '/_authenticated/vendor/hire-workers'
     | '/_authenticated/vendor/jobs'
     | '/_authenticated/vendor/notifications'
@@ -1386,6 +1399,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVendorHireWorkersRouteImport
       parentRoute: typeof AuthenticatedVendorRouteRoute
     }
+    '/_authenticated/vendor/calendar': {
+      id: '/_authenticated/vendor/calendar'
+      path: '/calendar'
+      fullPath: '/vendor/calendar'
+      preLoaderRoute: typeof AuthenticatedVendorCalendarRouteImport
+      parentRoute: typeof AuthenticatedVendorRouteRoute
+    }
     '/_authenticated/team-member/members': {
       id: '/_authenticated/team-member/members'
       path: '/members'
@@ -1645,6 +1665,7 @@ const AuthenticatedTeamMemberRouteRouteWithChildren =
   )
 
 interface AuthenticatedVendorRouteRouteChildren {
+  AuthenticatedVendorCalendarRoute: typeof AuthenticatedVendorCalendarRoute
   AuthenticatedVendorHireWorkersRoute: typeof AuthenticatedVendorHireWorkersRoute
   AuthenticatedVendorJobsRoute: typeof AuthenticatedVendorJobsRoute
   AuthenticatedVendorNotificationsRoute: typeof AuthenticatedVendorNotificationsRoute
@@ -1655,6 +1676,7 @@ interface AuthenticatedVendorRouteRouteChildren {
 
 const AuthenticatedVendorRouteRouteChildren: AuthenticatedVendorRouteRouteChildren =
   {
+    AuthenticatedVendorCalendarRoute: AuthenticatedVendorCalendarRoute,
     AuthenticatedVendorHireWorkersRoute: AuthenticatedVendorHireWorkersRoute,
     AuthenticatedVendorJobsRoute: AuthenticatedVendorJobsRoute,
     AuthenticatedVendorNotificationsRoute:
