@@ -65,7 +65,10 @@ import { Route as AuthenticatedVendorProfileRouteImport } from './routes/_authen
 import { Route as AuthenticatedVendorNotificationsRouteImport } from './routes/_authenticated/vendor/notifications'
 import { Route as AuthenticatedVendorJobsRouteImport } from './routes/_authenticated/vendor/jobs'
 import { Route as AuthenticatedVendorHireWorkersRouteImport } from './routes/_authenticated/vendor/hire-workers'
+import { Route as AuthenticatedVendorEarningsRouteImport } from './routes/_authenticated/vendor/earnings'
 import { Route as AuthenticatedVendorCalendarRouteImport } from './routes/_authenticated/vendor/calendar'
+import { Route as AuthenticatedVendorBoardRouteImport } from './routes/_authenticated/vendor/board'
+import { Route as AuthenticatedVendorAvailabilityRouteImport } from './routes/_authenticated/vendor/availability'
 import { Route as AuthenticatedTeamMemberMembersRouteImport } from './routes/_authenticated/team-member/members'
 import { Route as AuthenticatedTeamMemberEventsRouteImport } from './routes/_authenticated/team-member/events'
 import { Route as AuthenticatedTeamMemberDepartmentsRouteImport } from './routes/_authenticated/team-member/departments'
@@ -395,10 +398,28 @@ const AuthenticatedVendorHireWorkersRoute =
     path: '/hire-workers',
     getParentRoute: () => AuthenticatedVendorRouteRoute,
   } as any)
+const AuthenticatedVendorEarningsRoute =
+  AuthenticatedVendorEarningsRouteImport.update({
+    id: '/earnings',
+    path: '/earnings',
+    getParentRoute: () => AuthenticatedVendorRouteRoute,
+  } as any)
 const AuthenticatedVendorCalendarRoute =
   AuthenticatedVendorCalendarRouteImport.update({
     id: '/calendar',
     path: '/calendar',
+    getParentRoute: () => AuthenticatedVendorRouteRoute,
+  } as any)
+const AuthenticatedVendorBoardRoute =
+  AuthenticatedVendorBoardRouteImport.update({
+    id: '/board',
+    path: '/board',
+    getParentRoute: () => AuthenticatedVendorRouteRoute,
+  } as any)
+const AuthenticatedVendorAvailabilityRoute =
+  AuthenticatedVendorAvailabilityRouteImport.update({
+    id: '/availability',
+    path: '/availability',
     getParentRoute: () => AuthenticatedVendorRouteRoute,
   } as any)
 const AuthenticatedTeamMemberMembersRoute =
@@ -568,7 +589,10 @@ export interface FileRoutesByFullPath {
   '/team-member/departments': typeof AuthenticatedTeamMemberDepartmentsRoute
   '/team-member/events': typeof AuthenticatedTeamMemberEventsRoute
   '/team-member/members': typeof AuthenticatedTeamMemberMembersRoute
+  '/vendor/availability': typeof AuthenticatedVendorAvailabilityRoute
+  '/vendor/board': typeof AuthenticatedVendorBoardRoute
   '/vendor/calendar': typeof AuthenticatedVendorCalendarRoute
+  '/vendor/earnings': typeof AuthenticatedVendorEarningsRoute
   '/vendor/hire-workers': typeof AuthenticatedVendorHireWorkersRoute
   '/vendor/jobs': typeof AuthenticatedVendorJobsRoute
   '/vendor/notifications': typeof AuthenticatedVendorNotificationsRoute
@@ -639,7 +663,10 @@ export interface FileRoutesByTo {
   '/team-member/departments': typeof AuthenticatedTeamMemberDepartmentsRoute
   '/team-member/events': typeof AuthenticatedTeamMemberEventsRoute
   '/team-member/members': typeof AuthenticatedTeamMemberMembersRoute
+  '/vendor/availability': typeof AuthenticatedVendorAvailabilityRoute
+  '/vendor/board': typeof AuthenticatedVendorBoardRoute
   '/vendor/calendar': typeof AuthenticatedVendorCalendarRoute
+  '/vendor/earnings': typeof AuthenticatedVendorEarningsRoute
   '/vendor/hire-workers': typeof AuthenticatedVendorHireWorkersRoute
   '/vendor/jobs': typeof AuthenticatedVendorJobsRoute
   '/vendor/notifications': typeof AuthenticatedVendorNotificationsRoute
@@ -719,7 +746,10 @@ export interface FileRoutesById {
   '/_authenticated/team-member/departments': typeof AuthenticatedTeamMemberDepartmentsRoute
   '/_authenticated/team-member/events': typeof AuthenticatedTeamMemberEventsRoute
   '/_authenticated/team-member/members': typeof AuthenticatedTeamMemberMembersRoute
+  '/_authenticated/vendor/availability': typeof AuthenticatedVendorAvailabilityRoute
+  '/_authenticated/vendor/board': typeof AuthenticatedVendorBoardRoute
   '/_authenticated/vendor/calendar': typeof AuthenticatedVendorCalendarRoute
+  '/_authenticated/vendor/earnings': typeof AuthenticatedVendorEarningsRoute
   '/_authenticated/vendor/hire-workers': typeof AuthenticatedVendorHireWorkersRoute
   '/_authenticated/vendor/jobs': typeof AuthenticatedVendorJobsRoute
   '/_authenticated/vendor/notifications': typeof AuthenticatedVendorNotificationsRoute
@@ -799,7 +829,10 @@ export interface FileRouteTypes {
     | '/team-member/departments'
     | '/team-member/events'
     | '/team-member/members'
+    | '/vendor/availability'
+    | '/vendor/board'
     | '/vendor/calendar'
+    | '/vendor/earnings'
     | '/vendor/hire-workers'
     | '/vendor/jobs'
     | '/vendor/notifications'
@@ -870,7 +903,10 @@ export interface FileRouteTypes {
     | '/team-member/departments'
     | '/team-member/events'
     | '/team-member/members'
+    | '/vendor/availability'
+    | '/vendor/board'
     | '/vendor/calendar'
+    | '/vendor/earnings'
     | '/vendor/hire-workers'
     | '/vendor/jobs'
     | '/vendor/notifications'
@@ -949,7 +985,10 @@ export interface FileRouteTypes {
     | '/_authenticated/team-member/departments'
     | '/_authenticated/team-member/events'
     | '/_authenticated/team-member/members'
+    | '/_authenticated/vendor/availability'
+    | '/_authenticated/vendor/board'
     | '/_authenticated/vendor/calendar'
+    | '/_authenticated/vendor/earnings'
     | '/_authenticated/vendor/hire-workers'
     | '/_authenticated/vendor/jobs'
     | '/_authenticated/vendor/notifications'
@@ -1399,11 +1438,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVendorHireWorkersRouteImport
       parentRoute: typeof AuthenticatedVendorRouteRoute
     }
+    '/_authenticated/vendor/earnings': {
+      id: '/_authenticated/vendor/earnings'
+      path: '/earnings'
+      fullPath: '/vendor/earnings'
+      preLoaderRoute: typeof AuthenticatedVendorEarningsRouteImport
+      parentRoute: typeof AuthenticatedVendorRouteRoute
+    }
     '/_authenticated/vendor/calendar': {
       id: '/_authenticated/vendor/calendar'
       path: '/calendar'
       fullPath: '/vendor/calendar'
       preLoaderRoute: typeof AuthenticatedVendorCalendarRouteImport
+      parentRoute: typeof AuthenticatedVendorRouteRoute
+    }
+    '/_authenticated/vendor/board': {
+      id: '/_authenticated/vendor/board'
+      path: '/board'
+      fullPath: '/vendor/board'
+      preLoaderRoute: typeof AuthenticatedVendorBoardRouteImport
+      parentRoute: typeof AuthenticatedVendorRouteRoute
+    }
+    '/_authenticated/vendor/availability': {
+      id: '/_authenticated/vendor/availability'
+      path: '/availability'
+      fullPath: '/vendor/availability'
+      preLoaderRoute: typeof AuthenticatedVendorAvailabilityRouteImport
       parentRoute: typeof AuthenticatedVendorRouteRoute
     }
     '/_authenticated/team-member/members': {
@@ -1665,7 +1725,10 @@ const AuthenticatedTeamMemberRouteRouteWithChildren =
   )
 
 interface AuthenticatedVendorRouteRouteChildren {
+  AuthenticatedVendorAvailabilityRoute: typeof AuthenticatedVendorAvailabilityRoute
+  AuthenticatedVendorBoardRoute: typeof AuthenticatedVendorBoardRoute
   AuthenticatedVendorCalendarRoute: typeof AuthenticatedVendorCalendarRoute
+  AuthenticatedVendorEarningsRoute: typeof AuthenticatedVendorEarningsRoute
   AuthenticatedVendorHireWorkersRoute: typeof AuthenticatedVendorHireWorkersRoute
   AuthenticatedVendorJobsRoute: typeof AuthenticatedVendorJobsRoute
   AuthenticatedVendorNotificationsRoute: typeof AuthenticatedVendorNotificationsRoute
@@ -1676,7 +1739,10 @@ interface AuthenticatedVendorRouteRouteChildren {
 
 const AuthenticatedVendorRouteRouteChildren: AuthenticatedVendorRouteRouteChildren =
   {
+    AuthenticatedVendorAvailabilityRoute: AuthenticatedVendorAvailabilityRoute,
+    AuthenticatedVendorBoardRoute: AuthenticatedVendorBoardRoute,
     AuthenticatedVendorCalendarRoute: AuthenticatedVendorCalendarRoute,
+    AuthenticatedVendorEarningsRoute: AuthenticatedVendorEarningsRoute,
     AuthenticatedVendorHireWorkersRoute: AuthenticatedVendorHireWorkersRoute,
     AuthenticatedVendorJobsRoute: AuthenticatedVendorJobsRoute,
     AuthenticatedVendorNotificationsRoute:
