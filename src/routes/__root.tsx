@@ -81,18 +81,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@EventSphereAI" },
       { name: "theme-color", content: "#0B1B5A" },
-      // PWA installability — Chrome/Android's install prompt and iOS's
-      // "Add to Home Screen" both read these, alongside manifest.json below.
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
-      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
-      { name: "apple-mobile-web-app-title", content: "EventOrbit" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "default" },
+      { name: "apple-mobile-web-app-title", content: "EventSphere" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
-      { rel: "apple-touch-icon", href: "/favicon.png" },
-      { rel: "manifest", href: "/manifest.json" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "apple-touch-icon", href: "/icon-192.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" },
@@ -121,7 +119,13 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
-
+  useEffect(() => {
+    // Registers the service worker required for Chrome's "Install app"
+    // prompt. Safe no-op on browsers without support (Safari desktop etc).
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
+  }, []);
   useEffect(() => {
     // Global auth listener: refresh router + query cache on identity changes.
     let mounted = true;
@@ -140,19 +144,6 @@ function RootComponent() {
       s?.subscription.unsubscribe();
     };
   }, [router, queryClient]);
-
-  useEffect(() => {
-    // PWA: register the service worker so the app becomes installable
-    // (Chrome/Android's "Add to Home Screen" / install-app prompt requires
-    // an active service worker, not just a manifest). Deliberately a
-    // no-op if unsupported — never blocks the app from working normally.
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => {
-        // Silent — PWA installability is a nice-to-have, not a hard requirement.
-      });
-    }
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
