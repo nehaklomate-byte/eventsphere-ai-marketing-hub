@@ -4,10 +4,10 @@ export const Route = createFileRoute("/_authenticated/worker/support")({ compone
   <div className="space-y-6 max-w-3xl">
     <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Support</h1>
     <div className="grid gap-4 sm:grid-cols-2">
-      <a href="mailto:support@eventsphere.ai" className="rounded-2xl border border-border bg-card p-6 hover:bg-accent">
+      <a href="mailto:support@eventorbit.ai" className="rounded-2xl border border-border bg-card p-6 hover:bg-accent">
         <Mail className="h-5 w-5 text-brand-violet" />
         <div className="mt-3 font-semibold">Email support</div>
-        <div className="text-xs text-muted-foreground mt-1">support@eventsphere.ai · replies within 24h</div>
+        <div className="text-xs text-muted-foreground mt-1">support@eventorbit.ai · replies within 24h</div>
       </a>
       <Link to="/contact" className="rounded-2xl border border-border bg-card p-6 hover:bg-accent block">
         <MessageCircle className="h-5 w-5 text-brand-violet" />
