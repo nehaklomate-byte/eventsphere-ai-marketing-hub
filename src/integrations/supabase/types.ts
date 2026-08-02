@@ -1140,6 +1140,7 @@ export type Database = {
           email_verified: boolean
           full_name: string | null
           id: string
+          payout_upi_id: string | null
           phone: string | null
           phone_verified: boolean
           primary_role: Database["public"]["Enums"]["app_role"] | null
@@ -1155,6 +1156,7 @@ export type Database = {
           email_verified?: boolean
           full_name?: string | null
           id: string
+          payout_upi_id?: string | null
           phone?: string | null
           phone_verified?: boolean
           primary_role?: Database["public"]["Enums"]["app_role"] | null
@@ -1170,6 +1172,7 @@ export type Database = {
           email_verified?: boolean
           full_name?: string | null
           id?: string
+          payout_upi_id?: string | null
           phone?: string | null
           phone_verified?: boolean
           primary_role?: Database["public"]["Enums"]["app_role"] | null
@@ -1197,6 +1200,135 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      vendor_job_applications: {
+        Row: {
+          applied_at: string
+          cover_note: string | null
+          id: string
+          posting_id: string
+          responded_at: string | null
+          status: Database["public"]["Enums"]["application_status"]
+          vendor_id: string
+          vendor_user_id: string
+        }
+        Insert: {
+          applied_at?: string
+          cover_note?: string | null
+          id?: string
+          posting_id: string
+          responded_at?: string | null
+          status?: Database["public"]["Enums"]["application_status"]
+          vendor_id: string
+          vendor_user_id: string
+        }
+        Update: {
+          applied_at?: string
+          cover_note?: string | null
+          id?: string
+          posting_id?: string
+          responded_at?: string | null
+          status?: Database["public"]["Enums"]["application_status"]
+          vendor_id?: string
+          vendor_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_job_applications_posting_id_fkey"
+            columns: ["posting_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_job_postings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_job_applications_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_job_postings: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string
+          description: string | null
+          end_time: string | null
+          event_date: string
+          hall_id: string | null
+          id: string
+          org_id: string | null
+          pay_amount: number | null
+          pay_type: Database["public"]["Enums"]["pay_type"]
+          slots_filled: number
+          slots_needed: number
+          start_time: string | null
+          status: Database["public"]["Enums"]["posting_status"]
+          title: string
+          updated_at: string
+          venue: string | null
+          venue_address: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          end_time?: string | null
+          event_date: string
+          hall_id?: string | null
+          id?: string
+          org_id?: string | null
+          pay_amount?: number | null
+          pay_type?: Database["public"]["Enums"]["pay_type"]
+          slots_filled?: number
+          slots_needed?: number
+          start_time?: string | null
+          status?: Database["public"]["Enums"]["posting_status"]
+          title: string
+          updated_at?: string
+          venue?: string | null
+          venue_address?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          end_time?: string | null
+          event_date?: string
+          hall_id?: string | null
+          id?: string
+          org_id?: string | null
+          pay_amount?: number | null
+          pay_type?: Database["public"]["Enums"]["pay_type"]
+          slots_filled?: number
+          slots_needed?: number
+          start_time?: string | null
+          status?: Database["public"]["Enums"]["posting_status"]
+          title?: string
+          updated_at?: string
+          venue?: string | null
+          venue_address?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_job_postings_hall_id_fkey"
+            columns: ["hall_id"]
+            isOneToOne: false
+            referencedRelation: "halls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_job_postings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vendor_notifications: {
         Row: {
@@ -1379,6 +1511,7 @@ export type Database = {
           owner_full_name: string | null
           owner_id: string
           pan_number: string | null
+          payout_upi_id: string | null
           phone: string | null
           pincode: string | null
           portfolio: Json
@@ -1423,6 +1556,7 @@ export type Database = {
           owner_full_name?: string | null
           owner_id: string
           pan_number?: string | null
+          payout_upi_id?: string | null
           phone?: string | null
           pincode?: string | null
           portfolio?: Json
@@ -1467,6 +1601,7 @@ export type Database = {
           owner_full_name?: string | null
           owner_id?: string
           pan_number?: string | null
+          payout_upi_id?: string | null
           phone?: string | null
           pincode?: string | null
           portfolio?: Json
@@ -1490,6 +1625,145 @@ export type Database = {
           years_experience?: number | null
         }
         Relationships: []
+      }
+      worker_job_applications: {
+        Row: {
+          applied_at: string
+          cover_note: string | null
+          id: string
+          posting_id: string
+          responded_at: string | null
+          status: Database["public"]["Enums"]["application_status"]
+          worker_id: string
+          worker_user_id: string
+        }
+        Insert: {
+          applied_at?: string
+          cover_note?: string | null
+          id?: string
+          posting_id: string
+          responded_at?: string | null
+          status?: Database["public"]["Enums"]["application_status"]
+          worker_id: string
+          worker_user_id: string
+        }
+        Update: {
+          applied_at?: string
+          cover_note?: string | null
+          id?: string
+          posting_id?: string
+          responded_at?: string | null
+          status?: Database["public"]["Enums"]["application_status"]
+          worker_id?: string
+          worker_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_job_applications_posting_id_fkey"
+            columns: ["posting_id"]
+            isOneToOne: false
+            referencedRelation: "worker_job_postings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_job_applications_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_job_postings: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string
+          description: string | null
+          end_time: string | null
+          event_date: string
+          hall_id: string | null
+          id: string
+          org_id: string | null
+          pay_amount: number | null
+          pay_type: Database["public"]["Enums"]["pay_type"]
+          slots_filled: number
+          slots_needed: number
+          start_time: string | null
+          status: Database["public"]["Enums"]["posting_status"]
+          title: string
+          updated_at: string
+          vendor_id: string | null
+          venue: string | null
+          venue_address: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          end_time?: string | null
+          event_date: string
+          hall_id?: string | null
+          id?: string
+          org_id?: string | null
+          pay_amount?: number | null
+          pay_type?: Database["public"]["Enums"]["pay_type"]
+          slots_filled?: number
+          slots_needed?: number
+          start_time?: string | null
+          status?: Database["public"]["Enums"]["posting_status"]
+          title: string
+          updated_at?: string
+          vendor_id?: string | null
+          venue?: string | null
+          venue_address?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          end_time?: string | null
+          event_date?: string
+          hall_id?: string | null
+          id?: string
+          org_id?: string | null
+          pay_amount?: number | null
+          pay_type?: Database["public"]["Enums"]["pay_type"]
+          slots_filled?: number
+          slots_needed?: number
+          start_time?: string | null
+          status?: Database["public"]["Enums"]["posting_status"]
+          title?: string
+          updated_at?: string
+          vendor_id?: string | null
+          venue?: string | null
+          venue_address?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_job_postings_hall_id_fkey"
+            columns: ["hall_id"]
+            isOneToOne: false
+            referencedRelation: "halls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_job_postings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_job_postings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       worker_notifications: {
         Row: {
@@ -1724,6 +1998,7 @@ export type Database = {
           nationality: string | null
           owner_id: string
           payment_type: Database["public"]["Enums"]["payment_type"] | null
+          payout_upi_id: string | null
           per_event_charges: number | null
           phone: string | null
           photo_url: string | null
@@ -1796,6 +2071,7 @@ export type Database = {
           nationality?: string | null
           owner_id: string
           payment_type?: Database["public"]["Enums"]["payment_type"] | null
+          payout_upi_id?: string | null
           per_event_charges?: number | null
           phone?: string | null
           photo_url?: string | null
@@ -1868,6 +2144,7 @@ export type Database = {
           nationality?: string | null
           owner_id?: string
           payment_type?: Database["public"]["Enums"]["payment_type"] | null
+          payout_upi_id?: string | null
           per_event_charges?: number | null
           phone?: string | null
           photo_url?: string | null
@@ -1950,6 +2227,12 @@ export type Database = {
         | "vendor"
         | "worker"
         | "customer"
+      application_status:
+        | "applied"
+        | "shortlisted"
+        | "accepted"
+        | "rejected"
+        | "withdrawn"
       booking_status: "pending" | "confirmed" | "cancelled" | "completed"
       customer_booking_kind: "hall" | "vendor" | "worker"
       customer_booking_status:
@@ -1993,7 +2276,9 @@ export type Database = {
         | "profile_rejected"
         | "admin_message"
         | "system"
+      pay_type: "hourly" | "daily" | "per_event"
       payment_type: "hourly" | "daily" | "per_event" | "monthly"
+      posting_status: "open" | "closed" | "cancelled"
       task_priority: "low" | "normal" | "high" | "urgent"
       task_status:
         | "pending"
@@ -2147,6 +2432,13 @@ export const Constants = {
         "worker",
         "customer",
       ],
+      application_status: [
+        "applied",
+        "shortlisted",
+        "accepted",
+        "rejected",
+        "withdrawn",
+      ],
       booking_status: ["pending", "confirmed", "cancelled", "completed"],
       customer_booking_kind: ["hall", "vendor", "worker"],
       customer_booking_status: [
@@ -2195,7 +2487,9 @@ export const Constants = {
         "admin_message",
         "system",
       ],
+      pay_type: ["hourly", "daily", "per_event"],
       payment_type: ["hourly", "daily", "per_event", "monthly"],
+      posting_status: ["open", "closed", "cancelled"],
       task_priority: ["low", "normal", "high", "urgent"],
       task_status: [
         "pending",
