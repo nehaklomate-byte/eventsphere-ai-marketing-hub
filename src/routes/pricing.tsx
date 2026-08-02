@@ -12,9 +12,9 @@ const tiers = [
 export const Route = createFileRoute("/pricing")({
   head: () => ({
     meta: [
-      { title: "Pricing — EventSphere AI" },
+      { title: "Pricing — EventOrbit AI" },
       { name: "description", content: "Simple pricing that scales with you. Payment processing coming soon." },
-      { property: "og:title", content: "Pricing — EventSphere AI" },
+      { property: "og:title", content: "Pricing — EventOrbit AI" },
       { property: "og:description", content: "Simple, transparent pricing for teams of every size." },
       { property: "og:url", content: "/pricing" },
     ],
