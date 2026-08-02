@@ -32,8 +32,8 @@ type Vendor = {
 export const Route = createFileRoute("/vendor/$id")({
   head: ({ params }) => ({
     meta: [
-      { title: "Vendor details — EventSphere AI" },
-      { name: "description", content: "Verified event vendor on EventSphere AI." },
+      { title: "Vendor details — EventOrbit AI" },
+      { name: "description", content: "Verified event vendor on EventOrbit AI." },
       { property: "og:url", content: `/vendor/${params.id}` },
     ],
     links: [{ rel: "canonical", href: `/vendor/${params.id}` }],
