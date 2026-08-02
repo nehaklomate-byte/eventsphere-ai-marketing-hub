@@ -6,9 +6,9 @@ import { ArrowRight } from "lucide-react";
 export const Route = createFileRoute("/research")({
   head: () => ({
     meta: [
-      { title: "Research — EventSphere AI" },
+      { title: "Research — EventOrbit AI" },
       { name: "description", content: "We're collaborating with organizers and organizations to understand event operations at depth. Join the research." },
-      { property: "og:title", content: "Research — EventSphere AI" },
+      { property: "og:title", content: "Research — EventOrbit AI" },
       { property: "og:description", content: "Shape the future of event operations with us." },
       { property: "og:url", content: "/research" },
     ],
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/research")({
   }),
   component: () => (
     <SiteLayout>
-      <PageHeader eyebrow="Research" title="Built with the industry, not for it." description="EventSphere AI is collaborating with event organizers and organizations across India to understand how the industry really works." />
+      <PageHeader eyebrow="Research" title="Built with the industry, not for it." description="EventOrbit AI is collaborating with event organizers and organizations across India to understand how the industry really works." />
       <section className="mx-auto max-w-7xl px-5 md:px-8 py-20 grid gap-10 lg:grid-cols-2 items-start">
         <div className="prose prose-neutral dark:prose-invert max-w-none">
           <h2 className="font-display text-2xl font-semibold">Why we research</h2>
@@ -24,7 +24,7 @@ export const Route = createFileRoute("/research")({
             Events are deeply human and deeply operational. We spend hundreds of hours listening to hall owners, wedding planners, corporate ops leads, government coordinators, decorators and photographers — mapping the workflows that never quite make it into a product spec.
           </p>
           <p className="text-muted-foreground">
-            Our findings shape the EventSphere AI roadmap. Every partner in our research program gets early access, direct product influence, and named credit in our published reports.
+            Our findings shape the EventOrbit AI roadmap. Every partner in our research program gets early access, direct product influence, and named credit in our published reports.
           </p>
         </div>
         <div className="rounded-3xl glass-strong p-6 md:p-8 shadow-elegant">
