@@ -29,7 +29,6 @@ const nav: { to: string; label: string; icon: typeof LayoutDashboard; exact?: bo
   { to: "/worker/notifications", label: "Notifications", icon: Bell },
   { to: "/worker/earnings", label: "Earnings", icon: Wallet },
   { to: "/worker/profile", label: "Profile", icon: User },
-  { to: "/worker/documents", label: "Documents", icon: FileText },
   { to: "/worker/settings", label: "Settings", icon: Settings },
   { to: "/worker/support", label: "Support", icon: LifeBuoy },
 ];
@@ -151,12 +150,12 @@ function WorkerShell() {
   return (
     <div className="flex min-h-dvh bg-muted/30">
       {/* Sidebar */}
-      <aside className={`fixed lg:sticky top-0 z-40 h-dvh w-72 shrink-0 bg-card/95 backdrop-blur-xl border-r border-border transition-transform ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
-        <div className="flex h-16 items-center justify-between px-5 border-b border-border">
+      <aside className={`fixed lg:sticky top-0 z-40 h-dvh w-72 shrink-0 bg-card/95 backdrop-blur-xl border-r border-border transition-transform flex flex-col ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
+        <div className="flex h-16 shrink-0 items-center justify-between px-5 border-b border-border">
           <Logo className="h-7" />
           <button className="lg:hidden" onClick={() => setOpen(false)} aria-label="Close menu"><X className="h-5 w-5" /></button>
         </div>
-        <div className="p-4">
+        <div className="p-4 shrink-0">
           <div className="rounded-2xl border border-border bg-gradient-to-br from-brand-violet/10 to-secondary/10 p-4">
             <div className="flex items-center gap-3">
               {worker?.photo_url ? (
@@ -191,14 +190,14 @@ function WorkerShell() {
             </div>
           </div>
         </div>
-        <nav className="px-3 space-y-0.5">
+        <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-1 space-y-0.5">
           {nav.map((n) => {
             const active = n.exact ? location.pathname === n.to : location.pathname.startsWith(n.to);
             const Icon = n.icon;
             return (
               <Link key={n.to} to={n.to as never}
-                className={`group flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${active ? "bg-brand-violet/10 text-brand-violet" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}>
-                <span className="flex items-center gap-3"><Icon className="h-4 w-4" />{n.label}</span>
+                className={`group flex items-center justify-between rounded-xl px-3 py-2 text-sm font-medium transition-colors ${active ? "bg-brand-violet/10 text-brand-violet" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}>
+                <span className="flex items-center gap-3"><Icon className="h-4 w-4 shrink-0" />{n.label}</span>
                 {n.to === "/worker/notifications" && unread > 0 && (
                   <span className="min-w-[20px] rounded-full bg-rose-500 px-1.5 py-0.5 text-center text-[10px] font-bold text-white">{unread > 99 ? "99+" : unread}</span>
                 )}
@@ -206,7 +205,7 @@ function WorkerShell() {
             );
           })}
         </nav>
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
+        <div className="shrink-0 p-4 border-t border-border">
           <button onClick={signOut} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
             <LogOut className="h-4 w-4" /> Sign out
           </button>
