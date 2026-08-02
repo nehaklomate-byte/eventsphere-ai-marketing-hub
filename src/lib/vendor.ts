@@ -68,7 +68,55 @@ export async function uploadVendorFile(userId: string, key: string, file: File):
   }
 }
 
-/** Simple completion percentage — same idea as computeCompletion() in
+export type VendorTask = {
+  id: string;
+  vendor_id: string;
+  vendor_user_id: string;
+  assigned_by: string;
+  organization_name: string | null;
+  event_name: string;
+  task_name: string;
+  description: string | null;
+  venue: string | null;
+  venue_address: string | null;
+  event_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  priority: "low" | "normal" | "high" | "urgent";
+  status: "pending" | "accepted" | "in_progress" | "paused" | "completed" | "rejected" | "cancelled";
+  payment_amount: number | null;
+  payment_status: "unpaid" | "paid" | "refunded";
+  rejection_reason: string | null;
+  vendor_notes: string | null;
+  accepted_at: string | null;
+  started_at: string | null;
+  paused_at: string | null;
+  resumed_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  check_in_at: string | null;
+  check_in_photo_url: string | null;
+  check_in_lat: number | null;
+  check_in_lng: number | null;
+  check_out_at: string | null;
+  check_out_photo_url: string | null;
+  check_out_lat: number | null;
+  check_out_lng: number | null;
+  completion_photo_urls: string[];
+  completion_notes: string | null;
+};
+
+export type VendorNotification = {
+  id: string;
+  user_id: string;
+  category: string;
+  title: string;
+  body: string | null;
+  action_url: string | null;
+  task_id: string | null;
+  read_at: string | null;
+  created_at: string;
+};
  * lib/worker.ts, adapted to the vendor field set. */
 export function computeVendorCompletion(form: Partial<VendorRow>): number {
   const fields: (keyof VendorRow)[] = [
