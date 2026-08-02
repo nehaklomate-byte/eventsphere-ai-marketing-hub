@@ -21,9 +21,9 @@ const features = [
 export const Route = createFileRoute("/features")({
   head: () => ({
     meta: [
-      { title: "Features — EventSphere AI" },
+      { title: "Features — EventOrbit AI" },
       { name: "description", content: "A modular platform for planning, venues, vendors, workers, budgets and analytics — with AI woven in." },
-      { property: "og:title", content: "Features — EventSphere AI" },
+      { property: "og:title", content: "Features — EventOrbit AI" },
       { property: "og:description", content: "Everything you need to run world-class events." },
       { property: "og:url", content: "/features" },
     ],
