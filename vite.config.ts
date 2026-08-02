@@ -18,11 +18,15 @@ export default defineConfig({
     tsConfigPaths({ projects: ["./tsconfig.json"] }),
     tailwindcss(),
     tanstackStart({
-      // Explicit Vercel target — the private config previously defaulted
-      // this to "cloudflare". Without setting it correctly, TanStack
-      // Start's Nitro server build produces output in the wrong shape
-      // for Vercel's serverless functions even if `npm install` succeeds.
-      target: "vercel",
+      // No explicit target/preset here on purpose: Nitro (which powers
+      // this build) auto-detects the Vercel environment on its own via
+      // the VERCEL env var that Vercel's build step sets automatically,
+      // and picks the correct serverless output format for it. An
+      // earlier attempt to force this with `target: "vercel"` may have
+      // used the wrong option name for this TanStack Start version and
+      // silently produced the wrong (non-Vercel) output shape instead —
+      // which is exactly what causes a 404 on every route after an
+      // otherwise-successful build.
       server: { entry: "server" },
     }),
     viteReact(),
