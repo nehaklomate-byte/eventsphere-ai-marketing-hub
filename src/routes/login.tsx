@@ -13,10 +13,10 @@ import { z } from "zod";
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
-      { title: "Log in — EventSphere AI" },
-      { name: "description", content: "Sign in to the EventSphere AI operations console." },
-      { property: "og:title", content: "Log in — EventSphere AI" },
-      { property: "og:description", content: "Sign in to EventSphere AI." },
+      { title: "Log in — EventOrbit AI" },
+      { name: "description", content: "Sign in to the EventOrbit AI operations console." },
+      { property: "og:title", content: "Log in — EventOrbit AI" },
+      { property: "og:description", content: "Sign in to EventOrbit AI." },
       { name: "robots", content: "noindex" },
     ],
     links: [{ rel: "canonical", href: "/login" }],
@@ -121,7 +121,7 @@ function LoginPage() {
         <div className="w-full max-w-md">
           <div className="lg:hidden mb-8"><Link to="/"><Logo className="h-9" /></Link></div>
           <h1 className="font-display text-3xl font-semibold tracking-tight">Welcome back</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Sign in to the EventSphere AI console.</p>
+          <p className="mt-2 text-sm text-muted-foreground">Sign in to the EventOrbit AI console.</p>
 
           <button
             type="button"
@@ -179,7 +179,7 @@ function LoginPage() {
           </form>
 
           <p className="mt-8 text-sm text-muted-foreground">
-            New to EventSphere? <Link to="/register" className="font-semibold text-brand-violet hover:opacity-80">Create an account</Link>
+            New to EventOrbit? <Link to="/register" className="font-semibold text-brand-violet hover:opacity-80">Create an account</Link>
           </p>
           <p className="mt-8 text-[11px] text-muted-foreground">
             By signing in you agree to our <Link to="/terms" className="underline">Terms</Link> and <Link to="/privacy" className="underline">Privacy Policy</Link>.
