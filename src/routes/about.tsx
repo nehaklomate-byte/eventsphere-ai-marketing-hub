@@ -6,9 +6,9 @@ import { Target, Compass, Users, Sparkles } from "lucide-react";
 export const Route = createFileRoute("/about")({
   head: () => ({
     meta: [
-      { title: "About — EventSphere AI" },
+      { title: "About — EventOrbit AI" },
       { name: "description", content: "Meet the team building the operating system for events." },
-      { property: "og:title", content: "About — EventSphere AI" },
+      { property: "og:title", content: "About — EventOrbit AI" },
       { property: "og:description", content: "Meet the team building the operating system for events." },
       { property: "og:url", content: "/about" },
     ],
@@ -26,12 +26,12 @@ function About() {
   ];
   return (
     <SiteLayout>
-      <PageHeader eyebrow="About" title="Helping organizations run events that matter." description="EventSphere AI is on a mission to become the operating system for the world's events — from a neighborhood birthday to a national summit." />
+      <PageHeader eyebrow="About" title="Helping organizations run events that matter." description="EventOrbit AI is on a mission to become the operating system for the world's events — from a neighborhood birthday to a national summit." />
       <section className="mx-auto max-w-7xl px-5 md:px-8 py-20 grid gap-12 lg:grid-cols-2 items-start">
         <div>
           <h2 className="font-display text-3xl font-semibold">Our story</h2>
           <p className="mt-4 text-muted-foreground leading-relaxed">
-            We started EventSphere after watching planners, hall owners and vendors juggle spreadsheets, WhatsApp threads and paper receipts to pull off unforgettable moments. Every event is a symphony of moving parts — and we believe teams deserve a platform as ambitious as their ambitions.
+            We started EventOrbit after watching planners, hall owners and vendors juggle spreadsheets, WhatsApp threads and paper receipts to pull off unforgettable moments. Every event is a symphony of moving parts — and we believe teams deserve a platform as ambitious as their ambitions.
           </p>
           <p className="mt-4 text-muted-foreground leading-relaxed">
             Today, we're building a unified cloud platform that brings planning, venues, vendors, workers, budgets and analytics together — with AI quietly compounding every decision.
