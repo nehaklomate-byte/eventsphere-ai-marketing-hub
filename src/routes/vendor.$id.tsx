@@ -94,7 +94,7 @@ function VendorDetail() {
               <div className="mt-8">
                 <h2 className="font-display text-lg font-semibold mb-3">Portfolio</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {vendor.portfolio.map((url, i) => (
+                  {(vendor.portfolio as string[]).map((url: string, i: number) => (
                     <img key={i} src={url} alt={`Work ${i + 1}`} className="h-32 w-full rounded-xl object-cover border border-border" />
                   ))}
                 </div>
@@ -105,7 +105,7 @@ function VendorDetail() {
               <div className="mt-8">
                 <h2 className="font-display text-lg font-semibold mb-2">Service areas</h2>
                 <div className="flex flex-wrap gap-2">
-                  {vendor.service_areas.map((a) => <span key={a} className="rounded-full bg-accent px-3 py-1 text-xs font-medium">{a}</span>)}
+                  {(vendor.service_areas as string[]).map((a: string) => <span key={a} className="rounded-full bg-accent px-3 py-1 text-xs font-medium">{a}</span>)}
                 </div>
               </div>
             )}

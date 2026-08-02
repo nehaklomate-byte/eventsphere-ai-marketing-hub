@@ -106,7 +106,7 @@ function TeamMemberShell() {
             <span className="flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> {membership.org_name} - {role?.name ?? "Member"}</span>
             <button onClick={signOut} className="md:hidden"><LogOut className="h-4 w-4" /></button>
           </div>
-          <Outlet context={{ membership }} />
+          <Outlet />
         </main>
       </div>
     </div>

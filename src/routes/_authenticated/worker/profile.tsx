@@ -370,7 +370,7 @@ function ProfilePage() {
                     {togglePublish.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                     {form.marketplace_visible && form.status === "published" ? "Hide from marketplace" : "Show on marketplace"}
                   </button>
-                  {form.marketplace_visible && form.status === "published" && (
+                  {Boolean(form.marketplace_visible && form.status === "published") && (
                     <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-400">You're live — customers and venue owners can find and book you right now.</p>
                   )}
                 </div>
