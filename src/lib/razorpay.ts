@@ -21,22 +21,25 @@ function loadRazorpayScript(): Promise<void> {
 }
 
 /**
- * Pays for a worker_tasks row that's already been accepted by the worker.
- * Order is created + verified server-side (Edge Functions); this only
- * drives the Razorpay Checkout popup and reports success/failure.
+ * Pays for a worker_tasks OR vendor_tasks row that's already been
+ * accepted by the worker/vendor. Order is created + verified
+ * server-side (Edge Functions); this only drives the Razorpay
+ * Checkout popup and reports success/failure.
  */
 export async function payForWorkerTask(opts: {
   workerTaskId: string;
+  entityType?: "worker" | "vendor";
   payerName?: string;
   payerEmail?: string;
   payerPhone?: string;
 }): Promise<void> {
+  const entityType = opts.entityType ?? "worker";
   const { data: sessionData } = await supabase.auth.getSession();
   const accessToken = sessionData.session?.access_token;
   if (!accessToken) throw new Error("You need to be logged in to pay.");
 
   const { data: fnResp, error: fnErr } = await supabase.functions.invoke("razorpay-create-order", {
-    body: { worker_task_id: opts.workerTaskId },
+    body: { worker_task_id: opts.workerTaskId, entity_type: entityType },
   });
   if (fnErr) throw new Error(fnErr.message || "Could not start the payment.");
   if (fnResp?.error) throw new Error(fnResp.error);
@@ -54,13 +57,14 @@ export async function payForWorkerTask(opts: {
       currency,
       order_id,
       name: "EventOrbit AI",
-      description: "Worker payment",
+      description: entityType === "vendor" ? "Vendor payment" : "Worker payment",
       prefill: { name: opts.payerName, email: opts.payerEmail, contact: opts.payerPhone },
       theme: { color: "#7c3aed" },
       handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
         const { data: verifyResp, error: verifyErr } = await supabase.functions.invoke("razorpay-verify-payment", {
           body: {
             worker_task_id: opts.workerTaskId,
+            entity_type: entityType,
             razorpay_order_id: response.razorpay_order_id,
             razorpay_payment_id: response.razorpay_payment_id,
             razorpay_signature: response.razorpay_signature,
