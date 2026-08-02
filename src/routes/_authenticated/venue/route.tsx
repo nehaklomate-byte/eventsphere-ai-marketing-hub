@@ -62,7 +62,7 @@ const NAV = [
   { to: "/venue/hire-vendors", label: "Hire Vendors", icon: Store },
   { to: "/venue/notifications", label: "Notifications", icon: Bell },
   { to: "/venue/profile", label: "Venue Profile", icon: Building2 },
-  { to: "/venue/settings", label: "Settings", icon: Settings, soon: true },
+  { to: "/venue/settings", label: "Settings", icon: Settings },
 ];
 
 function VenueShell() {
