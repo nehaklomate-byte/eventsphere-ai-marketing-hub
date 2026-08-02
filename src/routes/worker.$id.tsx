@@ -32,8 +32,8 @@ type WorkerProfile = {
 export const Route = createFileRoute("/worker/$id")({
   head: ({ params }) => ({
     meta: [
-      { title: "Worker profile — EventSphere AI" },
-      { name: "description", content: "Verified event worker on EventSphere AI." },
+      { title: "Worker profile — EventOrbit AI" },
+      { name: "description", content: "Verified event worker on EventOrbit AI." },
       { property: "og:url", content: `/worker/${params.id}` },
     ],
     links: [{ rel: "canonical", href: `/worker/${params.id}` }],
@@ -164,7 +164,7 @@ function HireCard({ worker }: { worker: WorkerProfile }) {
       status: "pending",
       payment_amount: state.pay_amount ? Number(state.pay_amount) : null,
     } as never);
-   setSubmitting(false);
+    setSubmitting(false);
     if (error) { setErr(error.message || "Could not send the request. Please try again."); return; }
     setSent(true);
   }
