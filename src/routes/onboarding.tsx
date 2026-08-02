@@ -9,7 +9,7 @@ export const Route = createFileRoute("/onboarding")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Choose your workspace — EventSphere AI" },
+      { title: "Choose your workspace — EventOrbit AI" },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -61,7 +61,7 @@ function Onboarding() {
       </header>
       <main className="mx-auto max-w-4xl px-5 md:px-8 py-14">
         <div className="text-center max-w-xl mx-auto">
-          <h1 className="font-display text-3xl md:text-4xl font-semibold tracking-tight">Welcome — how will you use EventSphere?</h1>
+          <h1 className="font-display text-3xl md:text-4xl font-semibold tracking-tight">Welcome — how will you use EventOrbit?</h1>
           <p className="mt-2 text-muted-foreground">Pick your primary role to open the right workspace. You can add more roles later.</p>
         </div>
         {err && <div className="mt-6 mx-auto max-w-lg rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">{err}</div>}
