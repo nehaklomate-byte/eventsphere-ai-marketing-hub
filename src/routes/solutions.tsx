@@ -15,9 +15,9 @@ const items = [
 export const Route = createFileRoute("/solutions")({
   head: () => ({
     meta: [
-      { title: "Solutions — EventSphere AI" },
+      { title: "Solutions — EventOrbit AI" },
       { name: "description", content: "Tailored workflows for weddings, corporate events, festivals, birthdays and government events." },
-      { property: "og:title", content: "Solutions — EventSphere AI" },
+      { property: "og:title", content: "Solutions — EventOrbit AI" },
       { property: "og:description", content: "Built for every kind of gathering." },
       { property: "og:url", content: "/solutions" },
     ],
