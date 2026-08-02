@@ -6,10 +6,10 @@ import { Mail, MapPin, Phone } from "lucide-react";
 export const Route = createFileRoute("/contact")({
   head: () => ({
     meta: [
-      { title: "Contact — EventSphere AI" },
+      { title: "Contact — EventOrbit AI" },
       { name: "description", content: "Talk to sales, request a demo, or say hi. We usually respond within one business day." },
-      { property: "og:title", content: "Contact — EventSphere AI" },
-      { property: "og:description", content: "Get in touch with the EventSphere AI team." },
+      { property: "og:title", content: "Contact — EventOrbit AI" },
+      { property: "og:description", content: "Get in touch with the EventOrbit AI team." },
       { property: "og:url", content: "/contact" },
     ],
     links: [{ rel: "canonical", href: "/contact" }],
@@ -32,7 +32,7 @@ export const Route = createFileRoute("/contact")({
           <div className="rounded-3xl glass-strong p-6 shadow-soft">
             <h3 className="font-display text-lg font-semibold">Reach us directly</h3>
             <div className="mt-4 space-y-3 text-sm">
-              <div className="flex items-center gap-3"><Mail className="h-4 w-4 text-brand-violet" /> hello@eventsphere.ai</div>
+              <div className="flex items-center gap-3"><Mail className="h-4 w-4 text-brand-violet" /> hello@eventorbit.ai</div>
               <div className="flex items-center gap-3"><Phone className="h-4 w-4 text-brand-violet" /> +91 98765 43210</div>
               <div className="flex items-center gap-3"><MapPin className="h-4 w-4 text-brand-violet" /> Pune, India</div>
             </div>
