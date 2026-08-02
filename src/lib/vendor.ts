@@ -117,7 +117,8 @@ export type VendorNotification = {
   read_at: string | null;
   created_at: string;
 };
- * lib/worker.ts, adapted to the vendor field set. */
+
+/** Profile completion % — same approach as lib/worker.ts, adapted to the vendor field set. */
 export function computeVendorCompletion(form: Partial<VendorRow>): number {
   const fields: (keyof VendorRow)[] = [
     "business_name", "owner_full_name", "category", "years_experience",
