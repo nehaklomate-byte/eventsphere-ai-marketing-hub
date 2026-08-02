@@ -57,10 +57,14 @@ import { Route as AuthenticatedWorkerAvailabilityRouteImport } from './routes/_a
 import { Route as AuthenticatedVenueProfileRouteImport } from './routes/_authenticated/venue/profile'
 import { Route as AuthenticatedVenueNotificationsRouteImport } from './routes/_authenticated/venue/notifications'
 import { Route as AuthenticatedVenueHireWorkersRouteImport } from './routes/_authenticated/venue/hire-workers'
+import { Route as AuthenticatedVenueHireVendorsRouteImport } from './routes/_authenticated/venue/hire-vendors'
 import { Route as AuthenticatedVenueEnquiriesRouteImport } from './routes/_authenticated/venue/enquiries'
 import { Route as AuthenticatedVenueBookingsRouteImport } from './routes/_authenticated/venue/bookings'
 import { Route as AuthenticatedVendorSettingsRouteImport } from './routes/_authenticated/vendor/settings'
 import { Route as AuthenticatedVendorProfileRouteImport } from './routes/_authenticated/vendor/profile'
+import { Route as AuthenticatedVendorNotificationsRouteImport } from './routes/_authenticated/vendor/notifications'
+import { Route as AuthenticatedVendorJobsRouteImport } from './routes/_authenticated/vendor/jobs'
+import { Route as AuthenticatedVendorHireWorkersRouteImport } from './routes/_authenticated/vendor/hire-workers'
 import { Route as AuthenticatedTeamMemberMembersRouteImport } from './routes/_authenticated/team-member/members'
 import { Route as AuthenticatedTeamMemberEventsRouteImport } from './routes/_authenticated/team-member/events'
 import { Route as AuthenticatedTeamMemberDepartmentsRouteImport } from './routes/_authenticated/team-member/departments'
@@ -343,6 +347,12 @@ const AuthenticatedVenueHireWorkersRoute =
     path: '/hire-workers',
     getParentRoute: () => AuthenticatedVenueRouteRoute,
   } as any)
+const AuthenticatedVenueHireVendorsRoute =
+  AuthenticatedVenueHireVendorsRouteImport.update({
+    id: '/hire-vendors',
+    path: '/hire-vendors',
+    getParentRoute: () => AuthenticatedVenueRouteRoute,
+  } as any)
 const AuthenticatedVenueEnquiriesRoute =
   AuthenticatedVenueEnquiriesRouteImport.update({
     id: '/enquiries',
@@ -365,6 +375,23 @@ const AuthenticatedVendorProfileRoute =
   AuthenticatedVendorProfileRouteImport.update({
     id: '/profile',
     path: '/profile',
+    getParentRoute: () => AuthenticatedVendorRouteRoute,
+  } as any)
+const AuthenticatedVendorNotificationsRoute =
+  AuthenticatedVendorNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AuthenticatedVendorRouteRoute,
+  } as any)
+const AuthenticatedVendorJobsRoute = AuthenticatedVendorJobsRouteImport.update({
+  id: '/jobs',
+  path: '/jobs',
+  getParentRoute: () => AuthenticatedVendorRouteRoute,
+} as any)
+const AuthenticatedVendorHireWorkersRoute =
+  AuthenticatedVendorHireWorkersRouteImport.update({
+    id: '/hire-workers',
+    path: '/hire-workers',
     getParentRoute: () => AuthenticatedVendorRouteRoute,
   } as any)
 const AuthenticatedTeamMemberMembersRoute =
@@ -534,10 +561,14 @@ export interface FileRoutesByFullPath {
   '/team-member/departments': typeof AuthenticatedTeamMemberDepartmentsRoute
   '/team-member/events': typeof AuthenticatedTeamMemberEventsRoute
   '/team-member/members': typeof AuthenticatedTeamMemberMembersRoute
+  '/vendor/hire-workers': typeof AuthenticatedVendorHireWorkersRoute
+  '/vendor/jobs': typeof AuthenticatedVendorJobsRoute
+  '/vendor/notifications': typeof AuthenticatedVendorNotificationsRoute
   '/vendor/profile': typeof AuthenticatedVendorProfileRoute
   '/vendor/settings': typeof AuthenticatedVendorSettingsRoute
   '/venue/bookings': typeof AuthenticatedVenueBookingsRoute
   '/venue/enquiries': typeof AuthenticatedVenueEnquiriesRoute
+  '/venue/hire-vendors': typeof AuthenticatedVenueHireVendorsRoute
   '/venue/hire-workers': typeof AuthenticatedVenueHireWorkersRoute
   '/venue/notifications': typeof AuthenticatedVenueNotificationsRoute
   '/venue/profile': typeof AuthenticatedVenueProfileRoute
@@ -600,10 +631,14 @@ export interface FileRoutesByTo {
   '/team-member/departments': typeof AuthenticatedTeamMemberDepartmentsRoute
   '/team-member/events': typeof AuthenticatedTeamMemberEventsRoute
   '/team-member/members': typeof AuthenticatedTeamMemberMembersRoute
+  '/vendor/hire-workers': typeof AuthenticatedVendorHireWorkersRoute
+  '/vendor/jobs': typeof AuthenticatedVendorJobsRoute
+  '/vendor/notifications': typeof AuthenticatedVendorNotificationsRoute
   '/vendor/profile': typeof AuthenticatedVendorProfileRoute
   '/vendor/settings': typeof AuthenticatedVendorSettingsRoute
   '/venue/bookings': typeof AuthenticatedVenueBookingsRoute
   '/venue/enquiries': typeof AuthenticatedVenueEnquiriesRoute
+  '/venue/hire-vendors': typeof AuthenticatedVenueHireVendorsRoute
   '/venue/hire-workers': typeof AuthenticatedVenueHireWorkersRoute
   '/venue/notifications': typeof AuthenticatedVenueNotificationsRoute
   '/venue/profile': typeof AuthenticatedVenueProfileRoute
@@ -675,10 +710,14 @@ export interface FileRoutesById {
   '/_authenticated/team-member/departments': typeof AuthenticatedTeamMemberDepartmentsRoute
   '/_authenticated/team-member/events': typeof AuthenticatedTeamMemberEventsRoute
   '/_authenticated/team-member/members': typeof AuthenticatedTeamMemberMembersRoute
+  '/_authenticated/vendor/hire-workers': typeof AuthenticatedVendorHireWorkersRoute
+  '/_authenticated/vendor/jobs': typeof AuthenticatedVendorJobsRoute
+  '/_authenticated/vendor/notifications': typeof AuthenticatedVendorNotificationsRoute
   '/_authenticated/vendor/profile': typeof AuthenticatedVendorProfileRoute
   '/_authenticated/vendor/settings': typeof AuthenticatedVendorSettingsRoute
   '/_authenticated/venue/bookings': typeof AuthenticatedVenueBookingsRoute
   '/_authenticated/venue/enquiries': typeof AuthenticatedVenueEnquiriesRoute
+  '/_authenticated/venue/hire-vendors': typeof AuthenticatedVenueHireVendorsRoute
   '/_authenticated/venue/hire-workers': typeof AuthenticatedVenueHireWorkersRoute
   '/_authenticated/venue/notifications': typeof AuthenticatedVenueNotificationsRoute
   '/_authenticated/venue/profile': typeof AuthenticatedVenueProfileRoute
@@ -750,10 +789,14 @@ export interface FileRouteTypes {
     | '/team-member/departments'
     | '/team-member/events'
     | '/team-member/members'
+    | '/vendor/hire-workers'
+    | '/vendor/jobs'
+    | '/vendor/notifications'
     | '/vendor/profile'
     | '/vendor/settings'
     | '/venue/bookings'
     | '/venue/enquiries'
+    | '/venue/hire-vendors'
     | '/venue/hire-workers'
     | '/venue/notifications'
     | '/venue/profile'
@@ -816,10 +859,14 @@ export interface FileRouteTypes {
     | '/team-member/departments'
     | '/team-member/events'
     | '/team-member/members'
+    | '/vendor/hire-workers'
+    | '/vendor/jobs'
+    | '/vendor/notifications'
     | '/vendor/profile'
     | '/vendor/settings'
     | '/venue/bookings'
     | '/venue/enquiries'
+    | '/venue/hire-vendors'
     | '/venue/hire-workers'
     | '/venue/notifications'
     | '/venue/profile'
@@ -890,10 +937,14 @@ export interface FileRouteTypes {
     | '/_authenticated/team-member/departments'
     | '/_authenticated/team-member/events'
     | '/_authenticated/team-member/members'
+    | '/_authenticated/vendor/hire-workers'
+    | '/_authenticated/vendor/jobs'
+    | '/_authenticated/vendor/notifications'
     | '/_authenticated/vendor/profile'
     | '/_authenticated/vendor/settings'
     | '/_authenticated/venue/bookings'
     | '/_authenticated/venue/enquiries'
+    | '/_authenticated/venue/hire-vendors'
     | '/_authenticated/venue/hire-workers'
     | '/_authenticated/venue/notifications'
     | '/_authenticated/venue/profile'
@@ -1279,6 +1330,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVenueHireWorkersRouteImport
       parentRoute: typeof AuthenticatedVenueRouteRoute
     }
+    '/_authenticated/venue/hire-vendors': {
+      id: '/_authenticated/venue/hire-vendors'
+      path: '/hire-vendors'
+      fullPath: '/venue/hire-vendors'
+      preLoaderRoute: typeof AuthenticatedVenueHireVendorsRouteImport
+      parentRoute: typeof AuthenticatedVenueRouteRoute
+    }
     '/_authenticated/venue/enquiries': {
       id: '/_authenticated/venue/enquiries'
       path: '/enquiries'
@@ -1305,6 +1363,27 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/vendor/profile'
       preLoaderRoute: typeof AuthenticatedVendorProfileRouteImport
+      parentRoute: typeof AuthenticatedVendorRouteRoute
+    }
+    '/_authenticated/vendor/notifications': {
+      id: '/_authenticated/vendor/notifications'
+      path: '/notifications'
+      fullPath: '/vendor/notifications'
+      preLoaderRoute: typeof AuthenticatedVendorNotificationsRouteImport
+      parentRoute: typeof AuthenticatedVendorRouteRoute
+    }
+    '/_authenticated/vendor/jobs': {
+      id: '/_authenticated/vendor/jobs'
+      path: '/jobs'
+      fullPath: '/vendor/jobs'
+      preLoaderRoute: typeof AuthenticatedVendorJobsRouteImport
+      parentRoute: typeof AuthenticatedVendorRouteRoute
+    }
+    '/_authenticated/vendor/hire-workers': {
+      id: '/_authenticated/vendor/hire-workers'
+      path: '/hire-workers'
+      fullPath: '/vendor/hire-workers'
+      preLoaderRoute: typeof AuthenticatedVendorHireWorkersRouteImport
       parentRoute: typeof AuthenticatedVendorRouteRoute
     }
     '/_authenticated/team-member/members': {
@@ -1566,6 +1645,9 @@ const AuthenticatedTeamMemberRouteRouteWithChildren =
   )
 
 interface AuthenticatedVendorRouteRouteChildren {
+  AuthenticatedVendorHireWorkersRoute: typeof AuthenticatedVendorHireWorkersRoute
+  AuthenticatedVendorJobsRoute: typeof AuthenticatedVendorJobsRoute
+  AuthenticatedVendorNotificationsRoute: typeof AuthenticatedVendorNotificationsRoute
   AuthenticatedVendorProfileRoute: typeof AuthenticatedVendorProfileRoute
   AuthenticatedVendorSettingsRoute: typeof AuthenticatedVendorSettingsRoute
   AuthenticatedVendorIndexRoute: typeof AuthenticatedVendorIndexRoute
@@ -1573,6 +1655,10 @@ interface AuthenticatedVendorRouteRouteChildren {
 
 const AuthenticatedVendorRouteRouteChildren: AuthenticatedVendorRouteRouteChildren =
   {
+    AuthenticatedVendorHireWorkersRoute: AuthenticatedVendorHireWorkersRoute,
+    AuthenticatedVendorJobsRoute: AuthenticatedVendorJobsRoute,
+    AuthenticatedVendorNotificationsRoute:
+      AuthenticatedVendorNotificationsRoute,
     AuthenticatedVendorProfileRoute: AuthenticatedVendorProfileRoute,
     AuthenticatedVendorSettingsRoute: AuthenticatedVendorSettingsRoute,
     AuthenticatedVendorIndexRoute: AuthenticatedVendorIndexRoute,
@@ -1586,6 +1672,7 @@ const AuthenticatedVendorRouteRouteWithChildren =
 interface AuthenticatedVenueRouteRouteChildren {
   AuthenticatedVenueBookingsRoute: typeof AuthenticatedVenueBookingsRoute
   AuthenticatedVenueEnquiriesRoute: typeof AuthenticatedVenueEnquiriesRoute
+  AuthenticatedVenueHireVendorsRoute: typeof AuthenticatedVenueHireVendorsRoute
   AuthenticatedVenueHireWorkersRoute: typeof AuthenticatedVenueHireWorkersRoute
   AuthenticatedVenueNotificationsRoute: typeof AuthenticatedVenueNotificationsRoute
   AuthenticatedVenueProfileRoute: typeof AuthenticatedVenueProfileRoute
@@ -1596,6 +1683,7 @@ const AuthenticatedVenueRouteRouteChildren: AuthenticatedVenueRouteRouteChildren
   {
     AuthenticatedVenueBookingsRoute: AuthenticatedVenueBookingsRoute,
     AuthenticatedVenueEnquiriesRoute: AuthenticatedVenueEnquiriesRoute,
+    AuthenticatedVenueHireVendorsRoute: AuthenticatedVenueHireVendorsRoute,
     AuthenticatedVenueHireWorkersRoute: AuthenticatedVenueHireWorkersRoute,
     AuthenticatedVenueNotificationsRoute: AuthenticatedVenueNotificationsRoute,
     AuthenticatedVenueProfileRoute: AuthenticatedVenueProfileRoute,
@@ -1693,3 +1781,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

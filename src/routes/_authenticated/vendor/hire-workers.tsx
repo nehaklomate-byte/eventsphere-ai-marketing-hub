@@ -11,7 +11,7 @@ import { fetchMyHalls } from "@/lib/venue";
 import { WORKER_CATEGORIES, isVideoUrl } from "@/lib/worker";
 import { payForWorkerTask } from "@/lib/razorpay";
 
-export const Route = createFileRoute("/_authenticated/venue/hire-workers")({
+export const Route = createFileRoute("/_authenticated/vendor/hire-workers")({
   head: () => ({ meta: [{ title: "Hire Workers — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
   component: HireWorkersPage,
 });
