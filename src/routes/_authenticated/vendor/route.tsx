@@ -25,10 +25,18 @@ export const Route = createFileRoute("/_authenticated/vendor")({
 const nav: { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean }[] = [
   { to: "/vendor", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/vendor/jobs", label: "Assigned Jobs", icon: Briefcase },
+  { to: "/vendor/board", label: "Job Board", icon: ClipboardList },
+  { to: "/vendor/calendar", label: "Calendar", icon: CalendarDays },
+  { to: "/vendor/availability", label: "Availability", icon: CalendarCheck },
+  { to: "/vendor/hire-workers", label: "Hire Workers", icon: UsersRound },
+  { to: "/vendor/earnings", label: "Earnings", icon: Wallet },
   { to: "/vendor/notifications", label: "Notifications", icon: Bell },
+  { to: "/vendor/documents", label: "Documents", icon: FileText },
   { to: "/vendor/profile", label: "Vendor Profile", icon: Store },
   { to: "/vendor/settings", label: "Settings", icon: Settings },
+  { to: "/vendor/support", label: "Support", icon: LifeBuoy },
 ];
+
 
 function VendorShell() {
   const { location } = useRouterState();
