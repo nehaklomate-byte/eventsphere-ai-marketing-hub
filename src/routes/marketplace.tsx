@@ -38,9 +38,9 @@ const TAB_META: Record<Tab, { label: string; icon: typeof Building2; empty: stri
 export const Route = createFileRoute("/marketplace")({
   head: () => ({
     meta: [
-      { title: "Marketplace — EventSphere AI" },
+      { title: "Marketplace — EventOrbit AI" },
       { name: "description", content: "Discover verified venues, vendors and workers across India for your next event — transparent pricing, instant enquiries." },
-      { property: "og:title", content: "Marketplace — EventSphere AI" },
+      { property: "og:title", content: "Marketplace — EventOrbit AI" },
       { property: "og:description", content: "Verified venues, vendors and workers. Transparent pricing, instant enquiries." },
       { property: "og:url", content: "/marketplace" },
     ],
@@ -98,7 +98,7 @@ function Marketplace() {
       <PageHeader
         eyebrow="Marketplace"
         title="Discover verified venues, vendors and workers."
-        description="Everyone on EventSphere is verified by our team before they're listed. Filter by city and category, then enquire or book directly.">
+        description="Everyone on EventOrbit is verified by our team before they're listed. Filter by city and category, then enquire or book directly.">
         <div className="mt-6 inline-flex rounded-full border border-border bg-card p-1 text-sm">
           {(Object.keys(TAB_META) as Tab[]).map((t) => {
             const Icon = TAB_META[t].icon;
