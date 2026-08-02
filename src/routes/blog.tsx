@@ -15,10 +15,10 @@ const posts = [
 export const Route = createFileRoute("/blog")({
   head: () => ({
     meta: [
-      { title: "Blog — EventSphere AI" },
+      { title: "Blog — EventOrbit AI" },
       { name: "description", content: "Ideas, research and playbooks for teams running unforgettable events." },
-      { property: "og:title", content: "Blog — EventSphere AI" },
-      { property: "og:description", content: "Ideas, research and playbooks from the EventSphere team." },
+      { property: "og:title", content: "Blog — EventOrbit AI" },
+      { property: "og:description", content: "Ideas, research and playbooks from the EventOrbit team." },
       { property: "og:url", content: "/blog" },
     ],
     links: [{ rel: "canonical", href: "/blog" }],
