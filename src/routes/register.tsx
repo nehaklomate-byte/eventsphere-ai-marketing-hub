@@ -15,10 +15,10 @@ import { insertRoleRow, type Role } from "@/lib/registration";
 export const Route = createFileRoute("/register")({
   head: () => ({
     meta: [
-      { title: "Create your account — EventSphere AI" },
-      { name: "description", content: "Register your organization, venue, vendor profile or personal account on EventSphere AI." },
-      { property: "og:title", content: "Create your account — EventSphere AI" },
-      { property: "og:description", content: "Join EventSphere AI." },
+      { title: "Create your account — EventOrbit AI" },
+      { name: "description", content: "Register your organization, venue, vendor profile or personal account on EventOrbit AI." },
+      { property: "og:title", content: "Create your account — EventOrbit AI" },
+      { property: "og:description", content: "Join EventOrbit AI." },
       { name: "robots", content: "noindex" },
     ],
     links: [{ rel: "canonical", href: "/register" }],
@@ -70,7 +70,7 @@ function RegisterPage() {
         <AnimatePresence mode="wait">
           {step === 0 && (
             <motion.section key="role" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}>
-              <SectionHeader eyebrow="Step 1 of 2" title="How will you use EventSphere?" description="Pick the role that best describes you. You can add more roles from your workspace later." />
+              <SectionHeader eyebrow="Step 1 of 2" title="How will you use EventOrbit?" description="Pick the role that best describes you. You can add more roles from your workspace later." />
               <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {ROLES.map((r) => {
                   const active = role === r.id;
