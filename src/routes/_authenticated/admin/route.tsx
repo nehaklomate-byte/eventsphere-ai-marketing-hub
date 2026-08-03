@@ -47,7 +47,7 @@ const NAV = [
   { to: "/admin/verification", label: "Workers", icon: HardHat, search: { role: "worker" } },
   { to: "/admin/users", label: "Users", icon: Users },
   { to: "/admin/notifications", label: "Broadcast Center", icon: Bell, soon: true },
-  { to: "/admin/settings", label: "Settings", icon: Settings, soon: true },
+  { to: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
 function AdminShell() {
