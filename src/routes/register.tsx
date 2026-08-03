@@ -424,95 +424,54 @@ function roleDesc(r: Role) {
 
 const IND_STATES = ["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Delhi","Chandigarh","Puducherry","Jammu and Kashmir","Ladakh"];
 
+/**
+ * STAGE 1 ONLY — account creation.
+ * Business details (GST, PAN, pricing, capacity, portfolio, documents,
+ * bank details, policies…) are collected later in each role's
+ * Complete Profile page before submitting for verification.
+ */
 function fieldsFor(role: Role): FieldDef[] {
   const contact: FieldDef[] = [
-    { name: "email", label: "Official email", type: "email", required: true, placeholder: "you@company.com" },
+    { name: "email", label: "Email address", type: "email", required: true, placeholder: "you@example.com" },
     { name: "phone", label: "Mobile number", type: "tel", required: true, placeholder: "10-digit mobile" },
   ];
-  const altPhone: FieldDef = { name: "alt_phone", label: "Alternative contact", type: "tel", placeholder: "Optional" };
-  const address: FieldDef[] = [
-    { name: "address", label: "Complete address", type: "textarea", full: true, placeholder: "Street, area, landmark" },
-    { name: "city", label: "City", required: true },
+  const place: FieldDef[] = [
+    { name: "city", label: "City", required: true, placeholder: "e.g., Pune" },
     { name: "state", label: "State", type: "select", required: true, options: IND_STATES },
-    { name: "pincode", label: "Pincode", required: true, placeholder: "6-digit pincode" },
   ];
 
   if (role === "organization") return [
     { name: "name", label: "Organization name", required: true, placeholder: "Meridian Events Pvt. Ltd." },
     { name: "org_type", label: "Organization type", type: "select", required: true, options: ["Private Limited","LLP","Partnership","Proprietorship","NGO / Trust","Government","Educational Institution"] },
-    { name: "industry", label: "Industry", type: "select", options: ["Event Management","Hospitality","Corporate","Education","Media","Government","Other"] },
-    { name: "owner_full_name", label: "Owner full name", required: true, placeholder: "Priya Sharma" },
-    ...contact, altPhone,
-    { name: "website", label: "Website", type: "url", placeholder: "https://" },
-    { name: "gst_number", label: "GST number", placeholder: "22ABCDE1234F1Z5" },
-    { name: "business_reg_number", label: "Business registration number", placeholder: "Optional" },
-    ...address,
+    ...contact,
+    { name: "city", label: "City", required: true, placeholder: "e.g., Pune" },
+    { name: "state", label: "State", type: "select", options: IND_STATES },
   ];
 
   if (role === "hall_owner") return [
-    { name: "name", label: "Hall name", required: true, placeholder: "The Grand Lawns" },
-    { name: "owner_full_name", label: "Owner name", required: true },
-    ...contact, altPhone,
-    { name: "category", label: "Hall category", type: "select", required: true, options: ["Banquet","Wedding Hall","Convention Center","Community Hall","Lawn / Garden","Resort","Rooftop"] },
-    { name: "min_guests", label: "Minimum guests", type: "number", required: true, placeholder: "e.g., 100" },
-    { name: "max_guests", label: "Maximum guests", type: "number", required: true, placeholder: "e.g., 800" },
-    { name: "indoor_capacity", label: "Indoor capacity", type: "number" },
-    { name: "outdoor_capacity", label: "Outdoor capacity", type: "number" },
-    { name: "dining_capacity", label: "Dining capacity", type: "number" },
-    { name: "parking_slots", label: "Parking slots", type: "number" },
-    { name: "num_rooms", label: "Number of rooms", type: "number" },
-    { name: "changing_rooms", label: "Changing rooms", type: "number" },
-    { name: "price_per_day", label: "Price per day (₹)", type: "number" },
-    { name: "price_per_hour", label: "Price per hour (₹)", type: "number" },
-    { name: "advance_amount", label: "Advance amount (₹)", type: "number" },
-    { name: "working_hours", label: "Working hours", placeholder: "e.g., 8 AM – 11 PM" },
-    { name: "cancellation_policy", label: "Cancellation policy", type: "textarea", full: true, placeholder: "Describe your refund / cancellation terms" },
-    { name: "ac", label: "Air-conditioning available", type: "checkbox" },
-    { name: "generator", label: "Generator backup", type: "checkbox" },
-    { name: "lift", label: "Lift", type: "checkbox" },
-    { name: "wheelchair", label: "Wheelchair accessible", type: "checkbox" },
-    { name: "wifi", label: "Wi-Fi", type: "checkbox" },
-    { name: "decoration_allowed", label: "Outside decoration allowed", type: "checkbox" },
-    { name: "outside_catering", label: "Outside catering allowed", type: "checkbox" },
-    ...address,
-    { name: "google_maps_url", label: "Google Maps location", type: "url", full: true, required: true, placeholder: "https://maps.google.com/…" },
-    { name: "website", label: "Website", type: "url", placeholder: "Optional" },
+    { name: "name", label: "Venue / business name", required: true, placeholder: "The Grand Lawns" },
+    { name: "owner_full_name", label: "Owner name", required: true, placeholder: "Priya Sharma" },
+    { name: "category", label: "Venue type", type: "select", required: true, options: ["Banquet","Wedding Hall","Convention Center","Community Hall","Lawn / Garden","Resort","Rooftop"] },
+    ...contact, ...place,
   ];
 
   if (role === "vendor") return [
-    { name: "name", label: "Business name", required: true },
-    { name: "owner_full_name", label: "Owner name", required: true },
-    { name: "category", label: "Vendor category", type: "select", required: true, options: ["Decorator","Caterer","Photographer","Videographer","Sound & Lighting","DJ","Anchor / MC","Florist","Bartender","Rentals","Transport","Others"] },
-    { name: "years_experience", label: "Years of experience", type: "number" },
-    ...contact, altPhone,
-    { name: "gst_number", label: "GST", placeholder: "Optional" },
-    { name: "pan_number", label: "PAN", placeholder: "Optional" },
-    { name: "instagram", label: "Instagram", type: "url", placeholder: "https://instagram.com/…" },
-    { name: "facebook", label: "Facebook", type: "url", placeholder: "https://facebook.com/…" },
-    { name: "website", label: "Website", type: "url" },
-    { name: "service_areas", label: "Service areas", full: true, placeholder: "Comma-separated cities you serve" },
-    { name: "available_days", label: "Available days", full: true, placeholder: "e.g., Mon–Sat, All days on request" },
-    ...address,
+    { name: "name", label: "Business / service name", required: true, placeholder: "Bloom Decorators" },
+    { name: "owner_full_name", label: "Owner name", required: true, placeholder: "Priya Sharma" },
+    { name: "category", label: "Primary service category", type: "select", required: true, options: ["Decorator","Caterer","Photographer","Videographer","Sound & Lighting","DJ","Anchor / MC","Florist","Bartender","Rentals","Transport","Others"] },
+    ...contact, ...place,
   ];
 
   if (role === "worker") return [
-    { name: "full_name", label: "Full name", required: true },
-    { name: "category", label: "Category", type: "select", required: true, options: ["Steward","Chef","Waiter","Bartender","Housekeeping","Security","Technician","Sound Engineer","Lighting Tech","Driver","Cleaner","Coordinator"] },
-    { name: "skills", label: "Skills", full: true, placeholder: "Comma-separated skills" },
-    { name: "years_experience", label: "Years of experience", type: "number" },
-    { name: "languages", label: "Languages spoken", full: true, placeholder: "e.g., Hindi, Marathi, English" },
-    ...contact,
-    { name: "daily_charges", label: "Daily charges (₹)", type: "number" },
-    { name: "hourly_charges", label: "Hourly charges (₹)", type: "number" },
-    { name: "available_days", label: "Available days", full: true, placeholder: "e.g., Weekends, Mon–Fri" },
-    { name: "emergency_contact", label: "Emergency contact", type: "tel" },
-    ...address,
+    { name: "full_name", label: "Full name", required: true, placeholder: "Rahul Kadam" },
+    { name: "category", label: "Primary skill", type: "select", required: true, options: ["Steward","Chef","Waiter","Bartender","Housekeeping","Security","Technician","Sound Engineer","Lighting Tech","Driver","Cleaner","Coordinator"] },
+    ...contact, ...place,
   ];
 
   // customer
   return [
     { name: "full_name", label: "Full name", required: true, placeholder: "Priya Sharma" },
-    ...contact,
+    ...contact, ...place,
   ];
 }
 
@@ -522,32 +481,14 @@ function buildSchema(role: Role) {
     phone: phoneSchema,
     password: passwordSchema,
     confirm_password: z.string(),
+    city: z.string().trim().min(2, "Required"),
   };
   const nameKey = role === "worker" || role === "customer" ? "full_name" : "name";
   base[nameKey] = z.string().trim().min(2, "Required");
-  if (role !== "customer") base.owner_full_name = z.string().trim().min(2, "Required").optional().or(z.literal(""));
+  if (role === "hall_owner" || role === "vendor") base.owner_full_name = z.string().trim().min(2, "Required");
   if (role === "organization") base.org_type = z.string().min(1, "Required");
-  if (role === "hall_owner") {
-    base.category = z.string().min(1, "Required");
-    base.min_guests = z.string().regex(/^\d+$/, "Enter a number");
-    base.max_guests = z.string().regex(/^\d+$/, "Enter a number");
-    base.google_maps_url = z.string().url("Enter a valid URL");
-    base.city = z.string().min(1, "Required");
-    base.state = z.string().min(1, "Required");
-    base.pincode = pincodeSchema;
-  }
-  if (role === "vendor") {
-    base.category = z.string().min(1, "Required");
-    base.city = z.string().min(1, "Required");
-    base.state = z.string().min(1, "Required");
-    base.pincode = pincodeSchema;
-  }
-  if (role === "worker") {
-    base.category = z.string().min(1, "Required");
-    base.city = z.string().min(1, "Required");
-    base.state = z.string().min(1, "Required");
-    base.pincode = pincodeSchema;
-  }
+  if (role !== "organization") base.state = z.string().min(1, "Required");
+  if (role === "hall_owner" || role === "vendor" || role === "worker") base.category = z.string().min(1, "Required");
   return z.object(base).passthrough().refine((d) => d.password === d.confirm_password, {
     path: ["confirm_password"], message: "Passwords do not match",
   });
