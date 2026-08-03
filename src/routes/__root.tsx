@@ -120,6 +120,12 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
   useEffect(() => {
+    // Apply the saved theme (or system preference) as soon as the app
+    // mounts, so dark mode persists across reloads/navigation instead of
+    // resetting to light every time — see src/lib/settings.ts.
+    import("@/lib/settings").then(({ applyTheme, getStoredTheme }) => applyTheme(getStoredTheme()));
+  }, []);
+  useEffect(() => {
     // Registers the service worker required for Chrome's "Install app"
     // prompt. Safe no-op on browsers without support (Safari desktop etc).
     if ("serviceWorker" in navigator) {
