@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { fetchMyVendor, computeVendorCompletion } from "@/lib/vendor";
 import { useSession } from "@/lib/session";
+import { PhoneVerifyBanner } from "@/components/PhoneVerifyBanner";
 
 // Mirrors src/routes/_authenticated/worker/route.tsx exactly (Step-1
 // account_status gate, sidebar shell, verification badge) — same
@@ -231,6 +232,7 @@ function VendorShell() {
           </Link>
         </header>
         <main className="p-4 md:p-8">
+          {user && !user.phone_confirmed_at && <PhoneVerifyBanner user={user} />}
           {vendor && !vendor.payout_upi_id && (
             <PayoutBanner saving={savePayout.isPending} onSave={(upi) => savePayout.mutateAsync(upi)} />
           )}
