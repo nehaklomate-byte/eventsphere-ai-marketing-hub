@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
 import { PageShell } from "./-ui";
+import { AccountSettingsSection } from "@/components/AccountSettingsSection";
 
 export const Route = createFileRoute("/_authenticated/customer/settings")({ component: SettingsPage });
 
@@ -93,6 +94,12 @@ function SettingsPage() {
         <h3 className="font-display text-base font-semibold">Privacy</h3>
         <p className="mt-1 text-sm text-muted-foreground">Your data is protected with row-level security — only you and platform admins for support can view your account.</p>
       </section>
+
+      <div>
+        <h2 className="font-display text-xl font-semibold">More settings</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Profile photo, DOB, saved addresses aside — detailed privacy and per-event notification controls, appearance, and language.</p>
+      </div>
+      <AccountSettingsSection />
     </PageShell>
   );
 }
