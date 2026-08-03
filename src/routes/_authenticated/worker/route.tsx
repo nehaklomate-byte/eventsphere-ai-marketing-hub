@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { fetchMyWorker, computeCompletion } from "@/lib/worker";
 import { useSession } from "@/lib/session";
+import { PhoneVerifyBanner } from "@/components/PhoneVerifyBanner";
 
 export const Route = createFileRoute("/_authenticated/worker")({
   beforeLoad: async () => {
@@ -227,6 +228,7 @@ function WorkerShell() {
           </div>
         </header>
         <main className="p-4 md:p-8">
+          {user && !user.phone_confirmed_at && <PhoneVerifyBanner user={user} />}
           {worker && !worker.payout_upi_id && (
             <PayoutBanner saving={savePayout.isPending} onSave={(upi) => savePayout.mutateAsync(upi)} />
           )}
