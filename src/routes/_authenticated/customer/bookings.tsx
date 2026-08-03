@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ReceiptText, Store } from "lucide-react";
+import { ReceiptText, Store, IndianRupee, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
+import { payForWorkerTask } from "@/lib/razorpay";
 import { PageShell, EmptyState, LoadingRows } from "./-ui";
 
 export const Route = createFileRoute("/_authenticated/customer/bookings")({
@@ -13,6 +15,7 @@ export const Route = createFileRoute("/_authenticated/customer/bookings")({
 function BookingsPage() {
   const { user } = useSession();
   const qc = useQueryClient();
+  const [payingId, setPayingId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["c-bookings", user?.id],
@@ -32,6 +35,19 @@ function BookingsPage() {
     if (error) return toast.error(error.message);
     toast.success("Reschedule requested");
     qc.invalidateQueries({ queryKey: ["c-bookings"] });
+  }
+
+  async function handlePay(id: string) {
+    setPayingId(id);
+    try {
+      await payForWorkerTask({ workerTaskId: id, entityType: "hall" });
+      toast.success("Payment successful!");
+      qc.invalidateQueries({ queryKey: ["c-bookings"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Payment failed");
+    } finally {
+      setPayingId(null);
+    }
   }
 
   return (
@@ -66,6 +82,14 @@ function BookingsPage() {
                   <td className="px-4 py-3 capitalize">{b.payment_status}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
+                      {b.kind === "hall" && b.payment_status === "paid" ? (
+                        <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" /> Paid</span>
+                      ) : b.kind === "hall" && (b.status === "confirmed" || b.status === "in_progress" || b.status === "completed") && Number(b.amount) > 0 ? (
+                        <button onClick={() => handlePay(b.id)} disabled={payingId === b.id}
+                          className="inline-flex items-center gap-1.5 rounded-lg btn-brand btn-brand-hover px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-70">
+                          {payingId === b.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <IndianRupee className="h-3.5 w-3.5" />} Pay
+                        </button>
+                      ) : null}
                       {b.status !== "cancelled" && b.status !== "completed" && (
                         <>
                           <button onClick={() => reschedule(b.id)} className="rounded-lg border border-input px-2.5 py-1 text-xs hover:bg-accent">Reschedule</button>
