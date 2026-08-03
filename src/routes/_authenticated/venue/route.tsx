@@ -54,7 +54,7 @@ async function fetchGateData(): Promise<{ profile: ProfileGate | null; hall: Hal
   return { profile: profile as ProfileGate, hall: hall as HallGate };
 }
 
-const NAV = [
+const NAV: { to: string; label: string; icon: React.ComponentType<{ className?: string }>; exact?: boolean; soon?: boolean }[] = [
   { to: "/venue", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/venue/enquiries", label: "Enquiries", icon: Inbox },
   { to: "/venue/bookings", label: "Bookings", icon: CalendarCheck },
