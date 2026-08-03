@@ -28,7 +28,7 @@ function loadRazorpayScript(): Promise<void> {
  */
 export async function payForWorkerTask(opts: {
   workerTaskId: string;
-  entityType?: "worker" | "vendor";
+  entityType?: "worker" | "vendor" | "hall";
   payerName?: string;
   payerEmail?: string;
   payerPhone?: string;
@@ -57,7 +57,7 @@ export async function payForWorkerTask(opts: {
       currency,
       order_id,
       name: "EventOrbit AI",
-      description: entityType === "vendor" ? "Vendor payment" : "Worker payment",
+      description: entityType === "vendor" ? "Vendor payment" : entityType === "hall" ? "Venue booking payment" : "Worker payment",
       prefill: { name: opts.payerName, email: opts.payerEmail, contact: opts.payerPhone },
       theme: { color: "#7c3aed" },
       handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
