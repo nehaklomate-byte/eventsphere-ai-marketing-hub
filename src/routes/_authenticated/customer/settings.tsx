@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
 import { PageShell } from "./-ui";
-import { AccountSettingsSection } from "@/components/AccountSettingsSection";
+import { AccountSettingsSection } from "@/components/AccountSettingsSections";
 
 export const Route = createFileRoute("/_authenticated/customer/settings")({ component: SettingsPage });
 
