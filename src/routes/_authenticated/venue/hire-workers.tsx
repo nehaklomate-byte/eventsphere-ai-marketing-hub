@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
-import { fetchMyHalls } from "@/lib/venue";
+import { fetchMyHalls, fetchHallBookings } from "@/lib/venue";
 import { WORKER_CATEGORIES, isVideoUrl } from "@/lib/worker";
 import { payForWorkerTask } from "@/lib/razorpay";
 
@@ -58,6 +58,11 @@ function HireWorkersPage() {
   const [hireTarget, setHireTarget] = useState<MarketWorker | null>(null);
 
   const { data: halls = [] } = useQuery({ queryKey: ["my-halls"], queryFn: fetchMyHalls, enabled: !!user?.id });
+  const { data: bookings = [] } = useQuery({
+    queryKey: ["my-hall-bookings-for-hire", halls.map((h) => h.id).join(",")],
+    queryFn: () => fetchHallBookings(halls.map((h) => h.id)),
+    enabled: halls.length > 0,
+  });
   const { data: workers = [], isLoading } = useQuery({ queryKey: ["verified-workers", category], queryFn: () => fetchVerifiedWorkers(category) });
 
   const filtered = workers.filter((w) => !q || w.full_name.toLowerCase().includes(q.toLowerCase()) || (w.city ?? "").toLowerCase().includes(q.toLowerCase()));
@@ -123,7 +128,7 @@ function HireWorkersPage() {
       )}
 
       {hireTarget && user?.id && (
-        <HirePanel worker={hireTarget} halls={halls} userId={user.id} onClose={() => setHireTarget(null)} />
+        <HirePanel worker={hireTarget} bookings={bookings} userId={user.id} onClose={() => setHireTarget(null)} />
       )}
 
       {user?.id && <MyRequests userId={user.id} />}
@@ -230,29 +235,31 @@ function ProofItem({ url, label }: { url: string; label: string }) {
   );
 }
 
-function HirePanel({ worker, halls, userId, onClose }: {
-  worker: MarketWorker; halls: { id: string; name: string }[]; userId: string; onClose: () => void;
+function HirePanel({ worker, bookings, userId, onClose }: {
+  worker: MarketWorker; bookings: { id: string; target_name: string; event_date: string | null; status: string }[]; userId: string; onClose: () => void;
 }) {
   const qc = useQueryClient();
+  const activeBookings = bookings.filter((b) => b.status !== "cancelled");
   const [form, setForm] = useState({
-    event_name: "", task_name: "", hall_id: halls[0]?.id ?? "", event_date: "", start_time: "", end_time: "", pay_amount: "",
+    event_name: "", task_name: "", booking_id: activeBookings[0]?.id ?? "", event_date: activeBookings[0]?.event_date ?? "", start_time: "", end_time: "", pay_amount: "",
   });
 
   const mutation = useMutation({
     mutationFn: async () => {
-      if (!form.event_name.trim() || !form.task_name.trim() || !form.event_date) {
-        throw new Error("Event name, task and date are required.");
+      if (!form.task_name.trim() || !form.event_date) {
+        throw new Error("Task and date are required.");
       }
-      const hall = halls.find((h) => h.id === form.hall_id);
+      const booking = activeBookings.find((b) => b.id === form.booking_id);
       const { data, error } = await supabase.from("worker_tasks" as never).insert({
         worker_id: worker.id,
         worker_user_id: worker.owner_id,
         assigned_by: userId,
         organization_id: null,
-        organization_name: hall?.name ?? "Venue booking",
-        event_name: form.event_name.trim(),
+        organization_name: booking?.target_name ?? "Venue booking",
+        customer_booking_id: booking?.id ?? null,
+        event_name: (form.event_name || booking?.target_name || "Event").trim(),
         task_name: form.task_name.trim(),
-        venue: hall?.name ?? null,
+        venue: booking?.target_name ?? null,
         event_date: form.event_date,
         start_time: form.start_time || null,
         end_time: form.end_time || null,
@@ -276,16 +283,25 @@ function HirePanel({ worker, halls, userId, onClose }: {
         </div>
         <p className="mt-1 text-xs text-muted-foreground">They'll need to accept before this is confirmed.</p>
         <div className="mt-4 space-y-3">
-          <input placeholder="Event name" value={form.event_name} onChange={(e) => setForm((f) => ({ ...f, event_name: e.target.value }))}
-            className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
+          {activeBookings.length > 0 ? (
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">Which event/booking is this for?</label>
+              <select value={form.booking_id} onChange={(e) => {
+                const b = activeBookings.find((x) => x.id === e.target.value);
+                setForm((f) => ({ ...f, booking_id: e.target.value, event_date: b?.event_date ?? f.event_date }));
+              }} className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none">
+                {activeBookings.map((b) => (
+                  <option key={b.id} value={b.id}>{b.target_name} — {b.event_date ? new Date(b.event_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "no date"} ({b.status})</option>
+                ))}
+              </select>
+              <p className="mt-1 text-[11px] text-muted-foreground">This links the hire to that specific event, so it shows up under it later.</p>
+            </div>
+          ) : (
+            <input placeholder="Event name" value={form.event_name} onChange={(e) => setForm((f) => ({ ...f, event_name: e.target.value }))}
+              className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
+          )}
           <input placeholder="Task (what should they do?)" value={form.task_name} onChange={(e) => setForm((f) => ({ ...f, task_name: e.target.value }))}
             className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
-          {halls.length > 0 && (
-            <select value={form.hall_id} onChange={(e) => setForm((f) => ({ ...f, hall_id: e.target.value }))}
-              className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none">
-              {halls.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
-            </select>
-          )}
           <input type="date" value={form.event_date} onChange={(e) => setForm((f) => ({ ...f, event_date: e.target.value }))}
             className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
           <div className="grid grid-cols-2 gap-2">
