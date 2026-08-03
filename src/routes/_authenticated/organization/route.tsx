@@ -7,6 +7,7 @@ import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "@/lib/session";
+import { PhoneVerifyBanner } from "@/components/PhoneVerifyBanner";
 
 export const Route = createFileRoute("/_authenticated/organization")({
   beforeLoad: async () => {
@@ -169,6 +170,7 @@ function OrganizationShell() {
         {open && <div className="fixed inset-0 z-40 bg-black/40 md:hidden" onClick={() => setOpen(false)} />}
 
         <main className="min-h-dvh flex-1 px-4 md:px-8 py-6 md:py-10">
+          {user && !user.phone_confirmed_at && <PhoneVerifyBanner user={user} />}
           {!isVerified && (
             <div className={`mb-6 flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold ${
               org?.verification_status === "rejected" ? "bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300" : "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
