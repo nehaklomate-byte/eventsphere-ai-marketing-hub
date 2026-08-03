@@ -8,6 +8,7 @@ import {
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
+import { PhoneVerifyBanner } from "@/components/PhoneVerifyBanner";
 import { ensureCustomerBootstrapped } from "@/lib/customer";
 
 export const Route = createFileRoute("/_authenticated/customer")({
@@ -123,6 +124,7 @@ function CustomerLayout() {
         {open && <div className="fixed inset-0 z-40 bg-black/40 md:hidden" onClick={() => setOpen(false)} />}
 
         <main className="min-h-dvh flex-1 px-4 md:px-8 py-6 md:py-10">
+          {user && !user.phone_confirmed_at && <PhoneVerifyBanner user={user} />}
           <Outlet />
         </main>
       </div>
