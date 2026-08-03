@@ -90,7 +90,13 @@ export function DangerZoneSection({ userId }: { userId: string }) {
 
   const request = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("account_deactivation_requests").insert({ user_id: userId, reason: reason || null });
+      const { error } = await supabase.from("audit_logs").insert({
+        actor_id: userId,
+        action: "account_deactivation_requested",
+        target_table: "profiles",
+        target_id: userId,
+        new_value: { reason: reason || null },
+      });
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Request sent — our team will reach out before deactivating anything."); setOpen(false); setReason(""); },
