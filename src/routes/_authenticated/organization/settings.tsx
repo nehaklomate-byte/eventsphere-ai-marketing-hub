@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Save, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchMyOrganization, type Organization } from "@/lib/organization";
+import { AccountSettingsSection } from "@/components/AccountSettingsSection";
 
 export const Route = createFileRoute("/_authenticated/organization/settings")({
   head: () => ({ meta: [{ title: "Settings — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
@@ -152,6 +153,12 @@ function SettingsPage() {
           <Save className="h-4 w-4" /> {saving ? "Saving…" : "Save changes"}
         </button>
       </form>
+
+      <div>
+        <h2 className="font-display text-xl font-semibold">Your account</h2>
+        <p className="mt-1 text-sm text-muted-foreground">These settings are personal to you, separate from the organization's profile above.</p>
+      </div>
+      <AccountSettingsSection />
     </div>
   );
 }
