@@ -54,6 +54,7 @@ import { Route as AuthenticatedWorkerDocumentsRouteImport } from './routes/_auth
 import { Route as AuthenticatedWorkerCalendarRouteImport } from './routes/_authenticated/worker/calendar'
 import { Route as AuthenticatedWorkerBoardRouteImport } from './routes/_authenticated/worker/board'
 import { Route as AuthenticatedWorkerAvailabilityRouteImport } from './routes/_authenticated/worker/availability'
+import { Route as AuthenticatedVenueSettingsRouteImport } from './routes/_authenticated/venue/settings'
 import { Route as AuthenticatedVenueProfileRouteImport } from './routes/_authenticated/venue/profile'
 import { Route as AuthenticatedVenueNotificationsRouteImport } from './routes/_authenticated/venue/notifications'
 import { Route as AuthenticatedVenueHireWorkersRouteImport } from './routes/_authenticated/venue/hire-workers'
@@ -334,6 +335,12 @@ const AuthenticatedWorkerAvailabilityRoute =
     id: '/availability',
     path: '/availability',
     getParentRoute: () => AuthenticatedWorkerRouteRoute,
+  } as any)
+const AuthenticatedVenueSettingsRoute =
+  AuthenticatedVenueSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AuthenticatedVenueRouteRoute,
   } as any)
 const AuthenticatedVenueProfileRoute =
   AuthenticatedVenueProfileRouteImport.update({
@@ -620,6 +627,7 @@ export interface FileRoutesByFullPath {
   '/venue/hire-workers': typeof AuthenticatedVenueHireWorkersRoute
   '/venue/notifications': typeof AuthenticatedVenueNotificationsRoute
   '/venue/profile': typeof AuthenticatedVenueProfileRoute
+  '/venue/settings': typeof AuthenticatedVenueSettingsRoute
   '/worker/availability': typeof AuthenticatedWorkerAvailabilityRoute
   '/worker/board': typeof AuthenticatedWorkerBoardRoute
   '/worker/calendar': typeof AuthenticatedWorkerCalendarRoute
@@ -696,6 +704,7 @@ export interface FileRoutesByTo {
   '/venue/hire-workers': typeof AuthenticatedVenueHireWorkersRoute
   '/venue/notifications': typeof AuthenticatedVenueNotificationsRoute
   '/venue/profile': typeof AuthenticatedVenueProfileRoute
+  '/venue/settings': typeof AuthenticatedVenueSettingsRoute
   '/worker/availability': typeof AuthenticatedWorkerAvailabilityRoute
   '/worker/board': typeof AuthenticatedWorkerBoardRoute
   '/worker/calendar': typeof AuthenticatedWorkerCalendarRoute
@@ -781,6 +790,7 @@ export interface FileRoutesById {
   '/_authenticated/venue/hire-workers': typeof AuthenticatedVenueHireWorkersRoute
   '/_authenticated/venue/notifications': typeof AuthenticatedVenueNotificationsRoute
   '/_authenticated/venue/profile': typeof AuthenticatedVenueProfileRoute
+  '/_authenticated/venue/settings': typeof AuthenticatedVenueSettingsRoute
   '/_authenticated/worker/availability': typeof AuthenticatedWorkerAvailabilityRoute
   '/_authenticated/worker/board': typeof AuthenticatedWorkerBoardRoute
   '/_authenticated/worker/calendar': typeof AuthenticatedWorkerCalendarRoute
@@ -866,6 +876,7 @@ export interface FileRouteTypes {
     | '/venue/hire-workers'
     | '/venue/notifications'
     | '/venue/profile'
+    | '/venue/settings'
     | '/worker/availability'
     | '/worker/board'
     | '/worker/calendar'
@@ -942,6 +953,7 @@ export interface FileRouteTypes {
     | '/venue/hire-workers'
     | '/venue/notifications'
     | '/venue/profile'
+    | '/venue/settings'
     | '/worker/availability'
     | '/worker/board'
     | '/worker/calendar'
@@ -1026,6 +1038,7 @@ export interface FileRouteTypes {
     | '/_authenticated/venue/hire-workers'
     | '/_authenticated/venue/notifications'
     | '/_authenticated/venue/profile'
+    | '/_authenticated/venue/settings'
     | '/_authenticated/worker/availability'
     | '/_authenticated/worker/board'
     | '/_authenticated/worker/calendar'
@@ -1386,6 +1399,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/worker/availability'
       preLoaderRoute: typeof AuthenticatedWorkerAvailabilityRouteImport
       parentRoute: typeof AuthenticatedWorkerRouteRoute
+    }
+    '/_authenticated/venue/settings': {
+      id: '/_authenticated/venue/settings'
+      path: '/settings'
+      fullPath: '/venue/settings'
+      preLoaderRoute: typeof AuthenticatedVenueSettingsRouteImport
+      parentRoute: typeof AuthenticatedVenueRouteRoute
     }
     '/_authenticated/venue/profile': {
       id: '/_authenticated/venue/profile'
@@ -1808,6 +1828,7 @@ interface AuthenticatedVenueRouteRouteChildren {
   AuthenticatedVenueHireWorkersRoute: typeof AuthenticatedVenueHireWorkersRoute
   AuthenticatedVenueNotificationsRoute: typeof AuthenticatedVenueNotificationsRoute
   AuthenticatedVenueProfileRoute: typeof AuthenticatedVenueProfileRoute
+  AuthenticatedVenueSettingsRoute: typeof AuthenticatedVenueSettingsRoute
   AuthenticatedVenueIndexRoute: typeof AuthenticatedVenueIndexRoute
 }
 
@@ -1819,6 +1840,7 @@ const AuthenticatedVenueRouteRouteChildren: AuthenticatedVenueRouteRouteChildren
     AuthenticatedVenueHireWorkersRoute: AuthenticatedVenueHireWorkersRoute,
     AuthenticatedVenueNotificationsRoute: AuthenticatedVenueNotificationsRoute,
     AuthenticatedVenueProfileRoute: AuthenticatedVenueProfileRoute,
+    AuthenticatedVenueSettingsRoute: AuthenticatedVenueSettingsRoute,
     AuthenticatedVenueIndexRoute: AuthenticatedVenueIndexRoute,
   }
 
@@ -1913,3 +1935,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
