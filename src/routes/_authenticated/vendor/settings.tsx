@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Settings as SettingsIcon } from "lucide-react";
-import { AccountSettingsSection } from "@/components/AccountSettingsSection";
+import { AccountSettingsSection } from "@/components/AccountSettingsSections";
 
 export const Route = createFileRoute("/_authenticated/vendor/settings")({
   head: () => ({ meta: [{ title: "Settings — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
