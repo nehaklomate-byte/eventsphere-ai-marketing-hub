@@ -8,7 +8,7 @@ import {
 import { z } from "zod";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
-import { emailSchema, phoneSchema, pincodeSchema, passwordSchema, passwordStrength } from "@/lib/validation";
+import { emailSchema, phoneSchema, passwordSchema, passwordStrength } from "@/lib/validation";
 import { DASHBOARD_PATH, resolveDashboardPath, humanizeAuthError } from "@/lib/auth-redirect";
 import { insertRoleRow, type Role } from "@/lib/registration";
 
