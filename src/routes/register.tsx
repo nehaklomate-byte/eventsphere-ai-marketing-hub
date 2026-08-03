@@ -414,10 +414,10 @@ function roleTitle(r: Role) {
 }
 function roleDesc(r: Role) {
   return ({
-    organization: "Set up your workspace so your team can plan and manage events together.",
-    hall_owner: "Publish your venue and start receiving verified enquiries and bookings.",
-    vendor: "Showcase your services and get discovered by planners across India.",
-    worker: "Create a verified profile and get matched with events near you.",
+    organization: "Just the basics to open your workspace — you'll complete your organization profile after signing in.",
+    hall_owner: "Just the basics to create your account — capacity, pricing, photos and documents come later in your Venue Profile.",
+    vendor: "Just the basics to create your account — GST, PAN, portfolio and pricing come later in your Vendor Profile.",
+    worker: "Just the basics to create your account — skills, charges, documents and availability come later in your Worker Profile.",
     customer: "Book venues and services for weddings, birthdays and private events.",
   } as const)[r];
 }
