@@ -26,12 +26,20 @@ function toE164(input: string): string | null {
   return null;
 }
 
+// Flip to true once Twilio's compliance/business profile is approved
+// and SMS is actually sendable. Left off for now — email confirmation
+// already verifies identity at signup, and there's no point showing
+// people an OTP box that can't send SMS yet.
+const PHONE_VERIFICATION_ENABLED = false;
+
 export function PhoneVerifyBanner({ user }: { user: User }) {
   const [phase, setPhase] = useState<"enter" | "otp">("enter");
   const [phone, setPhone] = useState((user.user_metadata?.phone as string | undefined) ?? "");
   const [otp, setOtp] = useState("");
   const [busy, setBusy] = useState(false);
   const [sentTo, setSentTo] = useState("");
+
+  if (!PHONE_VERIFICATION_ENABLED) return null;
 
   async function sendOtp() {
     const e164 = toE164(phone);
