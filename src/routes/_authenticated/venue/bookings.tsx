@@ -2,9 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarCheck, Check, X, Loader2, IndianRupee, Eye, Download, Ban } from "lucide-react";
+import { CalendarCheck, Check, X, Loader2, IndianRupee, Eye, Download, Ban, Users, HardHat, Store } from "lucide-react";
 import { fetchMyHalls, fetchHallBookings, updateBookingStatus, type HallBooking } from "@/lib/venue";
 import { downloadCsv } from "@/lib/admin";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/venue/bookings")({
   head: () => ({ meta: [{ title: "Bookings — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
@@ -24,6 +25,7 @@ function BookingsPage() {
   const qc = useQueryClient();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [detailsFor, setDetailsFor] = useState<HallBooking | null>(null);
+  const [teamFor, setTeamFor] = useState<string | null>(null);
   const { data: halls } = useQuery({ queryKey: ["venue-halls"], queryFn: fetchMyHalls });
   const hallIds = (halls ?? []).map((h) => h.id);
 
@@ -106,6 +108,12 @@ function BookingsPage() {
 
                 <div className="flex flex-wrap gap-2">
                   <button
+                    onClick={() => setTeamFor(teamFor === b.id ? null : b.id)}
+                    className="flex items-center gap-1.5 rounded-full border border-input px-3.5 py-2 text-xs font-semibold hover:bg-accent"
+                  >
+                    <Users className="h-3.5 w-3.5" /> {teamFor === b.id ? "Hide hired team" : "View hired team"}
+                  </button>
+                  <button
                     onClick={() => setDetailsFor(b)}
                     className="flex items-center gap-1.5 rounded-full border border-input px-3.5 py-2 text-xs font-semibold hover:bg-accent"
                   >
@@ -149,12 +157,72 @@ function BookingsPage() {
                   )}
                 </div>
               </div>
+              {teamFor === b.id && <HiredTeamPanel bookingId={b.id} />}
             </div>
           ))}
         </div>
       )}
 
       {detailsFor && <BookingDetailsModal booking={detailsFor} onClose={() => setDetailsFor(null)} />}
+    </div>
+  );
+}
+
+function HiredTeamPanel({ bookingId }: { bookingId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["booking-hired-team", bookingId],
+    queryFn: async () => {
+      const [{ data: workers, error: wErr }, { data: vendors, error: vErr }] = await Promise.all([
+        supabase.from("worker_tasks" as never).select("id,task_name,status,payment_status,worker:workers(full_name)")
+          .eq("customer_booking_id" as never, bookingId as never),
+        supabase.from("vendor_tasks" as never).select("id,task_name,status,payment_status,vendor:vendors(business_name)")
+          .eq("customer_booking_id" as never, bookingId as never),
+      ]);
+      if (wErr) throw wErr;
+      if (vErr) throw vErr;
+      return {
+        workers: (workers ?? []) as unknown as { id: string; task_name: string; status: string; payment_status: string; worker: { full_name: string } | null }[],
+        vendors: (vendors ?? []) as unknown as { id: string; task_name: string; status: string; payment_status: string; vendor: { business_name: string } | null }[],
+      };
+    },
+  });
+
+  const statusTone: Record<string, string> = {
+    pending: "bg-amber-500/15 text-amber-700", accepted: "bg-blue-500/15 text-blue-700",
+    in_progress: "bg-blue-500/15 text-blue-700", completed: "bg-emerald-500/15 text-emerald-700",
+    rejected: "bg-rose-500/15 text-rose-700", cancelled: "bg-rose-500/15 text-rose-700",
+  };
+
+  const nothing = !isLoading && (data?.workers.length ?? 0) === 0 && (data?.vendors.length ?? 0) === 0;
+
+  return (
+    <div className="mt-4 border-t border-border pt-4">
+      {isLoading ? (
+        <div className="text-xs text-muted-foreground">Loading hired team…</div>
+      ) : nothing ? (
+        <div className="text-xs text-muted-foreground">No worker or vendor has been hired for this event yet — use "Hire Workers" / "Hire Vendors" and pick this event.</div>
+      ) : (
+        <div className="space-y-2">
+          {data!.workers.map((w) => (
+            <div key={`w-${w.id}`} className="flex items-center justify-between gap-3 rounded-xl bg-muted/40 px-3 py-2 text-xs">
+              <span className="flex items-center gap-2 font-medium"><HardHat className="h-3.5 w-3.5 text-muted-foreground" /> {w.worker?.full_name ?? "Worker"} — {w.task_name}</span>
+              <span className="flex items-center gap-2">
+                <span className={`rounded-full px-2 py-0.5 font-semibold capitalize ${statusTone[w.status] ?? "bg-muted"}`}>{w.status.replace("_", " ")}</span>
+                {w.payment_status === "paid" && <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 font-semibold text-emerald-700">Paid</span>}
+              </span>
+            </div>
+          ))}
+          {data!.vendors.map((v) => (
+            <div key={`v-${v.id}`} className="flex items-center justify-between gap-3 rounded-xl bg-muted/40 px-3 py-2 text-xs">
+              <span className="flex items-center gap-2 font-medium"><Store className="h-3.5 w-3.5 text-muted-foreground" /> {v.vendor?.business_name ?? "Vendor"} — {v.task_name}</span>
+              <span className="flex items-center gap-2">
+                <span className={`rounded-full px-2 py-0.5 font-semibold capitalize ${statusTone[v.status] ?? "bg-muted"}`}>{v.status.replace("_", " ")}</span>
+                {v.payment_status === "paid" && <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 font-semibold text-emerald-700">Paid</span>}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
