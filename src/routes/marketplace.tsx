@@ -36,6 +36,10 @@ const TAB_META: Record<Tab, { label: string; icon: typeof Building2; empty: stri
 };
 
 export const Route = createFileRoute("/marketplace")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    event_id: typeof search.event_id === "string" ? search.event_id : undefined,
+    tab: (search.tab === "vendor" || search.tab === "worker" || search.tab === "venue") ? search.tab : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Marketplace — EventOrbit AI" },
@@ -50,7 +54,8 @@ export const Route = createFileRoute("/marketplace")({
 });
 
 function Marketplace() {
-  const [tab, setTab] = useState<Tab>("venue");
+  const search = Route.useSearch();
+  const [tab, setTab] = useState<Tab>(search.tab ?? "venue");
   const [items, setItems] = useState<Item[] | null>(null);
   const [q, setQ] = useState("");
   const [city, setCity] = useState<string>("");
@@ -95,10 +100,18 @@ function Marketplace() {
 
   return (
     <SiteLayout>
+      {search.event_id && (
+        <div className="mx-auto max-w-7xl px-5 md:px-8 pt-6">
+          <Link to="/customer/events/$eventId" params={{ eventId: search.event_id }}
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-violet hover:underline">
+            ← Back to your event
+          </Link>
+        </div>
+      )}
       <PageHeader
         eyebrow="Marketplace"
         title="Discover verified venues, vendors and workers."
-        description="Every profile here is checked by our team before it appears. Pick a tab, filter by city or category, open a profile to see real capacity, facilities and rates, then send an enquiry — no phone calls needed to get started.">
+        description="Everyone on EventOrbit is verified by our team before they're listed. Filter by city and category, then enquire or book directly.">
         <div className="mt-6 inline-flex rounded-full border border-border bg-card p-1 text-sm">
           {(Object.keys(TAB_META) as Tab[]).map((t) => {
             const Icon = TAB_META[t].icon;
@@ -134,7 +147,7 @@ function Marketplace() {
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {filtered.map((h) => (
-              <Link key={h.id} to={`${meta.detailBase}/$id`} params={{ id: h.id }}
+              <Link key={h.id} to={`${meta.detailBase}/$id`} params={{ id: h.id }} search={search.event_id ? { event_id: search.event_id } : undefined}
                 className="group overflow-hidden rounded-2xl border border-border bg-card shadow-soft hover:shadow-elegant transition-all">
                 <div className="relative h-44 overflow-hidden bg-accent">
                   {h.cover_url || h.gallery[0] ? (
