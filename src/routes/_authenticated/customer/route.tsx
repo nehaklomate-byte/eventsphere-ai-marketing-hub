@@ -23,6 +23,7 @@ const NAV = [
   { to: "/customer/wishlist", label: "Wishlist", icon: Heart },
   { to: "/marketplace", label: "Marketplace", icon: Store, external: true },
   { to: "/customer/notifications", label: "Notifications", icon: Bell },
+  { to: "/customer/messages", label: "Messages", icon: MessageCircle },
   { to: "/customer/payments", label: "Payments", icon: Wallet },
   { to: "/customer/reviews", label: "Reviews", icon: Star },
   { to: "/customer/profile", label: "Profile", icon: User },
