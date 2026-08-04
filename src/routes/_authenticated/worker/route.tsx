@@ -28,6 +28,7 @@ const nav: { to: string; label: string; icon: typeof LayoutDashboard; exact?: bo
   { to: "/worker/calendar", label: "Calendar", icon: CalendarDays },
   { to: "/worker/availability", label: "Availability", icon: Clock },
   { to: "/worker/notifications", label: "Notifications", icon: Bell },
+  { to: "/worker/messages", label: "Messages", icon: MessageCircle },
   { to: "/worker/earnings", label: "Earnings", icon: Wallet },
   { to: "/worker/profile", label: "Profile", icon: User },
   { to: "/worker/settings", label: "Settings", icon: Settings },
