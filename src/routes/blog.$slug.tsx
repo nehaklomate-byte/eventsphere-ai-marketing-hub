@@ -1,7 +1,7 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/SiteLayout";
 import { ArrowLeft, Clock } from "lucide-react";
-import { getPost, posts } from "@/lib/blog-posts";
+import { getPost, posts, type BlogPost } from "@/lib/blog-posts";
 
 export const Route = createFileRoute("/blog/$slug")({
   loader: ({ params }) => {
@@ -31,7 +31,8 @@ export const Route = createFileRoute("/blog/$slug")({
 });
 
 function Post() {
-  const { post } = Route.useLoaderData();
+  const { post } = Route.useLoaderData() as { post: BlogPost };
+
   const others = posts.filter((p) => p.slug !== post.slug).slice(0, 3);
   return (
     <SiteLayout>
