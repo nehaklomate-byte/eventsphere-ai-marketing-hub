@@ -90,6 +90,7 @@ import { Route as AuthenticatedCustomerEventsRouteImport } from './routes/_authe
 import { Route as AuthenticatedCustomerBookingsRouteImport } from './routes/_authenticated/customer/bookings'
 import { Route as AuthenticatedAdminVerificationRouteImport } from './routes/_authenticated/admin/verification'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin/users'
+import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/admin/settings'
 import { Route as AuthenticatedAdminAccountsRouteImport } from './routes/_authenticated/admin/accounts'
 import { Route as AuthenticatedOrganizationEventsEventIdFormRouteImport } from './routes/_authenticated/organization/events.$eventId.form'
 
@@ -550,6 +551,12 @@ const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AuthenticatedAdminRouteRoute,
 } as any)
+const AuthenticatedAdminSettingsRoute =
+  AuthenticatedAdminSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedAdminAccountsRoute =
   AuthenticatedAdminAccountsRouteImport.update({
     id: '/accounts',
@@ -592,6 +599,7 @@ export interface FileRoutesByFullPath {
   '/vendor/$id': typeof VendorIdRoute
   '/worker/$id': typeof WorkerIdRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
+  '/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/admin/verification': typeof AuthenticatedAdminVerificationRoute
   '/customer/bookings': typeof AuthenticatedCustomerBookingsRoute
@@ -669,6 +677,7 @@ export interface FileRoutesByTo {
   '/vendor/$id': typeof VendorIdRoute
   '/worker/$id': typeof WorkerIdRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
+  '/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/admin/verification': typeof AuthenticatedAdminVerificationRoute
   '/customer/bookings': typeof AuthenticatedCustomerBookingsRoute
@@ -755,6 +764,7 @@ export interface FileRoutesById {
   '/vendor/$id': typeof VendorIdRoute
   '/worker/$id': typeof WorkerIdRoute
   '/_authenticated/admin/accounts': typeof AuthenticatedAdminAccountsRoute
+  '/_authenticated/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/admin/verification': typeof AuthenticatedAdminVerificationRoute
   '/_authenticated/customer/bookings': typeof AuthenticatedCustomerBookingsRoute
@@ -841,6 +851,7 @@ export interface FileRouteTypes {
     | '/vendor/$id'
     | '/worker/$id'
     | '/admin/accounts'
+    | '/admin/settings'
     | '/admin/users'
     | '/admin/verification'
     | '/customer/bookings'
@@ -918,6 +929,7 @@ export interface FileRouteTypes {
     | '/vendor/$id'
     | '/worker/$id'
     | '/admin/accounts'
+    | '/admin/settings'
     | '/admin/users'
     | '/admin/verification'
     | '/customer/bookings'
@@ -1003,6 +1015,7 @@ export interface FileRouteTypes {
     | '/vendor/$id'
     | '/worker/$id'
     | '/_authenticated/admin/accounts'
+    | '/_authenticated/admin/settings'
     | '/_authenticated/admin/users'
     | '/_authenticated/admin/verification'
     | '/_authenticated/customer/bookings'
@@ -1652,6 +1665,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/admin/settings': {
+      id: '/_authenticated/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AuthenticatedAdminSettingsRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
     '/_authenticated/admin/accounts': {
       id: '/_authenticated/admin/accounts'
       path: '/accounts'
@@ -1671,6 +1691,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminAccountsRoute: typeof AuthenticatedAdminAccountsRoute
+  AuthenticatedAdminSettingsRoute: typeof AuthenticatedAdminSettingsRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
   AuthenticatedAdminVerificationRoute: typeof AuthenticatedAdminVerificationRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
@@ -1679,6 +1700,7 @@ interface AuthenticatedAdminRouteRouteChildren {
 const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren =
   {
     AuthenticatedAdminAccountsRoute: AuthenticatedAdminAccountsRoute,
+    AuthenticatedAdminSettingsRoute: AuthenticatedAdminSettingsRoute,
     AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
     AuthenticatedAdminVerificationRoute: AuthenticatedAdminVerificationRoute,
     AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
@@ -1935,3 +1957,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
