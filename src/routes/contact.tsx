@@ -26,24 +26,25 @@ export const Route = createFileRoute("/contact")({
             <Field label="Last name"><input className="input" placeholder="Sharma" /></Field>
           </div>
           <Field label="Work email"><input type="email" className="input" placeholder="you@company.com" /></Field>
-          <Field label="Company"><input className="input" placeholder="Meridian Halls" /></Field>
-          <Field label="How can we help?"><textarea rows={5} className="input resize-none" placeholder="Tell us what you're planning…" /></Field>
+          <Field label="Organisation (optional)"><input className="input" placeholder="Your venue, business or company" /></Field>
+          <Field label="How can we help?"><textarea rows={5} className="input resize-none" placeholder="Listing your venue, verification status, a feature you need…" /></Field>
           <button className="rounded-full btn-brand btn-brand-hover px-5 py-3 text-sm font-semibold">Send message</button>
         </form>
         <div className="space-y-6">
           <div className="rounded-3xl glass-strong p-6 shadow-soft">
-            <h3 className="font-display text-lg font-semibold">Reach us directly</h3>
-            <div className="mt-4 space-y-3 text-sm">
-              <div className="flex items-center gap-3"><Mail className="h-4 w-4 text-brand-violet" /> hello@eventorbit.ai</div>
-              <div className="flex items-center gap-3"><Phone className="h-4 w-4 text-brand-violet" /> +91 98765 43210</div>
-              <div className="flex items-center gap-3"><MapPin className="h-4 w-4 text-brand-violet" /> Pune, India</div>
+            <h3 className="font-display text-lg font-semibold">What to expect</h3>
+            <div className="mt-4 space-y-3 text-sm text-muted-foreground">
+              <p>Messages are read by the team building the product, not a call centre. We reply within one business day.</p>
+              <p className="flex items-center gap-3 text-foreground"><Mail className="h-4 w-4 text-brand-violet" /> hello@eventorbit.ai</p>
+              <p className="flex items-center gap-3 text-foreground"><MapPin className="h-4 w-4 text-brand-violet" /> Operating from Maharashtra, India</p>
             </div>
           </div>
           <div className="rounded-3xl bg-gradient-brand text-white p-6 shadow-elegant">
-            <h3 className="font-display text-lg font-semibold">Enterprise & Government</h3>
-            <p className="mt-2 text-sm text-white/85">Dedicated implementation, security review and SLAs. We'll get you a tailored proposal within 48 hours.</p>
+            <h3 className="font-display text-lg font-semibold">Getting listed faster</h3>
+            <p className="mt-2 text-sm text-white/85">Create your account first and complete your profile — then message us here and we will prioritise the verification review.</p>
           </div>
         </div>
+
       </section>
       <style>{`
         .input { width: 100%; border-radius: 12px; border: 1px solid var(--border); background: color-mix(in oklab, var(--card) 90%, transparent); padding: 10px 14px; font-size: 14px; outline: none; }
