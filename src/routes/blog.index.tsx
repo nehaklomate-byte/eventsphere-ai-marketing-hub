@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { ChevronRight, Clock } from "lucide-react";
 import { posts } from "@/lib/blog-posts";
 
-export const Route = createFileRoute("/blog")({
+export const Route = createFileRoute("/blog/")({
   head: () => ({
     meta: [
       { title: "Field Notes — Practical Guides for Event Operations" },

@@ -24,10 +24,12 @@ import { Route as BlogRouteImport } from './routes/blog'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as WorkerIdRouteImport } from './routes/worker.$id'
 import { Route as VendorIdRouteImport } from './routes/vendor.$id'
 import { Route as JoinOrganizationTokenRouteImport } from './routes/join-organization/$token'
 import { Route as HallIdRouteImport } from './routes/hall.$id'
+import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedWorkerRouteRouteImport } from './routes/_authenticated/worker/route'
 import { Route as AuthenticatedVenueRouteRouteImport } from './routes/_authenticated/venue/route'
@@ -167,6 +169,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BlogIndexRoute = BlogIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => BlogRoute,
+} as any)
 const WorkerIdRoute = WorkerIdRouteImport.update({
   id: '/worker/$id',
   path: '/worker/$id',
@@ -186,6 +193,11 @@ const HallIdRoute = HallIdRouteImport.update({
   id: '/hall/$id',
   path: '/hall/$id',
   getParentRoute: () => rootRouteImport,
+} as any)
+const BlogSlugRoute = BlogSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => BlogRoute,
 } as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/auth/callback',
@@ -567,7 +579,7 @@ const AuthenticatedOrganizationEventsEventIdFormRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
-  '/blog': typeof BlogRoute
+  '/blog': typeof BlogRouteWithChildren
   '/contact': typeof ContactRoute
   '/features': typeof FeaturesRoute
   '/login': typeof LoginRoute
@@ -587,10 +599,12 @@ export interface FileRoutesByFullPath {
   '/venue': typeof AuthenticatedVenueRouteRouteWithChildren
   '/worker': typeof AuthenticatedWorkerRouteRouteWithChildren
   '/auth/callback': typeof AuthCallbackRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/hall/$id': typeof HallIdRoute
   '/join-organization/$token': typeof JoinOrganizationTokenRoute
   '/vendor/$id': typeof VendorIdRoute
   '/worker/$id': typeof WorkerIdRoute
+  '/blog/': typeof BlogIndexRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
@@ -651,7 +665,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
-  '/blog': typeof BlogRoute
   '/contact': typeof ContactRoute
   '/features': typeof FeaturesRoute
   '/login': typeof LoginRoute
@@ -664,10 +677,12 @@ export interface FileRoutesByTo {
   '/solutions': typeof SolutionsRoute
   '/terms': typeof TermsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/hall/$id': typeof HallIdRoute
   '/join-organization/$token': typeof JoinOrganizationTokenRoute
   '/vendor/$id': typeof VendorIdRoute
   '/worker/$id': typeof WorkerIdRoute
+  '/blog': typeof BlogIndexRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
@@ -730,7 +745,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/about': typeof AboutRoute
-  '/blog': typeof BlogRoute
+  '/blog': typeof BlogRouteWithChildren
   '/contact': typeof ContactRoute
   '/features': typeof FeaturesRoute
   '/login': typeof LoginRoute
@@ -750,10 +765,12 @@ export interface FileRoutesById {
   '/_authenticated/venue': typeof AuthenticatedVenueRouteRouteWithChildren
   '/_authenticated/worker': typeof AuthenticatedWorkerRouteRouteWithChildren
   '/auth/callback': typeof AuthCallbackRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/hall/$id': typeof HallIdRoute
   '/join-organization/$token': typeof JoinOrganizationTokenRoute
   '/vendor/$id': typeof VendorIdRoute
   '/worker/$id': typeof WorkerIdRoute
+  '/blog/': typeof BlogIndexRoute
   '/_authenticated/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/_authenticated/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
@@ -836,10 +853,12 @@ export interface FileRouteTypes {
     | '/venue'
     | '/worker'
     | '/auth/callback'
+    | '/blog/$slug'
     | '/hall/$id'
     | '/join-organization/$token'
     | '/vendor/$id'
     | '/worker/$id'
+    | '/blog/'
     | '/admin/accounts'
     | '/admin/settings'
     | '/admin/users'
@@ -900,7 +919,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
-    | '/blog'
     | '/contact'
     | '/features'
     | '/login'
@@ -913,10 +931,12 @@ export interface FileRouteTypes {
     | '/solutions'
     | '/terms'
     | '/auth/callback'
+    | '/blog/$slug'
     | '/hall/$id'
     | '/join-organization/$token'
     | '/vendor/$id'
     | '/worker/$id'
+    | '/blog'
     | '/admin/accounts'
     | '/admin/settings'
     | '/admin/users'
@@ -998,10 +1018,12 @@ export interface FileRouteTypes {
     | '/_authenticated/venue'
     | '/_authenticated/worker'
     | '/auth/callback'
+    | '/blog/$slug'
     | '/hall/$id'
     | '/join-organization/$token'
     | '/vendor/$id'
     | '/worker/$id'
+    | '/blog/'
     | '/_authenticated/admin/accounts'
     | '/_authenticated/admin/settings'
     | '/_authenticated/admin/users'
@@ -1064,7 +1086,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AboutRoute: typeof AboutRoute
-  BlogRoute: typeof BlogRoute
+  BlogRoute: typeof BlogRouteWithChildren
   ContactRoute: typeof ContactRoute
   FeaturesRoute: typeof FeaturesRoute
   LoginRoute: typeof LoginRoute
@@ -1190,6 +1212,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/blog/': {
+      id: '/blog/'
+      path: '/'
+      fullPath: '/blog/'
+      preLoaderRoute: typeof BlogIndexRouteImport
+      parentRoute: typeof BlogRoute
+    }
     '/worker/$id': {
       id: '/worker/$id'
       path: '/worker/$id'
@@ -1217,6 +1246,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/hall/$id'
       preLoaderRoute: typeof HallIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/blog/$slug': {
+      id: '/blog/$slug'
+      path: '/$slug'
+      fullPath: '/blog/$slug'
+      preLoaderRoute: typeof BlogSlugRouteImport
+      parentRoute: typeof BlogRoute
     }
     '/auth/callback': {
       id: '/auth/callback'
@@ -1911,11 +1947,23 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface BlogRouteChildren {
+  BlogSlugRoute: typeof BlogSlugRoute
+  BlogIndexRoute: typeof BlogIndexRoute
+}
+
+const BlogRouteChildren: BlogRouteChildren = {
+  BlogSlugRoute: BlogSlugRoute,
+  BlogIndexRoute: BlogIndexRoute,
+}
+
+const BlogRouteWithChildren = BlogRoute._addFileChildren(BlogRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AboutRoute: AboutRoute,
-  BlogRoute: BlogRoute,
+  BlogRoute: BlogRouteWithChildren,
   ContactRoute: ContactRoute,
   FeaturesRoute: FeaturesRoute,
   LoginRoute: LoginRoute,
