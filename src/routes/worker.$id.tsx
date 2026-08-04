@@ -30,6 +30,9 @@ type WorkerProfile = {
 };
 
 export const Route = createFileRoute("/worker/$id")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    event_id: typeof search.event_id === "string" ? search.event_id : undefined,
+  }),
   head: ({ params }) => ({
     meta: [
       { title: "Worker profile — EventOrbit AI" },
@@ -48,6 +51,7 @@ export const Route = createFileRoute("/worker/$id")({
 
 function WorkerDetail() {
   const { worker } = Route.useLoaderData();
+  const { event_id } = Route.useSearch();
 
   return (
     <SiteLayout>
@@ -118,7 +122,7 @@ function WorkerDetail() {
           </div>
 
           <div>
-            <HireCard worker={worker} />
+            <HireCard worker={worker} eventId={event_id} />
           </div>
         </div>
       </div>
@@ -126,7 +130,7 @@ function WorkerDetail() {
   );
 }
 
-function HireCard({ worker }: { worker: WorkerProfile }) {
+function HireCard({ worker, eventId }: { worker: WorkerProfile; eventId?: string }) {
   const navigate = useNavigate();
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
   const [state, setState] = useState({ event_name: "", task_name: "", venue: "", venue_address: "", event_date: "", start_time: "", end_time: "", pay_amount: "" });
@@ -153,6 +157,7 @@ function HireCard({ worker }: { worker: WorkerProfile }) {
       assigned_by: userRes.user.id,
       organization_id: null,
       organization_name: "Direct booking",
+      customer_event_id: eventId ?? null,
       event_name: state.event_name.trim(),
       task_name: state.task_name.trim(),
       venue: state.venue || null,
