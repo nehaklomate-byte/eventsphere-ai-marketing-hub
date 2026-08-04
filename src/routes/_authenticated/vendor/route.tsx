@@ -34,6 +34,7 @@ const nav: { to: string; label: string; icon: typeof LayoutDashboard; exact?: bo
   { to: "/vendor/hire-workers", label: "Hire Workers", icon: UsersRound },
   { to: "/vendor/earnings", label: "Earnings", icon: Wallet },
   { to: "/vendor/notifications", label: "Notifications", icon: Bell },
+  { to: "/vendor/messages", label: "Messages", icon: MessageCircle },
   { to: "/vendor/profile", label: "Vendor Profile", icon: Store },
   { to: "/vendor/settings", label: "Settings", icon: Settings },
   { to: "/vendor/support", label: "Support", icon: LifeBuoy },
