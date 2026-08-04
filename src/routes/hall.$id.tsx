@@ -41,6 +41,9 @@ type Hall = {
 };
 
 export const Route = createFileRoute("/hall/$id")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    event_id: typeof search.event_id === "string" ? search.event_id : undefined,
+  }),
   head: ({ params }) => ({
     meta: [
       { title: `Venue details — EventOrbit AI` },
@@ -99,6 +102,7 @@ function normalize(d: Record<string, unknown>): Hall {
 
 function HallDetail() {
   const { hall } = Route.useLoaderData();
+  const { event_id } = Route.useSearch();
   const [reviews, setReviews] = useState<Array<{ id: string; rating: number; comment: string | null; created_at: string }>>([]);
 
   useEffect(() => {
@@ -253,7 +257,7 @@ function HallDetail() {
               )}
             </div>
             <div className="mt-6">
-              <BookingAndEnquiry hallId={hall.id} hallName={hall.name} pricePerDay={hall.price_per_day} advanceAmount={hall.advance_amount} />
+              <BookingAndEnquiry hallId={hall.id} hallName={hall.name} pricePerDay={hall.price_per_day} advanceAmount={hall.advance_amount} eventId={event_id} />
             </div>
           </div>
         </aside>
@@ -322,8 +326,8 @@ const EVENT_TYPES = [
 ];
 
 function BookingAndEnquiry({
-  hallId, hallName, pricePerDay, advanceAmount,
-}: { hallId: string; hallName: string; pricePerDay: number | null; advanceAmount: number | null }) {
+  hallId, hallName, pricePerDay, advanceAmount, eventId,
+}: { hallId: string; hallName: string; pricePerDay: number | null; advanceAmount: number | null; eventId?: string }) {
   const [mode, setMode] = useState<"booking" | "enquiry">("booking");
   return (
     <div>
@@ -344,7 +348,7 @@ function BookingAndEnquiry({
         </button>
       </div>
       {mode === "booking"
-        ? <BookingForm hallId={hallId} hallName={hallName} pricePerDay={pricePerDay} advanceAmount={advanceAmount} />
+        ? <BookingForm hallId={hallId} hallName={hallName} pricePerDay={pricePerDay} advanceAmount={advanceAmount} eventId={eventId} />
         : <EnquiryForm hallId={hallId} />}
     </div>
   );
@@ -367,8 +371,8 @@ const bookingSchema = z.object({
 });
 
 function BookingForm({
-  hallId, hallName, pricePerDay, advanceAmount,
-}: { hallId: string; hallName: string; pricePerDay: number | null; advanceAmount: number | null }) {
+  hallId, hallName, pricePerDay, advanceAmount, eventId,
+}: { hallId: string; hallName: string; pricePerDay: number | null; advanceAmount: number | null; eventId?: string }) {
   const [state, setState] = useState({
     event_name: "", organizer_type: "", organizer_type_other: "", event_type: "", event_type_other: "",
     contact_person: "", contact_phone: "", contact_email: "", event_date: "", start_time: "", end_time: "",
@@ -404,6 +408,7 @@ function BookingForm({
       kind: "hall",
       target_id: hallId,
       target_name: hallName,
+      customer_event_id: eventId ?? null,
       event_date: d.event_date,
       amount: pricePerDay ?? 0,
       status: "pending",
