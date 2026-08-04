@@ -98,7 +98,7 @@ function Marketplace() {
       <PageHeader
         eyebrow="Marketplace"
         title="Discover verified venues, vendors and workers."
-        description="Everyone on EventOrbit is verified by our team before they're listed. Filter by city and category, then enquire or book directly.">
+        description="Every profile here is checked by our team before it appears. Pick a tab, filter by city or category, open a profile to see real capacity, facilities and rates, then send an enquiry — no phone calls needed to get started.">
         <div className="mt-6 inline-flex rounded-full border border-border bg-card p-1 text-sm">
           {(Object.keys(TAB_META) as Tab[]).map((t) => {
             const Icon = TAB_META[t].icon;
