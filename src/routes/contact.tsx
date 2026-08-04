@@ -6,17 +6,19 @@ import { Mail, MapPin, Phone } from "lucide-react";
 export const Route = createFileRoute("/contact")({
   head: () => ({
     meta: [
-      { title: "Contact — EventOrbit AI" },
-      { name: "description", content: "Talk to sales, request a demo, or say hi. We usually respond within one business day." },
-      { property: "og:title", content: "Contact — EventOrbit AI" },
-      { property: "og:description", content: "Get in touch with the EventOrbit AI team." },
+      { title: "Contact EventOrbit — Talk to the Team" },
+      { name: "description", content: "Questions about listing your venue, vendor business or worker profile, verification, or a feature you need? Send us a message and we'll reply within one business day." },
+      { property: "og:title", content: "Contact EventOrbit — Talk to the Team" },
+      { property: "og:description", content: "Get help with listing, verification or anything on the roadmap." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { property: "og:url", content: "/contact" },
     ],
     links: [{ rel: "canonical", href: "/contact" }],
   }),
   component: () => (
     <SiteLayout>
-      <PageHeader eyebrow="Contact" title="Let's build something memorable." description="Sales, partnerships, press, or just curious — we'd love to hear from you." />
+      <PageHeader eyebrow="Contact" title="Talk to the people building it." description="Listing help, verification questions, partnership ideas or a feature you need — it reaches the team directly." />
       <section className="mx-auto max-w-7xl px-5 md:px-8 py-20 grid gap-10 lg:grid-cols-2">
         <form onSubmit={(e) => e.preventDefault()} className="rounded-3xl border border-border bg-card p-6 md:p-8 shadow-soft space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
