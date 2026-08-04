@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Save, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchMyOrganization, type Organization } from "@/lib/organization";
-import { AccountSettingsSection} from "@/components/AccountSettingsSections";
+import { AccountSettingsSection } from "@/components/AccountSettingsSections";
 
 export const Route = createFileRoute("/_authenticated/organization/settings")({
   head: () => ({ meta: [{ title: "Settings — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
