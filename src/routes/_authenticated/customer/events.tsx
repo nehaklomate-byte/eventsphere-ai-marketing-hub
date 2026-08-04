@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { CalendarDays, Plus, Loader2 } from "lucide-react";
@@ -60,7 +60,7 @@ function EventsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filtered.map((e) => (
-            <div key={e.id} className="rounded-2xl border border-border bg-card p-5">
+            <Link key={e.id} to="/customer/events/$eventId" params={{ eventId: e.id }} className="block rounded-2xl border border-border bg-card p-5 hover:border-brand-violet/50 transition-colors">
               <div className="flex items-center justify-between">
                 <div className="text-xs font-semibold uppercase tracking-widest text-brand-violet">{e.event_type ?? "Event"}</div>
                 <span className="rounded-full bg-brand-violet/10 px-2 py-0.5 text-[10px] font-semibold capitalize text-brand-violet">{e.status}</span>
@@ -72,7 +72,8 @@ function EventsPage() {
                 <div className="flex justify-between"><dt>Guests</dt><dd>{e.guests ?? "—"}</dd></div>
                 <div className="flex justify-between"><dt>Budget</dt><dd>{e.budget ? `₹${Number(e.budget).toLocaleString("en-IN")}` : "—"}</dd></div>
               </dl>
-            </div>
+              <div className="mt-3 text-xs font-semibold text-brand-violet">View event & hire team →</div>
+            </Link>
           ))}
         </div>
       )}
