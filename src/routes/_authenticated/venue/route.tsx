@@ -62,6 +62,7 @@ const NAV: { to: string; label: string; icon: React.ComponentType<{ className?: 
   { to: "/venue/hire-workers", label: "Hire Workers", icon: HardHat },
   { to: "/venue/hire-vendors", label: "Hire Vendors", icon: Store },
   { to: "/venue/notifications", label: "Notifications", icon: Bell },
+  { to: "/venue/messages", label: "Messages", icon: MessageCircle },
   { to: "/venue/profile", label: "Venue Profile", icon: Building2 },
   { to: "/venue/settings", label: "Settings", icon: Settings },
 ];
