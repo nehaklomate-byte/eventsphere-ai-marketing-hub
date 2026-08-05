@@ -1,7 +1,8 @@
 import { createFileRoute, Outlet, Link, useRouterState, useNavigate, redirect } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import {
   LayoutDashboard, Inbox, CalendarCheck, Building2, Settings, LogOut, Menu, X, Clock, ShieldAlert, MailWarning, HardHat, Bell, Store,
+  MessageCircle,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { PayoutBanner } from "@/components/PayoutBanner";
@@ -55,7 +56,7 @@ async function fetchGateData(): Promise<{ profile: ProfileGate | null; hall: Hal
   return { profile: profile as ProfileGate, hall: hall as HallGate };
 }
 
-const NAV: { to: string; label: string; icon: React.ComponentType<{ className?: string }>; exact?: boolean; soon?: boolean }[] = [
+const NAV: { to: string; label: string; icon: ComponentType<{ className?: string }>; exact?: boolean; soon?: boolean }[] = [
   { to: "/venue", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/venue/enquiries", label: "Enquiries", icon: Inbox },
   { to: "/venue/bookings", label: "Bookings", icon: CalendarCheck },
