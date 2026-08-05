@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
 import {
   User, ShieldCheck, Lock, Eye, Bell, Palette, Globe, Loader2, Save, Upload,
-  LogOut, Trash2, AlertTriangle, X, Sun, Moon, Monitor,
+  LogOut, Trash2, AlertTriangle, X, Sun, Moon, Monitor, Copy, ShieldOff, KeyRound,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
@@ -14,6 +14,7 @@ import {
   applyTheme, TIMEZONES, LANGUAGES, NOTIFICATION_EVENT_LABEL,
   type AccountProfile, type Preferences, type NotificationChannel, type NotificationEvent,
 } from "@/lib/settings";
+import { listFactors, enrollTotp, verifyEnrollment, unenroll } from "@/lib/mfa";
 
 const TABS = ["basic", "security", "privacy", "notifications", "appearance"] as const;
 type Tab = (typeof TABS)[number];
@@ -176,9 +177,7 @@ function SecurityTab({ userId }: { userId: string }) {
       </div>
 
       <div className="border-t border-border pt-6">
-        <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><ShieldCheck className="h-4 w-4" /> Two-factor authentication</h3>
-        <p className="text-xs text-muted-foreground mb-2">Coming soon — an extra verification step at login.</p>
-        <span className="inline-block rounded-full bg-muted px-2.5 py-1 text-[10px] font-semibold text-muted-foreground">Not yet available</span>
+        <TwoFactorSection userId={userId} />
       </div>
 
       <div className="border-t border-border pt-6">
