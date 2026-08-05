@@ -79,7 +79,7 @@ function VendorDetail() {
               ) : (
                 <div className="grid h-20 w-20 place-items-center rounded-2xl bg-accent text-muted-foreground"><Wrench className="h-8 w-8" /></div>
               )}
-              <div>
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="font-display text-2xl md:text-3xl font-semibold">{vendor.business_name}</h1>
                   {vendor.verified && (
@@ -87,6 +87,7 @@ function VendorDetail() {
                       <BadgeCheck className="h-3.5 w-3.5" /> Verified
                     </span>
                   )}
+                  <WishlistButton kind="vendor" targetId={vendor.id} targetName={vendor.business_name} imageUrl={vendor.logo_url} className="ml-auto" />
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                   {vendor.category && <span>{vendor.category}</span>}
@@ -94,8 +95,21 @@ function VendorDetail() {
                   {vendor.years_experience != null && <span>{vendor.years_experience}+ yrs experience</span>}
                   {vendor.review_count > 0 && <span className="inline-flex items-center gap-1"><Star className="h-3.5 w-3.5 fill-brand-orange text-brand-orange" />{vendor.rating.toFixed(1)} ({vendor.review_count})</span>}
                 </div>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 font-medium">
+                    <Users className="h-3.5 w-3.5" />
+                    {vendor.team_size && vendor.team_size > 1 ? `Team of ${vendor.team_size}` : vendor.team_size === 1 ? "Solo professional" : "Team size not listed"}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 font-medium">
+                    <IndianRupee className="h-3.5 w-3.5" />
+                    {vendor.base_price
+                      ? `₹${Number(vendor.base_price).toLocaleString("en-IN")} ${vendor.pricing_mode === "individual" ? "per person" : "for the whole team"}`
+                      : "Price on request"}
+                  </span>
+                </div>
               </div>
             </div>
+
 
             {vendor.portfolio?.length > 0 && (
               <div className="mt-8">
