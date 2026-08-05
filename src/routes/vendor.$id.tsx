@@ -7,8 +7,6 @@ import {
 import { SiteLayout } from "@/components/SiteLayout";
 import { WishlistButton } from "@/components/WishlistButton";
 import { supabase } from "@/integrations/supabase/client";
-import { z } from "zod";
-import { emailSchema, phoneSchema } from "@/lib/validation";
 
 
 type Vendor = {
@@ -51,14 +49,6 @@ export const Route = createFileRoute("/vendor/$id")({
     return { vendor: data as unknown as Vendor };
   },
   component: VendorDetail,
-});
-
-const enquirySchema = z.object({
-  contact_name: z.string().min(2, "Enter your name"),
-  contact_email: emailSchema,
-  contact_phone: phoneSchema.optional().or(z.literal("")),
-  event_date: z.string().min(1, "Pick a date"),
-  message: z.string().optional(),
 });
 
 function VendorDetail() {
@@ -138,6 +128,8 @@ function VendorDetail() {
                 {vendor.facebook && <a href={vendor.facebook} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-brand-violet hover:underline"><Facebook className="h-4 w-4" /> Facebook</a>}
               </div>
             )}
+
+            <VendorReviews vendorId={vendor.id} />
           </div>
 
           <div>
@@ -149,21 +141,14 @@ function VendorDetail() {
   );
 }
 
-/** Direct hire (creates a real vendor_tasks job the vendor accepts/rejects
- *  from their dashboard) with enquiry kept as the lighter "just asking" path. */
+/** Direct hire only — creates a real vendor_tasks job the vendor
+ *  accepts/rejects from their dashboard, with in-app chat attached.
+ *  The old "just send an enquiry" path is removed: it went nowhere
+ *  trackable for the customer (see MessagesInbox/ChatPanel instead). */
 function BookOrEnquire({ vendor }: { vendor: Vendor }) {
-  const [tab, setTab] = useState<"book" | "enquire">("book");
   return (
     <div className="sticky top-24 space-y-3">
-      <div className="flex rounded-full border border-border bg-card p-1 text-sm">
-        {(["book", "enquire"] as const).map((t) => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`flex-1 rounded-full px-3 py-1.5 font-semibold capitalize transition ${tab === t ? "bg-gradient-brand text-white" : "text-muted-foreground hover:bg-accent"}`}>
-            {t === "book" ? "Book now" : "Send enquiry"}
-          </button>
-        ))}
-      </div>
-      {tab === "book" ? <VendorHireCard vendor={vendor} /> : <EnquiryCard vendorId={vendor.id} />}
+      <VendorHireCard vendor={vendor} />
     </div>
   );
 }
@@ -268,77 +253,38 @@ function VendorHireCard({ vendor }: { vendor: Vendor }) {
   );
 }
 
-
-function EnquiryCard({ vendorId }: { vendorId: string }) {
-  const [state, setState] = useState({ contact_name: "", contact_email: "", contact_phone: "", event_date: "", message: "" });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [submitting, setSubmitting] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setErrors({}); setErr(null);
-    const parsed = enquirySchema.safeParse(state);
-    if (!parsed.success) {
-      const fe: Record<string, string> = {};
-      parsed.error.issues.forEach((i) => { fe[i.path[0] as string] = i.message; });
-      setErrors(fe); return;
-    }
-    setSubmitting(true);
-    const { data: userRes } = await supabase.auth.getUser();
-    const { error } = await supabase.from("enquiries").insert({
-      vendor_id: vendorId,
-      requester_id: userRes.user?.id ?? null,
-      contact_name: parsed.data.contact_name,
-      contact_email: parsed.data.contact_email,
-      contact_phone: parsed.data.contact_phone || null,
-      event_date: parsed.data.event_date,
-      message: parsed.data.message || null,
-    });
-    setSubmitting(false);
-    if (error) { setErr("Could not send enquiry. Please try again."); return; }
-    setSent(true);
-  }
-
-  if (sent) {
-    return (
-      <div className="rounded-2xl border border-brand-violet/30 bg-accent/40 p-5 text-sm sticky top-24">
-        <div className="flex items-center gap-2 font-semibold text-foreground"><CheckCircle2 className="h-5 w-5 text-emerald-600" /> Enquiry sent!</div>
-        <p className="mt-1.5 text-muted-foreground">The vendor will get back to you shortly. Our team monitors every enquiry too.</p>
-      </div>
-    );
-  }
+function VendorReviews({ vendorId }: { vendorId: string }) {
+  const [reviews, setReviews] = useState<Array<{ id: string; rating: number; comment: string | null; created_at: string }>>([]);
+  useEffect(() => {
+    supabase.from("customer_reviews" as never)
+      .select("id,rating,comment,created_at")
+      .eq("kind" as never, "vendor" as never)
+      .eq("target_id" as never, vendorId as never)
+      .order("created_at" as never, { ascending: false })
+      .limit(6)
+      .then(({ data }) => setReviews((data as never) ?? []));
+  }, [vendorId]);
 
   return (
-    <form onSubmit={submit} className="rounded-2xl border border-border bg-card p-5 shadow-soft sticky top-24 space-y-3">
-      <h3 className="font-display text-lg font-semibold">Enquire with this vendor</h3>
-      <div>
-        <input placeholder="Your name" value={state.contact_name} onChange={(e) => setState((s) => ({ ...s, contact_name: e.target.value }))}
-          className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
-        {errors.contact_name && <p className="mt-1 text-xs text-destructive">{errors.contact_name}</p>}
-      </div>
-      <div>
-        <input type="email" placeholder="Email" value={state.contact_email} onChange={(e) => setState((s) => ({ ...s, contact_email: e.target.value }))}
-          className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
-        {errors.contact_email && <p className="mt-1 text-xs text-destructive">{errors.contact_email}</p>}
-      </div>
-      <div className="relative">
-        <Phone className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <input placeholder="Phone (optional)" value={state.contact_phone} onChange={(e) => setState((s) => ({ ...s, contact_phone: e.target.value }))}
-          className="w-full rounded-xl border border-input bg-background pl-9 pr-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
-      </div>
-      <div>
-        <input type="date" value={state.event_date} onChange={(e) => setState((s) => ({ ...s, event_date: e.target.value }))}
-          className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
-        {errors.event_date && <p className="mt-1 text-xs text-destructive">{errors.event_date}</p>}
-      </div>
-      <textarea placeholder="What do you need for your event?" rows={3} value={state.message} onChange={(e) => setState((s) => ({ ...s, message: e.target.value }))}
-        className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
-      {err && <p className="text-xs text-destructive">{err}</p>}
-      <button type="submit" disabled={submitting} className="inline-flex w-full items-center justify-center gap-2 rounded-full btn-brand btn-brand-hover px-4 py-2.5 text-sm font-semibold disabled:opacity-70">
-        <Send className="h-4 w-4" /> {submitting ? "Sending…" : "Send enquiry"}
-      </button>
-    </form>
+    <div className="mt-8 border-t border-border pt-8">
+      <h2 className="font-display text-lg font-semibold mb-3">Reviews</h2>
+      {reviews.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No reviews yet. Be the first to review after your booking.</p>
+      ) : (
+        <div className="space-y-4">
+          {reviews.map((r) => (
+            <div key={r.id} className="rounded-xl border border-border p-4">
+              <div className="flex items-center gap-1 text-brand-orange">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star key={i} className={`h-4 w-4 ${i < r.rating ? "fill-brand-orange" : "text-muted-foreground/40"}`} />
+                ))}
+              </div>
+              {r.comment && <p className="mt-2 text-sm text-foreground/90">{r.comment}</p>}
+              <p className="mt-1 text-[11px] text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
