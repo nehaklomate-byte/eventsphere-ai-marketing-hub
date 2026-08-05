@@ -129,6 +129,8 @@ function WorkerDetail() {
                 </div>
               </div>
             )}
+
+            <WorkerReviews workerId={worker.id} />
           </div>
 
           <div>
@@ -233,5 +235,41 @@ function HireCard({ worker, eventId }: { worker: WorkerProfile; eventId?: string
         <Send className="h-4 w-4" /> {submitting ? "Sending…" : "Send booking request"}
       </button>
     </form>
+  );
+}
+
+function WorkerReviews({ workerId }: { workerId: string }) {
+  const [reviews, setReviews] = useState<Array<{ id: string; rating: number; comment: string | null; created_at: string }>>([]);
+  useEffect(() => {
+    supabase.from("customer_reviews" as never)
+      .select("id,rating,comment,created_at")
+      .eq("kind" as never, "worker" as never)
+      .eq("target_id" as never, workerId as never)
+      .order("created_at" as never, { ascending: false })
+      .limit(6)
+      .then(({ data }) => setReviews((data as never) ?? []));
+  }, [workerId]);
+
+  return (
+    <div className="mt-8 border-t border-border pt-8">
+      <h2 className="font-display text-lg font-semibold mb-3">Reviews</h2>
+      {reviews.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No reviews yet. Be the first to review after your booking.</p>
+      ) : (
+        <div className="space-y-4">
+          {reviews.map((r) => (
+            <div key={r.id} className="rounded-xl border border-border p-4">
+              <div className="flex items-center gap-1 text-brand-orange">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star key={i} className={`h-4 w-4 ${i < r.rating ? "fill-brand-orange" : "text-muted-foreground/40"}`} />
+                ))}
+              </div>
+              {r.comment && <p className="mt-2 text-sm text-foreground/90">{r.comment}</p>}
+              <p className="mt-1 text-[11px] text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
