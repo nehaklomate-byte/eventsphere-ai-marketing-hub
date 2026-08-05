@@ -83,7 +83,7 @@ export async function fetchPendingCounts(): Promise<Record<VerificationRole, num
   return out;
 }
 
-async function writeAudit(action: string, table: string, id: string, oldValue: unknown, newValue: unknown) {
+async function writeAudit(action: string, table: string, id: string | null, oldValue: unknown, newValue: unknown) {
   try {
     const { data: userData } = await supabase.auth.getUser();
     const { error } = await supabase.from("audit_logs" as never).insert({
@@ -264,4 +264,183 @@ export function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// =============================================================
+// Earnings / Payments — admin visibility into money moving on the
+// platform. Depends on migration 20260805110000_admin_payment_visibility.sql:
+// before that migration, admin had no read access to customer_bookings,
+// worker_payouts, or vendor_payouts at all, so this data was invisible
+// no matter what UI existed on top of it.
+// =============================================================
+
+export type IncomingPaymentSource = "hall" | "worker" | "vendor";
+
+export type IncomingPayment = {
+  id: string;
+  source: IncomingPaymentSource;
+  title: string;
+  amount: number;
+  commission_amount: number;
+  razorpay_payment_id: string | null;
+  paid_at: string | null;
+  created_at: string;
+};
+
+/** Every payment that has actually cleared through Razorpay, across
+ * hall bookings, worker tasks, and vendor tasks — money that has
+ * landed in the platform's account, whether or not it's been paid
+ * out to the worker/vendor/venue owner yet. */
+export async function fetchIncomingPayments(): Promise<IncomingPayment[]> {
+  const [halls, workers, vendors] = await Promise.all([
+    supabase.from("customer_bookings" as never)
+      .select("id, target_name, amount, commission_amount, razorpay_payment_id, paid_at, created_at" as never)
+      .eq("kind" as never, "hall" as never).eq("payment_status" as never, "paid" as never)
+      .order("created_at" as never, { ascending: false }),
+    supabase.from("worker_tasks" as never)
+      .select("id, event_name, task_name, payment_amount, razorpay_payment_id, updated_at" as never)
+      .eq("payment_status" as never, "paid" as never)
+      .order("updated_at" as never, { ascending: false }),
+    supabase.from("vendor_tasks" as never)
+      .select("id, event_name, task_name, payment_amount, razorpay_payment_id, paid_at, updated_at" as never)
+      .eq("payment_status" as never, "paid" as never)
+      .order("updated_at" as never, { ascending: false }),
+  ]);
+  if (halls.error) throw halls.error;
+  if (workers.error) throw workers.error;
+  if (vendors.error) throw vendors.error;
+
+  type HallRow = { id: string; target_name: string; amount: number; commission_amount: number; razorpay_payment_id: string | null; paid_at: string | null; created_at: string };
+  type TaskRow = { id: string; event_name: string; task_name: string; payment_amount: number | null; razorpay_payment_id: string | null; paid_at?: string | null; updated_at: string };
+
+  const out: IncomingPayment[] = [];
+  for (const r of (halls.data as unknown as HallRow[]) ?? []) {
+    out.push({ id: r.id, source: "hall", title: r.target_name, amount: r.amount, commission_amount: r.commission_amount ?? 0, razorpay_payment_id: r.razorpay_payment_id, paid_at: r.paid_at, created_at: r.created_at });
+  }
+  for (const r of (workers.data as unknown as TaskRow[]) ?? []) {
+    out.push({ id: r.id, source: "worker", title: `${r.event_name} — ${r.task_name}`, amount: r.payment_amount ?? 0, commission_amount: 0, razorpay_payment_id: r.razorpay_payment_id, paid_at: r.updated_at, created_at: r.updated_at });
+  }
+  for (const r of (vendors.data as unknown as TaskRow[]) ?? []) {
+    out.push({ id: r.id, source: "vendor", title: `${r.event_name} — ${r.task_name}`, amount: r.payment_amount ?? 0, commission_amount: 0, razorpay_payment_id: r.razorpay_payment_id, paid_at: r.paid_at ?? r.updated_at, created_at: r.updated_at });
+  }
+  return out.sort((a, b) => (b.paid_at ?? b.created_at).localeCompare(a.paid_at ?? a.created_at));
+}
+
+export type PayoutSource = "worker" | "vendor" | "venue";
+
+export type PayoutRow = {
+  id: string;
+  source: PayoutSource;
+  title: string;
+  amount: number;
+  status: "pending" | "paid";
+  payout_reference: string | null;
+  paid_at: string | null;
+  created_at: string;
+};
+
+/** What the platform owes out to workers, vendors, and venue owners —
+ * the other half of the money story. Manual-payout model: admin reads
+ * the payout_upi_id on the recipient's row, transfers outside the
+ * platform, then marks it paid here. */
+export async function fetchPayouts(): Promise<PayoutRow[]> {
+  const [workers, vendors, venues] = await Promise.all([
+    supabase.from("worker_payouts" as never)
+      .select("id, amount, status, payout_reference, paid_at, created_at, worker_task_id, worker_tasks:worker_task_id(event_name, task_name)" as never)
+      .order("created_at" as never, { ascending: false }),
+    supabase.from("vendor_payouts" as never)
+      .select("id, amount, status, payout_reference, paid_at, created_at, vendor_task_id, vendor_tasks:vendor_task_id(event_name, task_name)" as never)
+      .order("created_at" as never, { ascending: false }),
+    supabase.from("venue_payouts" as never)
+      .select("id, amount, status, payout_reference, paid_at, created_at, booking_id, customer_bookings:booking_id(target_name)" as never)
+      .order("created_at" as never, { ascending: false }),
+  ]);
+  if (workers.error) throw workers.error;
+  if (vendors.error) throw vendors.error;
+  if (venues.error) throw venues.error;
+
+  type Base = { id: string; amount: number; status: "pending" | "paid"; payout_reference: string | null; paid_at: string | null; created_at: string };
+  type WorkerRow = Base & { worker_tasks: { event_name: string; task_name: string } | null };
+  type VendorRow = Base & { vendor_tasks: { event_name: string; task_name: string } | null };
+  type VenueRow = Base & { customer_bookings: { target_name: string } | null };
+
+  const out: PayoutRow[] = [];
+  for (const r of (workers.data as unknown as WorkerRow[]) ?? []) {
+    out.push({ id: r.id, source: "worker", title: r.worker_tasks ? `${r.worker_tasks.event_name} — ${r.worker_tasks.task_name}` : "Worker task", amount: r.amount, status: r.status, payout_reference: r.payout_reference, paid_at: r.paid_at, created_at: r.created_at });
+  }
+  for (const r of (vendors.data as unknown as VendorRow[]) ?? []) {
+    out.push({ id: r.id, source: "vendor", title: r.vendor_tasks ? `${r.vendor_tasks.event_name} — ${r.vendor_tasks.task_name}` : "Vendor task", amount: r.amount, status: r.status, payout_reference: r.payout_reference, paid_at: r.paid_at, created_at: r.created_at });
+  }
+  for (const r of (venues.data as unknown as VenueRow[]) ?? []) {
+    out.push({ id: r.id, source: "venue", title: r.customer_bookings ? r.customer_bookings.target_name : "Hall booking", amount: r.amount, status: r.status, payout_reference: r.payout_reference, paid_at: r.paid_at, created_at: r.created_at });
+  }
+  return out.sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+const PAYOUT_TABLE: Record<PayoutSource, string> = { worker: "worker_payouts", vendor: "vendor_payouts", venue: "venue_payouts" };
+
+/** Marks a payout as paid — the manual half of the flow (admin has
+ * already sent the money via UPI outside the platform, using the
+ * recipient's payout_upi_id, and is recording that here). */
+export async function markPayoutPaid(source: PayoutSource, id: string, payoutReference: string, adminUserId: string): Promise<void> {
+  const { error } = await supabase.from(PAYOUT_TABLE[source] as never)
+    .update({ status: "paid", payout_reference: payoutReference || null, paid_by: adminUserId, paid_at: new Date().toISOString() } as never)
+    .eq("id" as never, id as never);
+  if (error) throw error;
+}
+
+// =============================================================
+// Broadcast Center — send a platform_notifications row to many users
+// at once. Reuses the same table the "account approved/rejected"
+// notify() helper already writes to (see above), just fanned out to
+// an audience instead of one user_id.
+// =============================================================
+
+export type BroadcastAudience = "all" | "customer" | "hall_owner" | "vendor" | "worker" | "organization";
+
+/** Resolves an audience to concrete user_ids via profiles.primary_role,
+ * then bulk-inserts one platform_notifications row per recipient.
+ * Returns the recipient count so the UI can confirm "sent to N users". */
+export async function sendBroadcast(audience: BroadcastAudience, title: string, body: string, type: "info" | "success" | "warning" | "error" = "info"): Promise<number> {
+  let query = supabase.from("profiles").select("id");
+  if (audience !== "all") query = query.eq("primary_role", audience);
+  const { data: profiles, error: profilesErr } = await query.limit(5000);
+  if (profilesErr) throw profilesErr;
+  const ids = (profiles as { id: string }[] | null)?.map((p) => p.id) ?? [];
+  if (ids.length === 0) return 0;
+
+  const rows = ids.map((user_id) => ({ user_id, title, body, type }));
+  // Insert in chunks so one broadcast to a large audience doesn't hit
+  // a request-size limit.
+  const CHUNK = 500;
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const { error } = await supabase.from("platform_notifications" as never).insert(rows.slice(i, i + CHUNK) as never);
+    if (error) throw error;
+  }
+  await writeAudit("send_broadcast", "platform_notifications", null, null, { audience, title, recipient_count: ids.length });
+  return ids.length;
+}
+
+/** Recent broadcasts, reconstructed by grouping platform_notifications
+ * rows that share the same title+body+created minute — there's no
+ * separate "broadcasts" table, so this is a best-effort history view
+ * rather than a source of truth. */
+export async function fetchRecentBroadcasts(): Promise<{ title: string; body: string; type: string; created_at: string; recipient_count: number }[]> {
+  const { data, error } = await supabase
+    .from("platform_notifications" as never)
+    .select("title, body, type, created_at" as never)
+    .order("created_at" as never, { ascending: false })
+    .limit(2000);
+  if (error) throw error;
+  type Row = { title: string; body: string; type: string; created_at: string };
+  const rows = (data as unknown as Row[]) ?? [];
+  const groups = new Map<string, { title: string; body: string; type: string; created_at: string; recipient_count: number }>();
+  for (const r of rows) {
+    const minuteKey = r.created_at.slice(0, 16); // group by same minute
+    const key = `${r.title}|${r.body}|${minuteKey}`;
+    const existing = groups.get(key);
+    if (existing) existing.recipient_count += 1;
+    else groups.set(key, { title: r.title, body: r.body, type: r.type, created_at: r.created_at, recipient_count: 1 });
+  }
+  return Array.from(groups.values()).filter((g) => g.recipient_count > 1).slice(0, 30);
 }
