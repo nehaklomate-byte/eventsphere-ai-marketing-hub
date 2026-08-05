@@ -58,7 +58,9 @@ function ProfilePage() {
       city: form.city || null,
       state: form.state || null,
       pincode: form.pincode || null,
+      avatar_url: form.avatar_url || null,
       profile_completion: completion,
+
     };
     const { error } = await supabase.from("customers").update(payload).eq("user_id", user!.id);
     setBusy(false);
@@ -86,7 +88,13 @@ function ProfilePage() {
         </div>
         <div className="mb-6 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full bg-gradient-brand" style={{ width: `${completion}%` }} /></div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <AvatarPicker
+          url={form.avatar_url ?? null}
+          userId={user?.id}
+          onChange={(url) => setForm((f) => ({ ...f, avatar_url: url }))}
+        />
+
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
           <Field label="Full name *" v={form.full_name ?? ""} on={(v) => setForm({ ...form, full_name: v })} err={errors.full_name} />
           <Field label="Email" v={user?.email ?? ""} disabled />
           <Field label="Phone" v={form.phone ?? ""} on={(v) => setForm({ ...form, phone: v })} err={errors.phone} placeholder="+91 98xxxxxxxx" />
@@ -98,6 +106,7 @@ function ProfilePage() {
           <Field label="State" v={form.state ?? ""} on={(v) => setForm({ ...form, state: v })} />
           <Field label="Pincode" v={form.pincode ?? ""} on={(v) => setForm({ ...form, pincode: v })} err={errors.pincode} />
         </div>
+
 
         <div className="mt-6 flex flex-wrap gap-3">
           <button onClick={save} disabled={busy} className="inline-flex items-center gap-2 rounded-full btn-brand btn-brand-hover px-5 py-2 text-sm font-semibold text-white">
@@ -115,7 +124,40 @@ function ProfilePage() {
   );
 }
 
+function AvatarPicker({ url, userId, onChange }: { url: string | null; userId?: string; onChange: (url: string) => void }) {
+  const [busy, setBusy] = useState(false);
+
+  async function upload(file: File) {
+    if (!userId) return;
+    if (!file.type.startsWith("image/")) return toast.error("Please pick an image file");
+    if (file.size > 5 * 1024 * 1024) return toast.error("Image must be under 5 MB");
+    setBusy(true);
+    const path = `${userId}/avatar-${Date.now()}-${file.name.replace(/[^\w.-]/g, "_")}`;
+    const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+    if (error) { setBusy(false); return toast.error(error.message); }
+    const { data } = await supabase.storage.from("avatars").createSignedUrl(path, 60 * 60 * 24 * 365);
+    setBusy(false);
+    if (data?.signedUrl) { onChange(data.signedUrl); toast.success("Photo uploaded — save to apply"); }
+  }
+
+  return (
+    <div className="flex items-center gap-4">
+      {url ? (
+        <img src={url} alt="Profile photo" className="h-16 w-16 rounded-full border border-border object-cover" />
+      ) : (
+        <div className="grid h-16 w-16 place-items-center rounded-full bg-muted text-xs text-muted-foreground">No photo</div>
+      )}
+      <label className="cursor-pointer rounded-full border border-input px-4 py-2 text-xs font-semibold hover:bg-accent">
+        {busy ? "Uploading…" : url ? "Change photo" : "Upload photo"}
+        <input type="file" accept="image/*" className="hidden" disabled={busy}
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f); }} />
+      </label>
+    </div>
+  );
+}
+
 function Field({ label, v, on, type = "text", err, disabled, placeholder }: { label: string; v: string; on?: (v: string) => void; type?: string; err?: string; disabled?: boolean; placeholder?: string }) {
+
   return (
     <label className="block">
       <span className="mb-1 block text-xs font-semibold">{label}</span>

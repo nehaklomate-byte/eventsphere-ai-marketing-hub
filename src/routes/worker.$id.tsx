@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { SiteLayout } from "@/components/SiteLayout";
 import { supabase } from "@/integrations/supabase/client";
+import { WishlistButton } from "@/components/WishlistButton";
 
 type WorkerProfile = {
   id: string;
@@ -56,9 +57,18 @@ function WorkerDetail() {
   return (
     <SiteLayout>
       <div className="mx-auto max-w-6xl px-5 md:px-8 py-10">
-        <Link to="/marketplace" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" /> Back to marketplace
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link to="/marketplace" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" /> Back to marketplace
+          </Link>
+          <WishlistButton
+            kind="worker"
+            targetId={worker.id}
+            targetName={worker.full_name}
+            imageUrl={worker.photo_url}
+            className="grid h-9 w-9 place-items-center rounded-full border border-border bg-card text-brand-navy shadow-sm hover:bg-accent transition"
+          />
+        </div>
 
         <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_380px]">
           <div>

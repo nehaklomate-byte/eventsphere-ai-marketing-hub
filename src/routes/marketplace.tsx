@@ -4,6 +4,7 @@ import { SiteLayout } from "@/components/SiteLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { MapPin, Star, BadgeCheck, Loader2, Search, Users, ArrowRight, Building2, Wrench, HardHat } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { WishlistButton } from "@/components/WishlistButton";
 
 type Hall = {
   kind: "venue";
@@ -158,10 +159,17 @@ function Marketplace() {
                   )}
                   {h.category && <span className="absolute left-3 top-3 rounded-full bg-white/90 text-[10px] font-semibold text-brand-navy px-2 py-1">{h.category}</span>}
                   {h.verified && (
-                    <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-brand-blue/90 text-white text-[10px] font-semibold px-2 py-1">
+                    <span className={`absolute right-3 top-12 inline-flex items-center gap-1 rounded-full bg-brand-blue/90 text-white text-[10px] font-semibold px-2 py-1`}>
                       <BadgeCheck className="h-3 w-3" /> Verified
                     </span>
                   )}
+                  <WishlistButton
+                    kind={h.kind === "venue" ? "hall" : h.kind}
+                    targetId={h.id}
+                    targetName={h.name}
+                    imageUrl={h.cover_url || h.gallery[0]}
+                    className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-white/90 text-brand-navy shadow-sm hover:bg-white transition"
+                  />
                 </div>
                 <div className="p-4">
                   <div className="flex items-center justify-between gap-2">

@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_deactivation_requests: {
+        Row: {
+          id: string
+          reason: string | null
+          requested_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          reason?: string | null
+          requested_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          reason?: string | null
+          requested_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      account_deletion_requests: {
+        Row: {
+          id: string
+          reason: string | null
+          requested_at: string
+          resolved_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          reason?: string | null
+          requested_at?: string
+          resolved_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          reason?: string | null
+          requested_at?: string
+          resolved_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
@@ -53,10 +104,70 @@ export type Database = {
         }
         Relationships: []
       }
+      conversation_participants: {
+        Row: {
+          conversation_id: string
+          joined_at: string
+          last_read_at: string | null
+          role_label: string | null
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          joined_at?: string
+          last_read_at?: string | null
+          role_label?: string | null
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          joined_at?: string
+          last_read_at?: string | null
+          role_label?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_participants_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          context_id: string
+          context_type: string
+          created_at: string
+          id: string
+          last_message_at: string
+          subject: string | null
+        }
+        Insert: {
+          context_id: string
+          context_type: string
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          subject?: string | null
+        }
+        Update: {
+          context_id?: string
+          context_type?: string
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          subject?: string | null
+        }
+        Relationships: []
+      }
       customer_bookings: {
         Row: {
           amount: number
           created_at: string
+          customer_event_id: string | null
           details: Json
           event_date: string | null
           event_id: string | null
@@ -64,6 +175,7 @@ export type Database = {
           kind: Database["public"]["Enums"]["customer_booking_kind"]
           notes: string | null
           payment_status: Database["public"]["Enums"]["customer_payment_status"]
+          requested_event_date: string | null
           status: Database["public"]["Enums"]["customer_booking_status"]
           target_id: string | null
           target_name: string
@@ -73,6 +185,7 @@ export type Database = {
         Insert: {
           amount?: number
           created_at?: string
+          customer_event_id?: string | null
           details?: Json
           event_date?: string | null
           event_id?: string | null
@@ -80,6 +193,7 @@ export type Database = {
           kind: Database["public"]["Enums"]["customer_booking_kind"]
           notes?: string | null
           payment_status?: Database["public"]["Enums"]["customer_payment_status"]
+          requested_event_date?: string | null
           status?: Database["public"]["Enums"]["customer_booking_status"]
           target_id?: string | null
           target_name: string
@@ -89,6 +203,7 @@ export type Database = {
         Update: {
           amount?: number
           created_at?: string
+          customer_event_id?: string | null
           details?: Json
           event_date?: string | null
           event_id?: string | null
@@ -96,6 +211,7 @@ export type Database = {
           kind?: Database["public"]["Enums"]["customer_booking_kind"]
           notes?: string | null
           payment_status?: Database["public"]["Enums"]["customer_payment_status"]
+          requested_event_date?: string | null
           status?: Database["public"]["Enums"]["customer_booking_status"]
           target_id?: string | null
           target_name?: string
@@ -103,6 +219,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "customer_bookings_customer_event_id_fkey"
+            columns: ["customer_event_id"]
+            isOneToOne: false
+            referencedRelation: "customer_events"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "customer_bookings_event_id_fkey"
             columns: ["event_id"]
@@ -425,6 +548,8 @@ export type Database = {
           hall_id: string | null
           id: string
           message: string | null
+          owner_reply: string | null
+          replied_at: string | null
           requester_id: string | null
           status: Database["public"]["Enums"]["enquiry_status"]
           vendor_id: string | null
@@ -440,6 +565,8 @@ export type Database = {
           hall_id?: string | null
           id?: string
           message?: string | null
+          owner_reply?: string | null
+          replied_at?: string | null
           requester_id?: string | null
           status?: Database["public"]["Enums"]["enquiry_status"]
           vendor_id?: string | null
@@ -455,6 +582,8 @@ export type Database = {
           hall_id?: string | null
           id?: string
           message?: string | null
+          owner_reply?: string | null
+          replied_at?: string | null
           requester_id?: string | null
           status?: Database["public"]["Enums"]["enquiry_status"]
           vendor_id?: string | null
@@ -698,6 +827,38 @@ export type Database = {
           working_hours?: string | null
         }
         Relationships: []
+      }
+      messages: {
+        Row: {
+          body: string
+          conversation_id: string
+          created_at: string
+          id: string
+          sender_id: string
+        }
+        Insert: {
+          body: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          sender_id: string
+        }
+        Update: {
+          body?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       org_departments: {
         Row: {
@@ -1136,15 +1297,23 @@ export type Database = {
           alt_phone: string | null
           avatar_url: string | null
           created_at: string
+          date_of_birth: string | null
           email: string | null
           email_verified: boolean
           full_name: string | null
+          gender: string | null
           id: string
+          language_preference: string
+          notify_new_task: boolean
+          notify_status_updates: boolean
           payout_upi_id: string | null
           phone: string | null
           phone_verified: boolean
+          preferences: Json
           primary_role: Database["public"]["Enums"]["app_role"] | null
+          timezone: string
           updated_at: string
+          username: string | null
         }
         Insert: {
           account_rejection_reason?: string | null
@@ -1152,15 +1321,23 @@ export type Database = {
           alt_phone?: string | null
           avatar_url?: string | null
           created_at?: string
+          date_of_birth?: string | null
           email?: string | null
           email_verified?: boolean
           full_name?: string | null
+          gender?: string | null
           id: string
+          language_preference?: string
+          notify_new_task?: boolean
+          notify_status_updates?: boolean
           payout_upi_id?: string | null
           phone?: string | null
           phone_verified?: boolean
+          preferences?: Json
           primary_role?: Database["public"]["Enums"]["app_role"] | null
+          timezone?: string
           updated_at?: string
+          username?: string | null
         }
         Update: {
           account_rejection_reason?: string | null
@@ -1168,15 +1345,23 @@ export type Database = {
           alt_phone?: string | null
           avatar_url?: string | null
           created_at?: string
+          date_of_birth?: string | null
           email?: string | null
           email_verified?: boolean
           full_name?: string | null
+          gender?: string | null
           id?: string
+          language_preference?: string
+          notify_new_task?: boolean
+          notify_status_updates?: boolean
           payout_upi_id?: string | null
           phone?: string | null
           phone_verified?: boolean
+          preferences?: Json
           primary_role?: Database["public"]["Enums"]["app_role"] | null
+          timezone?: string
           updated_at?: string
+          username?: string | null
         }
         Relationships: []
       }
@@ -1384,6 +1569,7 @@ export type Database = {
           assigner_role: Database["public"]["Enums"]["app_role"] | null
           completed_at: string | null
           created_at: string
+          customer_event_id: string | null
           description: string | null
           end_time: string | null
           event_date: string
@@ -1415,6 +1601,7 @@ export type Database = {
           assigner_role?: Database["public"]["Enums"]["app_role"] | null
           completed_at?: string | null
           created_at?: string
+          customer_event_id?: string | null
           description?: string | null
           end_time?: string | null
           event_date: string
@@ -1446,6 +1633,7 @@ export type Database = {
           assigner_role?: Database["public"]["Enums"]["app_role"] | null
           completed_at?: string | null
           created_at?: string
+          customer_event_id?: string | null
           description?: string | null
           end_time?: string | null
           event_date?: string
@@ -1473,6 +1661,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "vendor_tasks_customer_event_id_fkey"
+            columns: ["customer_event_id"]
+            isOneToOne: false
+            referencedRelation: "customer_events"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "vendor_tasks_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -1493,6 +1688,7 @@ export type Database = {
           additional_info: Json
           address: string | null
           available_days: Json
+          base_price: number | null
           blocked_dates: Json
           business_name: string
           category: string | null
@@ -1516,6 +1712,7 @@ export type Database = {
           pincode: string | null
           portfolio: Json
           price_catalogue_url: string | null
+          pricing_mode: string | null
           profile_completion: number
           rating: number
           rejection_reason: string | null
@@ -1523,6 +1720,7 @@ export type Database = {
           service_areas: Json
           state: string | null
           status: Database["public"]["Enums"]["hall_status"]
+          team_size: number | null
           updated_at: string
           verification_status: Database["public"]["Enums"]["verification_status"]
           verified: boolean
@@ -1538,6 +1736,7 @@ export type Database = {
           additional_info?: Json
           address?: string | null
           available_days?: Json
+          base_price?: number | null
           blocked_dates?: Json
           business_name: string
           category?: string | null
@@ -1561,6 +1760,7 @@ export type Database = {
           pincode?: string | null
           portfolio?: Json
           price_catalogue_url?: string | null
+          pricing_mode?: string | null
           profile_completion?: number
           rating?: number
           rejection_reason?: string | null
@@ -1568,6 +1768,7 @@ export type Database = {
           service_areas?: Json
           state?: string | null
           status?: Database["public"]["Enums"]["hall_status"]
+          team_size?: number | null
           updated_at?: string
           verification_status?: Database["public"]["Enums"]["verification_status"]
           verified?: boolean
@@ -1583,6 +1784,7 @@ export type Database = {
           additional_info?: Json
           address?: string | null
           available_days?: Json
+          base_price?: number | null
           blocked_dates?: Json
           business_name?: string
           category?: string | null
@@ -1606,6 +1808,7 @@ export type Database = {
           pincode?: string | null
           portfolio?: Json
           price_catalogue_url?: string | null
+          pricing_mode?: string | null
           profile_completion?: number
           rating?: number
           rejection_reason?: string | null
@@ -1613,6 +1816,7 @@ export type Database = {
           service_areas?: Json
           state?: string | null
           status?: Database["public"]["Enums"]["hall_status"]
+          team_size?: number | null
           updated_at?: string
           verification_status?: Database["public"]["Enums"]["verification_status"]
           verified?: boolean
@@ -1829,6 +2033,7 @@ export type Database = {
           completion_notes: string | null
           completion_photo_urls: Json
           created_at: string
+          customer_event_id: string | null
           description: string | null
           end_time: string | null
           event_date: string
@@ -1870,6 +2075,7 @@ export type Database = {
           completion_notes?: string | null
           completion_photo_urls?: Json
           created_at?: string
+          customer_event_id?: string | null
           description?: string | null
           end_time?: string | null
           event_date: string
@@ -1911,6 +2117,7 @@ export type Database = {
           completion_notes?: string | null
           completion_photo_urls?: Json
           created_at?: string
+          customer_event_id?: string | null
           description?: string | null
           end_time?: string | null
           event_date?: string
@@ -1937,6 +2144,13 @@ export type Database = {
           worker_user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "worker_tasks_customer_event_id_fkey"
+            columns: ["customer_event_id"]
+            isOneToOne: false
+            referencedRelation: "customer_events"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "worker_tasks_organization_id_fkey"
             columns: ["organization_id"]
@@ -2013,6 +2227,7 @@ export type Database = {
           skills: Json
           state: string | null
           status: Database["public"]["Enums"]["hall_status"]
+          team_size: number | null
           updated_at: string
           verification_notes: string | null
           verification_status: Database["public"]["Enums"]["verification_status"]
@@ -2086,6 +2301,7 @@ export type Database = {
           skills?: Json
           state?: string | null
           status?: Database["public"]["Enums"]["hall_status"]
+          team_size?: number | null
           updated_at?: string
           verification_notes?: string | null
           verification_status?: Database["public"]["Enums"]["verification_status"]
@@ -2159,6 +2375,7 @@ export type Database = {
           skills?: Json
           state?: string | null
           status?: Database["public"]["Enums"]["hall_status"]
+          team_size?: number | null
           updated_at?: string
           verification_notes?: string | null
           verification_status?: Database["public"]["Enums"]["verification_status"]
@@ -2198,11 +2415,27 @@ export type Database = {
       }
     }
     Functions: {
+      get_or_create_conversation: {
+        Args: {
+          p_context_id: string
+          p_context_type: string
+          p_role_a: string
+          p_role_b: string
+          p_subject: string
+          p_user_a: string
+          p_user_b: string
+        }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_conversation_participant: {
+        Args: { p_conversation_id: string; p_user_id: string }
         Returns: boolean
       }
       is_org_manager: {

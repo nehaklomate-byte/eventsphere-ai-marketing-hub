@@ -8,6 +8,7 @@ import { lovable } from "@/integrations/lovable/index";
 import { supabase as supabaseAuth } from "@/integrations/supabase/client";
 import { emailSchema } from "@/lib/validation";
 import { resolveDashboardPath, humanizeAuthError } from "@/lib/auth-redirect";
+import { listFactors, getAssuranceLevel, challengeAndVerifyFactor } from "@/lib/mfa";
 import { z } from "zod";
 
 export const Route = createFileRoute("/login")({
@@ -37,6 +38,10 @@ function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [fieldErr, setFieldErr] = useState<{ email?: string; password?: string }>({});
   const [checked, setChecked] = useState(false);
+  const [mfaStep, setMfaStep] = useState(false);
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaError, setMfaError] = useState<string | null>(null);
+  const [mfaLoading, setMfaLoading] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
@@ -68,8 +73,45 @@ function LoginPage() {
     }
     const uid = signInData.user?.id;
     if (!uid) { setLoading(false); setError("Sign-in succeeded but no user session was returned. Please try again."); return; }
+
+    const aal = await getAssuranceLevel();
+    if (aal.currentLevel === "aal1" && aal.nextLevel === "aal2") {
+      setLoading(false);
+      setMfaStep(true);
+      return;
+    }
+
     const path = await resolveDashboardPath(uid);
     navigate({ to: path, replace: true } as never);
+  }
+
+  async function handleVerifyMfa(e: React.FormEvent) {
+    e.preventDefault();
+    setMfaError(null);
+    if (mfaCode.trim().length !== 6) { setMfaError("Enter the 6-digit code from your authenticator app."); return; }
+    setMfaLoading(true);
+    try {
+      const factors = await listFactors();
+      const factor = factors.find((f) => f.status === "verified");
+      if (!factor) { setMfaError("No verified authenticator found on this account."); setMfaLoading(false); return; }
+      await challengeAndVerifyFactor(factor.id, mfaCode.trim());
+      const { data } = await supabase.auth.getSession();
+      const uid = data.session?.user.id;
+      if (!uid) { setMfaError("Verification succeeded but no session was returned. Please try again."); setMfaLoading(false); return; }
+      const path = await resolveDashboardPath(uid);
+      navigate({ to: path, replace: true } as never);
+    } catch (err) {
+      setMfaError(err instanceof Error ? err.message : "Invalid code, please try again.");
+    } finally {
+      setMfaLoading(false);
+    }
+  }
+
+  async function handleBackToLogin() {
+    await supabase.auth.signOut();
+    setMfaStep(false);
+    setMfaCode("");
+    setMfaError(null);
   }
 
  async function handleGoogle() {
@@ -142,6 +184,29 @@ function LoginPage() {
             </div>
           )}
 
+          {mfaStep ? (
+            <form onSubmit={handleVerifyMfa} noValidate className="space-y-4">
+              <p className="text-sm text-muted-foreground">Enter the 6-digit code from your authenticator app to finish signing in.</p>
+              {mfaError && (
+                <div role="alert" className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /> <span>{mfaError}</span>
+                </div>
+              )}
+              <Field label="Authentication code" htmlFor="mfa-code">
+                <input id="mfa-code" inputMode="numeric" autoComplete="one-time-code" value={mfaCode}
+                  onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  className="input text-center tracking-widest" placeholder="000000" required />
+              </Field>
+              <button type="submit" disabled={mfaLoading}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl btn-brand btn-brand-hover px-5 py-3 text-sm font-semibold disabled:opacity-70">
+                {mfaLoading && <Loader2 className="h-4 w-4 animate-spin" />} Verify & continue
+              </button>
+              <button type="button" onClick={handleBackToLogin}
+                className="w-full rounded-xl border border-input px-5 py-3 text-sm font-semibold hover:bg-accent">
+                Back to sign in
+              </button>
+            </form>
+          ) : (
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <Field label="Email address" htmlFor="email" error={fieldErr.email}>
               <div className="relative">
@@ -177,6 +242,7 @@ function LoginPage() {
               {loading && <Loader2 className="h-4 w-4 animate-spin" />} Sign in
             </button>
           </form>
+          )}
 
           <p className="mt-8 text-sm text-muted-foreground">
             New to EventOrbit? <Link to="/register" className="font-semibold text-brand-violet hover:opacity-80">Create an account</Link>
