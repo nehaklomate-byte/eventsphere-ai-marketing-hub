@@ -1,12 +1,15 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import {
   ArrowLeft, MapPin, Star, BadgeCheck, Wrench, Send, Phone, CheckCircle2, Globe, Instagram, Facebook,
+  Users, IndianRupee, Wallet,
 } from "lucide-react";
 import { SiteLayout } from "@/components/SiteLayout";
+import { WishlistButton } from "@/components/WishlistButton";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 import { emailSchema, phoneSchema } from "@/lib/validation";
+
 
 type Vendor = {
   id: string;
