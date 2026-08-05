@@ -58,7 +58,9 @@ function ProfilePage() {
       city: form.city || null,
       state: form.state || null,
       pincode: form.pincode || null,
+      avatar_url: form.avatar_url || null,
       profile_completion: completion,
+
     };
     const { error } = await supabase.from("customers").update(payload).eq("user_id", user!.id);
     setBusy(false);
