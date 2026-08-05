@@ -37,6 +37,8 @@ type WorkerProfile = {
   agency_name: string | null;
   agency_team_size: number | null;
   team_size: number | null;
+  min_booking_qty: number | null;
+  max_booking_qty: number | null;
 };
 
 /** Completed-jobs count + a rough "how fast do they respond" signal,
@@ -235,17 +237,33 @@ function HireCard({ worker, eventId }: { worker: WorkerProfile; eventId?: string
   const navigate = useNavigate();
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
   const [state, setState] = useState({ event_name: "", task_name: "", venue: "", venue_address: "", event_date: "", start_time: "", end_time: "", pay_amount: "" });
+  const isAgency = worker.worker_type === "agency";
+  const minQty = worker.min_booking_qty ?? 1;
+  const maxQty = worker.max_booking_qty ?? worker.agency_team_size ?? 99;
+  const [quantity, setQuantity] = useState(minQty);
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => { supabase.auth.getUser().then(({ data }) => setLoggedIn(!!data.user)); }, []);
 
+  // Keep the suggested amount in sync with quantity for agency bookings
+  // (daily rate × headcount) — customer can still override it.
+  useEffect(() => {
+    if (isAgency && worker.daily_charges != null) {
+      setState((s) => ({ ...s, pay_amount: String(Number(worker.daily_charges) * quantity) }));
+    }
+  }, [quantity, isAgency, worker.daily_charges]);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
     if (!state.event_name.trim() || !state.task_name.trim() || !state.event_date) {
       setErr("Event name, task and date are required.");
+      return;
+    }
+    if (isAgency && (quantity < minQty || quantity > maxQty)) {
+      setErr(`This agency takes bookings of ${minQty}–${maxQty} workers.`);
       return;
     }
     setSubmitting(true);
@@ -269,6 +287,7 @@ function HireCard({ worker, eventId }: { worker: WorkerProfile; eventId?: string
       priority: "normal",
       status: "pending",
       payment_amount: state.pay_amount ? Number(state.pay_amount) : null,
+      quantity: isAgency ? quantity : 1,
     } as never);
     setSubmitting(false);
     if (error) { setErr(error.message || "Could not send the request. Please try again."); return; }
@@ -306,6 +325,19 @@ function HireCard({ worker, eventId }: { worker: WorkerProfile; eventId?: string
         className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
       <input placeholder="Venue name (optional)" value={state.venue} onChange={(e) => setState((s) => ({ ...s, venue: e.target.value }))}
         className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
+      {isAgency && (
+        <div className="rounded-xl border border-border bg-muted/30 px-3.5 py-2.5">
+          <label className="text-xs font-semibold text-muted-foreground">How many workers?</label>
+          <div className="mt-1.5 flex items-center gap-3">
+            <button type="button" onClick={() => setQuantity((q) => Math.max(minQty, q - 1))}
+              className="grid h-8 w-8 place-items-center rounded-full border border-input text-sm font-semibold hover:bg-accent">−</button>
+            <span className="min-w-[2ch] text-center text-sm font-semibold">{quantity}</span>
+            <button type="button" onClick={() => setQuantity((q) => Math.min(maxQty, q + 1))}
+              className="grid h-8 w-8 place-items-center rounded-full border border-input text-sm font-semibold hover:bg-accent">+</button>
+            <span className="text-xs text-muted-foreground">{minQty}–{maxQty} workers</span>
+          </div>
+        </div>
+      )}
       <input type="date" value={state.event_date} onChange={(e) => setState((s) => ({ ...s, event_date: e.target.value }))}
         className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
       <div className="grid grid-cols-2 gap-2">
