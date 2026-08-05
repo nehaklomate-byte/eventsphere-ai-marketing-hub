@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
-import { fetchMyVendor, uploadVendorFile, computeVendorCompletion, VENDOR_CATEGORIES, fetchVendorPackages, saveVendorPackage, deleteVendorPackage, type VendorPackage } from "@/lib/vendor";
+import { fetchMyVendor, uploadVendorFile, computeVendorCompletion, VENDOR_CATEGORIES, fetchVendorPackages, saveVendorPackage, deleteVendorPackage, type VendorPackage } from "@/lib/vendor.ts";
 import { Loader2, Save, Upload, X, CheckCircle2, ShieldCheck, Store, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
