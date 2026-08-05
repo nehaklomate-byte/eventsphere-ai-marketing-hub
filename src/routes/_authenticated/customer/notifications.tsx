@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
 import { PageShell, EmptyState, LoadingRows } from "./-ui";
+import { PlatformAnnouncements } from "@/components/PlatformAnnouncements";
 
 export const Route = createFileRoute("/_authenticated/customer/notifications")({ component: NotificationsPage });
 
@@ -43,6 +44,7 @@ function NotificationsPage() {
   return (
     <PageShell title="Notifications" subtitle={unread ? `${unread} unread` : "You're all caught up."}
       action={unread > 0 ? (<button onClick={markAll} className="inline-flex items-center gap-1.5 rounded-full border border-input px-3 py-1.5 text-xs font-semibold hover:bg-accent"><Check className="h-3.5 w-3.5" /> Mark all read</button>) : null}>
+      <PlatformAnnouncements />
       {isLoading ? <LoadingRows /> : (data?.length ?? 0) === 0 ? (
         <EmptyState title="No notifications yet" description="We'll ping you here about booking updates, payments and offers." icon={Bell} />
       ) : (
