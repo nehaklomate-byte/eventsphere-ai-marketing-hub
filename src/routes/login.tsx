@@ -184,6 +184,29 @@ function LoginPage() {
             </div>
           )}
 
+          {mfaStep ? (
+            <form onSubmit={handleVerifyMfa} noValidate className="space-y-4">
+              <p className="text-sm text-muted-foreground">Enter the 6-digit code from your authenticator app to finish signing in.</p>
+              {mfaError && (
+                <div role="alert" className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /> <span>{mfaError}</span>
+                </div>
+              )}
+              <Field label="Authentication code" htmlFor="mfa-code">
+                <input id="mfa-code" inputMode="numeric" autoComplete="one-time-code" value={mfaCode}
+                  onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  className="input text-center tracking-widest" placeholder="000000" required />
+              </Field>
+              <button type="submit" disabled={mfaLoading}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl btn-brand btn-brand-hover px-5 py-3 text-sm font-semibold disabled:opacity-70">
+                {mfaLoading && <Loader2 className="h-4 w-4 animate-spin" />} Verify & continue
+              </button>
+              <button type="button" onClick={handleBackToLogin}
+                className="w-full rounded-xl border border-input px-5 py-3 text-sm font-semibold hover:bg-accent">
+                Back to sign in
+              </button>
+            </form>
+          ) : (
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <Field label="Email address" htmlFor="email" error={fieldErr.email}>
               <div className="relative">
@@ -219,6 +242,7 @@ function LoginPage() {
               {loading && <Loader2 className="h-4 w-4 animate-spin" />} Sign in
             </button>
           </form>
+          )}
 
           <p className="mt-8 text-sm text-muted-foreground">
             New to EventOrbit? <Link to="/register" className="font-semibold text-brand-violet hover:opacity-80">Create an account</Link>
