@@ -4,6 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Inbox, Phone, Mail, Calendar, Users, Loader2 } from "lucide-react";
 import { fetchMyHalls, fetchEnquiries, updateEnquiryStatus, type Enquiry } from "@/lib/venue";
+import { useSession } from "@/lib/session";
+import { MessageButton } from "@/components/chat/ChatPanel";
 
 export const Route = createFileRoute("/_authenticated/venue/enquiries")({
   head: () => ({ meta: [{ title: "Enquiries — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
@@ -22,6 +24,7 @@ const STATUS_STYLE: Record<Enquiry["status"], string> = {
 
 function EnquiriesPage() {
   const qc = useQueryClient();
+  const { user } = useSession();
   const [busyId, setBusyId] = useState<string | null>(null);
   const { data: halls } = useQuery({ queryKey: ["venue-halls"], queryFn: fetchMyHalls });
   const hallIds = (halls ?? []).map((h) => h.id);
@@ -81,14 +84,20 @@ function EnquiriesPage() {
                   {e.message && <p className="mt-2 text-sm text-foreground/80">{e.message}</p>}
                 </div>
 
-                <select
-                  value={e.status}
-                  disabled={busyId === e.id}
-                  onChange={(ev) => changeStatus(e.id, ev.target.value as Enquiry["status"])}
-                  className="rounded-full border border-input bg-background px-3 py-1.5 text-xs font-semibold capitalize outline-none focus:border-brand-violet disabled:opacity-50"
-                >
-                  {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
+                <div className="flex flex-col items-end gap-2">
+                  <select
+                    value={e.status}
+                    disabled={busyId === e.id}
+                    onChange={(ev) => changeStatus(e.id, ev.target.value as Enquiry["status"])}
+                    className="rounded-full border border-input bg-background px-3 py-1.5 text-xs font-semibold capitalize outline-none focus:border-brand-violet disabled:opacity-50"
+                  >
+                    {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  {e.requester_id && user?.id && (
+                    <MessageButton contextType="hall_enquiry" contextId={e.id} subject={e.contact_name}
+                      userId={user.id} userRole="owner" otherUserId={e.requester_id} otherRole="customer" otherLabel={`${e.contact_name} — enquiry`} />
+                  )}
+                </div>
               </div>
             </div>
           ))}
