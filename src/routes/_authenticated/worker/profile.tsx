@@ -243,9 +243,12 @@ function ProfilePage() {
                     </Field>
                     <Field label="Team size"><Input type="number" min={1} value={(form.agency_team_size as number)?.toString() ?? ""} onChange={(v) => set("agency_team_size", v === "" ? null : Number(v))} /></Field>
                     <Field label="Years in business"><Input type="number" min={0} value={(form.agency_years as number)?.toString() ?? ""} onChange={(v) => set("agency_years", v === "" ? null : Number(v))} /></Field>
+                    <Field label="Min. workers per booking"><Input type="number" min={1} value={(form.min_booking_qty as number)?.toString() ?? ""} onChange={(v) => set("min_booking_qty", v === "" ? null : Number(v))} placeholder="e.g. 5" /></Field>
+                    <Field label="Max. workers per booking"><Input type="number" min={1} value={(form.max_booking_qty as number)?.toString() ?? ""} onChange={(v) => set("max_booking_qty", v === "" ? null : Number(v))} placeholder="e.g. 50" /></Field>
                     <Field label="GST (optional)"><Input value={(form.agency_gst as string) ?? ""} onChange={(v) => set("agency_gst", v)} /></Field>
                     <Field label="Business reg. no. (optional)"><Input value={(form.agency_reg_no as string) ?? ""} onChange={(v) => set("agency_reg_no", v)} /></Field>
                   </FieldGrid>
+                  <p className="mt-2 text-xs text-muted-foreground">Customers will see a quantity selector bounded by these limits when booking your agency.</p>
                   <Field label="Business description">
                     <textarea rows={3} value={(form.agency_description as string) ?? ""} onChange={(e) => set("agency_description", e.target.value)}
                       className="mt-2 w-full rounded-xl border border-input bg-background p-3 text-sm" />
