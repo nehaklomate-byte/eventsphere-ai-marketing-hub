@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import {
   LayoutDashboard, Briefcase, CalendarDays, Clock, Bell, Wallet, User, FileText,
   Settings, LifeBuoy, LogOut, Menu, X, ShieldCheck, BadgeAlert, BadgeCheck, ShieldAlert, Loader2, Layers,
+  MessageCircle,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { PayoutBanner } from "@/components/PayoutBanner";
