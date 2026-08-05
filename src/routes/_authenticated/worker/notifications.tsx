@@ -5,6 +5,7 @@ import { useSession } from "@/lib/session";
 import { Bell, Check, Trash2 } from "lucide-react";
 import { EmptyState } from "./index";
 import type { WorkerNotification } from "@/lib/worker";
+import { PlatformAnnouncements } from "@/components/PlatformAnnouncements";
 
 export const Route = createFileRoute("/_authenticated/worker/notifications")({
   component: NotificationsPage,
@@ -68,6 +69,8 @@ function NotificationsPage() {
           </button>
         )}
       </div>
+
+      <PlatformAnnouncements />
 
       {notifs.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card p-8">
