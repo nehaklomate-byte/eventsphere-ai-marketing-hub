@@ -243,3 +243,44 @@ export async function withdrawVendorApplication(id: string): Promise<void> {
   if (error) throw error;
   if (!data) throw new Error("Update was blocked — please refresh and try again.");
 }
+
+// =============================================================
+// Vendor packages (Basic / Premium / Luxury tiers) — see migration
+// 20260805100000_packages_and_quantity.sql. New table, not yet in
+// generated Supabase types, so `as never` casts throughout (same
+// pattern as worker_job_postings above).
+// =============================================================
+
+export type VendorPackage = {
+  id: string;
+  vendor_id: string;
+  name: string;
+  price: number;
+  description: string | null;
+  sort_order: number;
+};
+
+export async function fetchVendorPackages(vendorId: string): Promise<VendorPackage[]> {
+  const { data, error } = await supabase
+    .from("vendor_packages" as never)
+    .select("*")
+    .eq("vendor_id" as never, vendorId as never)
+    .order("sort_order" as never, { ascending: true });
+  if (error) throw error;
+  return (data as unknown as VendorPackage[]) ?? [];
+}
+
+export async function saveVendorPackage(pkg: Partial<VendorPackage> & { vendor_id: string }): Promise<void> {
+  if (pkg.id) {
+    const { error } = await supabase.from("vendor_packages" as never).update({ name: pkg.name, price: pkg.price, description: pkg.description ?? null, sort_order: pkg.sort_order ?? 0 } as never).eq("id" as never, pkg.id as never);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase.from("vendor_packages" as never).insert({ vendor_id: pkg.vendor_id, name: pkg.name, price: pkg.price, description: pkg.description ?? null, sort_order: pkg.sort_order ?? 0 } as never);
+    if (error) throw error;
+  }
+}
+
+export async function deleteVendorPackage(id: string): Promise<void> {
+  const { error } = await supabase.from("vendor_packages" as never).delete().eq("id" as never, id as never);
+  if (error) throw error;
+}
