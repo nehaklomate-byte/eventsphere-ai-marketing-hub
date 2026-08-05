@@ -211,6 +211,154 @@ function SecurityTab({ userId }: { userId: string }) {
   );
 }
 
+/* ---------------- Two-Factor Authentication ---------------- */
+function TwoFactorSection({ userId }: { userId: string }) {
+  const { data: factors, isLoading, refetch } = useQuery({
+    queryKey: ["mfa-factors", userId], queryFn: listFactors,
+  });
+  const [enrolling, setEnrolling] = useState(false);
+  const [enrollData, setEnrollData] = useState<{ factorId: string; qrCode: string; secret: string } | null>(null);
+  const [code, setCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [turningOff, setTurningOff] = useState<string | null>(null);
+  const [confirmOff, setConfirmOff] = useState(false);
+
+  const verified = (factors ?? []).find((f) => f.status === "verified");
+
+  async function startEnroll() {
+    setEnrolling(true);
+    setVerifyError(null);
+    try {
+      const data = await enrollTotp("Authenticator app");
+      setEnrollData({ factorId: data.factorId, qrCode: data.qrCode, secret: data.secret });
+      setCode("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to start enrollment");
+    } finally {
+      setEnrolling(false);
+    }
+  }
+
+  async function cancelEnroll() {
+    if (enrollData) {
+      try { await unenroll(enrollData.factorId); } catch { /* ignore */ }
+    }
+    setEnrollData(null);
+    setCode("");
+    setVerifyError(null);
+  }
+
+  async function verify() {
+    if (!enrollData) return;
+    if (code.trim().length !== 6) { setVerifyError("Enter the 6-digit code from your authenticator app."); return; }
+    setVerifying(true);
+    setVerifyError(null);
+    try {
+      await verifyEnrollment(enrollData.factorId, code.trim());
+      toast.success("Two-factor authentication enabled");
+      setEnrollData(null);
+      setCode("");
+      refetch();
+    } catch (e) {
+      setVerifyError(e instanceof Error ? e.message : "Invalid code, please try again.");
+    } finally {
+      setVerifying(false);
+    }
+  }
+
+  async function turnOff(factorId: string) {
+    setTurningOff(factorId);
+    try {
+      await unenroll(factorId);
+      toast.success("Two-factor authentication turned off");
+      setConfirmOff(false);
+      refetch();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to turn off two-factor authentication");
+    } finally {
+      setTurningOff(null);
+    }
+  }
+
+  function copySecret() {
+    if (!enrollData) return;
+    navigator.clipboard.writeText(enrollData.secret);
+    toast.success("Secret copied");
+  }
+
+  return (
+    <div>
+      <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><ShieldCheck className="h-4 w-4" /> Two-factor authentication</h3>
+      <p className="text-xs text-muted-foreground mb-3">Add an extra verification step at login using an authenticator app (TOTP).</p>
+
+      {isLoading ? (
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+      ) : verified ? (
+        <div className="rounded-xl border border-border bg-background p-4 max-w-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-600">Enabled</span>
+              <p className="mt-2 text-sm font-medium">{verified.friendlyName || "Authenticator app"}</p>
+              <p className="text-xs text-muted-foreground">Added on {new Date(verified.createdAt).toLocaleDateString()}</p>
+            </div>
+            <button onClick={() => setConfirmOff(true)} className="inline-flex items-center gap-2 rounded-full border border-rose-500/40 px-3.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-500/10">
+              <ShieldOff className="h-3.5 w-3.5" /> Turn off
+            </button>
+          </div>
+          {confirmOff && (
+            <div className="mt-4 rounded-lg border border-rose-500/30 bg-rose-500/5 p-3 text-sm">
+              <p>Are you sure you want to turn off two-factor authentication?</p>
+              <div className="mt-2 flex gap-2">
+                <button onClick={() => turnOff(verified.id)} disabled={turningOff === verified.id}
+                  className="inline-flex items-center gap-2 rounded-full bg-rose-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-70">
+                  {turningOff === verified.id && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Yes, turn off
+                </button>
+                <button onClick={() => setConfirmOff(false)} className="rounded-full border border-input px-3.5 py-1.5 text-xs font-semibold hover:bg-accent">Cancel</button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : enrollData ? (
+        <div className="rounded-xl border border-border bg-background p-4 max-w-lg space-y-4">
+          <div>
+            <p className="text-sm font-medium mb-2">1. Scan this QR code with your authenticator app</p>
+            <img src={enrollData.qrCode} alt="TOTP QR code" className="h-40 w-40 rounded-lg border border-border bg-white p-2" />
+          </div>
+          <div>
+            <p className="text-sm font-medium mb-1">Or enter this code manually</p>
+            <div className="flex items-center gap-2">
+              <code className="rounded-lg bg-accent px-3 py-1.5 text-xs break-all">{enrollData.secret}</code>
+              <button onClick={copySecret} className="rounded-lg p-1.5 hover:bg-accent" aria-label="Copy secret"><Copy className="h-3.5 w-3.5" /></button>
+            </div>
+          </div>
+          <div>
+            <p className="text-sm font-medium mb-1">2. Enter the 6-digit code</p>
+            <input value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              inputMode="numeric" placeholder="000000" className="input max-w-[10rem] tracking-widest text-center" />
+            {verifyError && <p className="mt-1.5 text-xs font-medium text-destructive">{verifyError}</p>}
+          </div>
+          <div className="flex gap-2">
+            <button onClick={verify} disabled={verifying} className="inline-flex items-center gap-2 rounded-full btn-brand btn-brand-hover px-4 py-2 text-sm font-semibold disabled:opacity-70">
+              {verifying && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Verify & activate
+            </button>
+            <button onClick={cancelEnroll} className="rounded-full border border-input px-4 py-2 text-sm font-semibold hover:bg-accent">Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <span className="inline-block mb-3 rounded-full bg-muted px-2.5 py-1 text-[10px] font-semibold text-muted-foreground">Disabled</span>
+          <div>
+            <button onClick={startEnroll} disabled={enrolling} className="inline-flex items-center gap-2 rounded-full border border-input px-4 py-2 text-sm font-semibold hover:bg-accent disabled:opacity-50">
+              {enrolling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <KeyRound className="h-3.5 w-3.5" />} Enable two-factor authentication
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DeleteAccountDialog({ userId, onClose, onDone }: { userId: string; onClose: () => void; onDone: () => void }) {
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
