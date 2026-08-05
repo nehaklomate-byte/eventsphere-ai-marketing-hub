@@ -201,12 +201,25 @@ function BookOrEnquire({ vendor }: { vendor: Vendor }) {
 function VendorHireCard({ vendor }: { vendor: Vendor }) {
   const navigate = useNavigate();
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
+  const [packages, setPackages] = useState<{ id: string; name: string; price: number; description: string | null }[]>([]);
+  const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
   const [state, setState] = useState({ event_name: "", task_name: "", venue: "", venue_address: "", event_date: "", start_time: "", end_time: "", pay_amount: "" });
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => { supabase.auth.getUser().then(({ data }) => setLoggedIn(!!data.user)); }, []);
+  useEffect(() => {
+    supabase.from("vendor_packages" as never).select("id,name,price,description").eq("vendor_id" as never, vendor.id as never).order("sort_order" as never, { ascending: true })
+      .then(({ data }) => setPackages((data as never) ?? []));
+  }, [vendor.id]);
+
+  function pickPackage(pkgId: string) {
+    const pkg = packages.find((p) => p.id === pkgId);
+    if (!pkg) return;
+    setSelectedPackage(pkgId);
+    setState((s) => ({ ...s, pay_amount: String(pkg.price), task_name: s.task_name || pkg.name }));
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -267,6 +280,29 @@ function VendorHireCard({ vendor }: { vendor: Vendor }) {
       <p className="text-xs text-muted-foreground -mt-1">
         They accept or decline first — you only pay after that, from Bookings in your workspace.
       </p>
+      {packages.length > 0 && (
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold text-muted-foreground">Choose a package (optional)</label>
+          <div className="grid grid-cols-1 gap-2">
+            {packages.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => pickPackage(p.id)}
+                className={`rounded-xl border px-3.5 py-2.5 text-left text-sm transition ${
+                  selectedPackage === p.id ? "border-brand-violet bg-brand-violet/5" : "border-input hover:bg-accent"
+                }`}
+              >
+                <div className="flex items-center justify-between font-semibold">
+                  <span>{p.name}</span>
+                  <span>₹{Number(p.price).toLocaleString("en-IN")}</span>
+                </div>
+                {p.description && <p className="mt-0.5 text-xs text-muted-foreground">{p.description}</p>}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <input placeholder="Event name" value={state.event_name} onChange={(e) => setState((s) => ({ ...s, event_name: e.target.value }))}
         className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
       <input placeholder="What service do you need?" value={state.task_name} onChange={(e) => setState((s) => ({ ...s, task_name: e.target.value }))}
