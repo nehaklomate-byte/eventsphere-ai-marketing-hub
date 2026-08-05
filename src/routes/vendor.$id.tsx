@@ -2,11 +2,39 @@ import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-ro
 import { useEffect, useState } from "react";
 import {
   ArrowLeft, MapPin, Star, BadgeCheck, Wrench, Send, Phone, CheckCircle2, Globe, Instagram, Facebook,
-  Users, IndianRupee, Wallet,
+  Users, IndianRupee, Wallet, Briefcase, Clock,
 } from "lucide-react";
 import { SiteLayout } from "@/components/SiteLayout";
 import { WishlistButton } from "@/components/WishlistButton";
 import { supabase } from "@/integrations/supabase/client";
+
+/** Same idea as the worker profile's useWorkerStats — completed-jobs
+ * count and average response time computed from vendor_tasks instead
+ * of a stored column, so it stays accurate with no extra migration. */
+function useVendorStats(vendorId: string) {
+  const [stats, setStats] = useState<{ completed: number; avgResponseMins: number | null; acceptanceRate: number | null } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    supabase
+      .from("vendor_tasks" as never)
+      .select("status, created_at, accepted_at, rejected_at" as never)
+      .eq("vendor_id" as never, vendorId as never)
+      .order("created_at" as never, { ascending: false })
+      .limit(200)
+      .then(({ data }) => {
+        if (cancelled) return;
+        const rows = (data as unknown as { status: string; created_at: string; accepted_at: string | null; rejected_at: string | null }[]) ?? [];
+        const completed = rows.filter((r) => r.status === "completed").length;
+        const decided = rows.filter((r) => r.accepted_at || r.rejected_at);
+        const acceptanceRate = decided.length > 0 ? Math.round((rows.filter((r) => r.accepted_at).length / decided.length) * 100) : null;
+        const responseTimes = rows.filter((r) => r.accepted_at).map((r) => (new Date(r.accepted_at!).getTime() - new Date(r.created_at).getTime()) / 60000);
+        const avgResponseMins = responseTimes.length > 0 ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length) : null;
+        setStats({ completed, avgResponseMins, acceptanceRate });
+      });
+    return () => { cancelled = true; };
+  }, [vendorId]);
+  return stats;
+}
 
 
 type Vendor = {
@@ -53,6 +81,7 @@ export const Route = createFileRoute("/vendor/$id")({
 
 function VendorDetail() {
   const { vendor } = Route.useLoaderData();
+  const stats = useVendorStats(vendor.id);
 
   return (
     <SiteLayout>
@@ -96,6 +125,22 @@ function VendorDetail() {
                       ? `₹${Number(vendor.base_price).toLocaleString("en-IN")} ${vendor.pricing_mode === "individual" ? "per person" : "for the whole team"}`
                       : "Price on request"}
                   </span>
+                  {stats && stats.completed > 0 && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 font-medium">
+                      <Briefcase className="h-3.5 w-3.5" />{stats.completed} events completed
+                    </span>
+                  )}
+                  {stats?.acceptanceRate != null && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 font-medium">
+                      {stats.acceptanceRate}% acceptance
+                    </span>
+                  )}
+                  {stats?.avgResponseMins != null && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 font-medium">
+                      <Clock className="h-3.5 w-3.5" />
+                      Responds in ~{stats.avgResponseMins < 60 ? `${stats.avgResponseMins} min` : `${Math.round(stats.avgResponseMins / 60)} hr`}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
