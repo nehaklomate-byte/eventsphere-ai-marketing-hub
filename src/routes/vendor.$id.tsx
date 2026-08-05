@@ -13,6 +13,10 @@ import { emailSchema, phoneSchema } from "@/lib/validation";
 
 type Vendor = {
   id: string;
+  owner_id: string;
+  team_size: number | null;
+  pricing_mode: "individual" | "team" | null;
+  base_price: number | null;
   business_name: string;
   owner_full_name: string | null;
   category: string | null;
