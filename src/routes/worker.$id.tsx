@@ -2,6 +2,7 @@ import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-ro
 import { useEffect, useState } from "react";
 import {
   ArrowLeft, MapPin, Star, BadgeCheck, HardHat, Send, CheckCircle2, Wallet, Clock, Languages,
+  Users, IndianRupee, Navigation, Briefcase,
 } from "lucide-react";
 import { SiteLayout } from "@/components/SiteLayout";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,7 +29,44 @@ type WorkerProfile = {
   verified: boolean;
   rating: number;
   review_count: number;
+  // Already existed in the DB (added 20260706070753 / 20260805062502) but
+  // were never selected/rendered on this page — customers had no way to
+  // see them even though the worker had filled them in.
+  worker_type: "individual" | "agency" | null;
+  max_travel_km: number | null;
+  agency_name: string | null;
+  agency_team_size: number | null;
+  team_size: number | null;
 };
+
+/** Completed-jobs count + a rough "how fast do they respond" signal,
+ * computed from worker_tasks rather than stored — avoids a migration
+ * and stays accurate as more jobs happen. Capped at 200 rows so this
+ * stays a cheap query even for a busy worker. */
+function useWorkerStats(workerId: string) {
+  const [stats, setStats] = useState<{ completed: number; avgResponseMins: number | null; acceptanceRate: number | null } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    supabase
+      .from("worker_tasks" as never)
+      .select("status, created_at, accepted_at, rejected_at" as never)
+      .eq("worker_id" as never, workerId as never)
+      .order("created_at" as never, { ascending: false })
+      .limit(200)
+      .then(({ data }) => {
+        if (cancelled) return;
+        const rows = (data as unknown as { status: string; created_at: string; accepted_at: string | null; rejected_at: string | null }[]) ?? [];
+        const completed = rows.filter((r) => r.status === "completed").length;
+        const decided = rows.filter((r) => r.accepted_at || r.rejected_at);
+        const acceptanceRate = decided.length > 0 ? Math.round((rows.filter((r) => r.accepted_at).length / decided.length) * 100) : null;
+        const responseTimes = rows.filter((r) => r.accepted_at).map((r) => (new Date(r.accepted_at!).getTime() - new Date(r.created_at).getTime()) / 60000);
+        const avgResponseMins = responseTimes.length > 0 ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length) : null;
+        setStats({ completed, avgResponseMins, acceptanceRate });
+      });
+    return () => { cancelled = true; };
+  }, [workerId]);
+  return stats;
+}
 
 export const Route = createFileRoute("/worker/$id")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -53,6 +91,7 @@ export const Route = createFileRoute("/worker/$id")({
 function WorkerDetail() {
   const { worker } = Route.useLoaderData();
   const { event_id } = Route.useSearch();
+  const stats = useWorkerStats(worker.id);
 
   return (
     <SiteLayout>
@@ -93,6 +132,56 @@ function WorkerDetail() {
                   {worker.years_experience != null && <span>{worker.years_experience}+ yrs experience</span>}
                   {worker.review_count > 0 && <span className="inline-flex items-center gap-1"><Star className="h-3.5 w-3.5 fill-brand-orange text-brand-orange" />{worker.rating.toFixed(1)} ({worker.review_count})</span>}
                 </div>
+
+                {/* Booking-decision info a customer actually needs before tapping
+                    Book — this data already lived in the DB (worker_type,
+                    daily/hourly charges, max_travel_km) but wasn't shown here. */}
+                <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 font-medium">
+                    <Users className="h-3.5 w-3.5" />
+                    {worker.worker_type === "agency" ? "Agency" : "Individual"}
+                  </span>
+                  {worker.daily_charges != null && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 font-medium">
+                      <IndianRupee className="h-3.5 w-3.5" />₹{Number(worker.daily_charges).toLocaleString("en-IN")} / day
+                    </span>
+                  )}
+                  {worker.hourly_charges != null && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 font-medium">
+                      <IndianRupee className="h-3.5 w-3.5" />₹{Number(worker.hourly_charges).toLocaleString("en-IN")} / hr
+                    </span>
+                  )}
+                  {worker.max_travel_km != null && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 font-medium">
+                      <Navigation className="h-3.5 w-3.5" />Travels up to {worker.max_travel_km} km
+                    </span>
+                  )}
+                  {stats && stats.completed > 0 && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 font-medium">
+                      <Briefcase className="h-3.5 w-3.5" />{stats.completed} jobs completed
+                    </span>
+                  )}
+                  {stats?.acceptanceRate != null && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 font-medium">
+                      {stats.acceptanceRate}% acceptance
+                    </span>
+                  )}
+                  {stats?.avgResponseMins != null && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 font-medium">
+                      <Clock className="h-3.5 w-3.5" />
+                      Responds in ~{stats.avgResponseMins < 60 ? `${stats.avgResponseMins} min` : `${Math.round(stats.avgResponseMins / 60)} hr`}
+                    </span>
+                  )}
+                </div>
+
+                {worker.worker_type === "agency" && (worker.agency_name || worker.agency_team_size) && (
+                  <div className="mt-3 rounded-xl border border-border bg-accent/40 px-4 py-3 text-sm">
+                    <div className="font-semibold">{worker.agency_name || "Agency"}</div>
+                    {worker.agency_team_size != null && (
+                      <div className="mt-0.5 text-muted-foreground">{worker.agency_team_size} workers on the team</div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
