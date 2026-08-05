@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import {
   LayoutDashboard, Store, Settings, LogOut, Menu, X, ShieldCheck, BadgeAlert, BadgeCheck, ShieldAlert, Loader2, Clock, Briefcase, Bell,
   ClipboardList, CalendarDays, CalendarCheck, UsersRound, Wallet, FileText, LifeBuoy,
+  MessageCircle,
 } from "lucide-react";
 
 import { Logo } from "@/components/Logo";
