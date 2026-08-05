@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
 import { Bell, Check, Trash2 } from "lucide-react";
 import type { WorkerNotification } from "@/lib/worker";
+import { PlatformAnnouncements } from "@/components/PlatformAnnouncements";
 
 export const Route = createFileRoute("/_authenticated/venue/notifications")({
   head: () => ({ meta: [{ title: "Notifications — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
@@ -87,6 +88,8 @@ function NotificationsPage() {
           </button>
         )}
       </div>
+
+      <PlatformAnnouncements />
 
       {notifs.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card p-8 text-center">
