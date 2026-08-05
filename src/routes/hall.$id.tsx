@@ -10,6 +10,7 @@ import { SiteLayout } from "@/components/SiteLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 import { emailSchema, phoneSchema } from "@/lib/validation";
+import { WishlistButton } from "@/components/WishlistButton";
 
 type Hall = {
   id: string;
@@ -117,10 +118,17 @@ function HallDetail() {
       <section className="relative h-[52vh] min-h-[380px] w-full overflow-hidden">
         <img src={cover} alt={hall.name} className="h-full w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/40" />
-        <div className="absolute inset-x-0 top-0 mx-auto max-w-7xl px-5 md:px-8 py-6">
+        <div className="absolute inset-x-0 top-0 mx-auto max-w-7xl px-5 md:px-8 py-6 flex items-center justify-between">
           <Link to="/marketplace" className="inline-flex items-center gap-2 rounded-full glass-strong text-white px-4 py-2 text-sm font-semibold">
             <ArrowLeft className="h-4 w-4" /> Back to marketplace
           </Link>
+          <WishlistButton
+            kind="hall"
+            targetId={hall.id}
+            targetName={hall.name}
+            imageUrl={cover}
+            className="grid h-10 w-10 place-items-center rounded-full glass-strong text-white hover:bg-white/20 transition"
+          />
         </div>
         <div className="absolute inset-x-0 bottom-0 mx-auto max-w-7xl px-5 md:px-8 py-8 text-white">
           <div className="flex items-center gap-2 text-xs">

@@ -8,6 +8,7 @@ import { lovable } from "@/integrations/lovable/index";
 import { supabase as supabaseAuth } from "@/integrations/supabase/client";
 import { emailSchema } from "@/lib/validation";
 import { resolveDashboardPath, humanizeAuthError } from "@/lib/auth-redirect";
+import { listFactors, getAssuranceLevel, challengeAndVerifyFactor } from "@/lib/mfa";
 import { z } from "zod";
 
 export const Route = createFileRoute("/login")({
@@ -37,6 +38,10 @@ function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [fieldErr, setFieldErr] = useState<{ email?: string; password?: string }>({});
   const [checked, setChecked] = useState(false);
+  const [mfaStep, setMfaStep] = useState(false);
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaError, setMfaError] = useState<string | null>(null);
+  const [mfaLoading, setMfaLoading] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
@@ -68,8 +73,45 @@ function LoginPage() {
     }
     const uid = signInData.user?.id;
     if (!uid) { setLoading(false); setError("Sign-in succeeded but no user session was returned. Please try again."); return; }
+
+    const aal = await getAssuranceLevel();
+    if (aal.currentLevel === "aal1" && aal.nextLevel === "aal2") {
+      setLoading(false);
+      setMfaStep(true);
+      return;
+    }
+
     const path = await resolveDashboardPath(uid);
     navigate({ to: path, replace: true } as never);
+  }
+
+  async function handleVerifyMfa(e: React.FormEvent) {
+    e.preventDefault();
+    setMfaError(null);
+    if (mfaCode.trim().length !== 6) { setMfaError("Enter the 6-digit code from your authenticator app."); return; }
+    setMfaLoading(true);
+    try {
+      const factors = await listFactors();
+      const factor = factors.find((f) => f.status === "verified");
+      if (!factor) { setMfaError("No verified authenticator found on this account."); setMfaLoading(false); return; }
+      await challengeAndVerifyFactor(factor.id, mfaCode.trim());
+      const { data } = await supabase.auth.getSession();
+      const uid = data.session?.user.id;
+      if (!uid) { setMfaError("Verification succeeded but no session was returned. Please try again."); setMfaLoading(false); return; }
+      const path = await resolveDashboardPath(uid);
+      navigate({ to: path, replace: true } as never);
+    } catch (err) {
+      setMfaError(err instanceof Error ? err.message : "Invalid code, please try again.");
+    } finally {
+      setMfaLoading(false);
+    }
+  }
+
+  async function handleBackToLogin() {
+    await supabase.auth.signOut();
+    setMfaStep(false);
+    setMfaCode("");
+    setMfaError(null);
   }
 
  async function handleGoogle() {
