@@ -124,7 +124,40 @@ function ProfilePage() {
   );
 }
 
+function AvatarPicker({ url, userId, onChange }: { url: string | null; userId?: string; onChange: (url: string) => void }) {
+  const [busy, setBusy] = useState(false);
+
+  async function upload(file: File) {
+    if (!userId) return;
+    if (!file.type.startsWith("image/")) return toast.error("Please pick an image file");
+    if (file.size > 5 * 1024 * 1024) return toast.error("Image must be under 5 MB");
+    setBusy(true);
+    const path = `${userId}/avatar-${Date.now()}-${file.name.replace(/[^\w.-]/g, "_")}`;
+    const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+    if (error) { setBusy(false); return toast.error(error.message); }
+    const { data } = await supabase.storage.from("avatars").createSignedUrl(path, 60 * 60 * 24 * 365);
+    setBusy(false);
+    if (data?.signedUrl) { onChange(data.signedUrl); toast.success("Photo uploaded — save to apply"); }
+  }
+
+  return (
+    <div className="flex items-center gap-4">
+      {url ? (
+        <img src={url} alt="Profile photo" className="h-16 w-16 rounded-full border border-border object-cover" />
+      ) : (
+        <div className="grid h-16 w-16 place-items-center rounded-full bg-muted text-xs text-muted-foreground">No photo</div>
+      )}
+      <label className="cursor-pointer rounded-full border border-input px-4 py-2 text-xs font-semibold hover:bg-accent">
+        {busy ? "Uploading…" : url ? "Change photo" : "Upload photo"}
+        <input type="file" accept="image/*" className="hidden" disabled={busy}
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f); }} />
+      </label>
+    </div>
+  );
+}
+
 function Field({ label, v, on, type = "text", err, disabled, placeholder }: { label: string; v: string; on?: (v: string) => void; type?: string; err?: string; disabled?: boolean; placeholder?: string }) {
+
   return (
     <label className="block">
       <span className="mb-1 block text-xs font-semibold">{label}</span>
