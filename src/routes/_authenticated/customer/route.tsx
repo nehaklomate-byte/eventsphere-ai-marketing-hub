@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   LayoutDashboard, CalendarDays, ReceiptText, Heart, Store, Bell, Wallet,
   Star, Settings, LogOut, Menu, X, User,
+  MessageCircle,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
