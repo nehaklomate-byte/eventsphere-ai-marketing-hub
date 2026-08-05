@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useRouterState, useNavigate, redirect } 
 import { useState } from "react";
 import {
   LayoutDashboard, ShieldCheck, Users, Building2, Landmark, Briefcase, HardHat,
-  Bell, Settings, LogOut, Menu, X, UserCheck,
+  Bell, Settings, LogOut, Menu, X, UserCheck, IndianRupee,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,8 +45,9 @@ const NAV = [
   { to: "/admin/verification", label: "Venue Owners", icon: Landmark, search: { role: "venue" } },
   { to: "/admin/verification", label: "Vendors", icon: Briefcase, search: { role: "vendor" } },
   { to: "/admin/verification", label: "Workers", icon: HardHat, search: { role: "worker" } },
+  { to: "/admin/earnings", label: "Earnings", icon: IndianRupee },
   { to: "/admin/users", label: "Users", icon: Users },
-  { to: "/admin/notifications", label: "Broadcast Center", icon: Bell, soon: true },
+  { to: "/admin/notifications", label: "Broadcast Center", icon: Bell },
   { to: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
