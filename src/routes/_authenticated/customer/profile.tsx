@@ -86,7 +86,13 @@ function ProfilePage() {
         </div>
         <div className="mb-6 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full bg-gradient-brand" style={{ width: `${completion}%` }} /></div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <AvatarPicker
+          url={form.avatar_url ?? null}
+          userId={user?.id}
+          onChange={(url) => setForm((f) => ({ ...f, avatar_url: url }))}
+        />
+
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
           <Field label="Full name *" v={form.full_name ?? ""} on={(v) => setForm({ ...form, full_name: v })} err={errors.full_name} />
           <Field label="Email" v={user?.email ?? ""} disabled />
           <Field label="Phone" v={form.phone ?? ""} on={(v) => setForm({ ...form, phone: v })} err={errors.phone} placeholder="+91 98xxxxxxxx" />
@@ -98,6 +104,7 @@ function ProfilePage() {
           <Field label="State" v={form.state ?? ""} on={(v) => setForm({ ...form, state: v })} />
           <Field label="Pincode" v={form.pincode ?? ""} on={(v) => setForm({ ...form, pincode: v })} err={errors.pincode} />
         </div>
+
 
         <div className="mt-6 flex flex-wrap gap-3">
           <button onClick={save} disabled={busy} className="inline-flex items-center gap-2 rounded-full btn-brand btn-brand-hover px-5 py-2 text-sm font-semibold text-white">
