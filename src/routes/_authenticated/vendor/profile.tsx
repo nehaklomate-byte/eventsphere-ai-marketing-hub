@@ -3,8 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
-import { fetchMyVendor, uploadVendorFile, computeVendorCompletion, VENDOR_CATEGORIES } from "@/lib/vendor";
-import { Loader2, Save, Upload, X, CheckCircle2, ShieldCheck, Store } from "lucide-react";
+import { fetchMyVendor, uploadVendorFile, computeVendorCompletion, VENDOR_CATEGORIES, fetchVendorPackages, saveVendorPackage, deleteVendorPackage, type VendorPackage } from "@/lib/vendor";
+import { Loader2, Save, Upload, X, CheckCircle2, ShieldCheck, Store, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 // Mirrors src/routes/_authenticated/worker/profile.tsx exactly — same
@@ -21,6 +21,7 @@ const SECTIONS = [
   { id: "location", label: "Location" },
   { id: "legal", label: "Legal & Links" },
   { id: "portfolio", label: "Portfolio" },
+  { id: "packages", label: "Packages" },
   { id: "review", label: "Review" },
 ];
 
@@ -35,6 +36,12 @@ function ProfilePage() {
 
   const { data: vendor, isLoading } = useQuery({
     queryKey: ["me-vendor", user?.id], queryFn: () => fetchMyVendor(user!.id), enabled: !!user?.id,
+  });
+
+  const { data: packages, refetch: refetchPackages } = useQuery({
+    queryKey: ["me-vendor-packages", vendor?.id],
+    queryFn: () => fetchVendorPackages(vendor!.id),
+    enabled: !!vendor?.id,
   });
 
   useEffect(() => { if (vendor) setForm(vendor as unknown as FormState); }, [vendor]);
@@ -180,6 +187,14 @@ function ProfilePage() {
           </>
         )}
 
+        {active === "packages" && (
+          vendor?.id ? (
+            <PackagesEditor vendorId={vendor.id} packages={packages ?? []} onChanged={refetchPackages} />
+          ) : (
+            <p className="text-sm text-muted-foreground">Save your basic profile first (so we have a vendor ID), then come back to add packages.</p>
+          )
+        )}
+
         {active === "review" && (
           <div>
             <div className="rounded-2xl border border-border p-5 space-y-2 text-sm">
@@ -300,4 +315,64 @@ function MediaGrid({ label, prefix, accept = "image/*", values, onChange, upload
 }
 function ReviewRow({ label, value }: { label: string; value: string | number | undefined }) {
   return <div className="flex justify-between gap-4"><span className="text-muted-foreground">{label}</span><span className="font-medium text-foreground text-right truncate">{value || "—"}</span></div>;
+}
+
+/** Basic/Premium/Luxury (or custom-named) price tiers a customer can pick
+ * on the vendor's public profile instead of a single flat "starting
+ * price". Deliberately simple — name + price + optional description,
+ * no per-package inclusions list — per the "don't add more fields than
+ * this for MVP" guidance. */
+function PackagesEditor({ vendorId, packages, onChanged }: { vendorId: string; packages: VendorPackage[]; onChanged: () => void }) {
+  const [rows, setRows] = useState<Partial<VendorPackage>[]>(packages);
+  const [saving, setSaving] = useState<number | null>(null);
+  useEffect(() => setRows(packages), [packages]);
+
+  function updateRow(i: number, patch: Partial<VendorPackage>) {
+    setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+  }
+
+  async function save(i: number) {
+    const r = rows[i];
+    if (!r.name?.trim() || !r.price) { toast.error("Package name and price are required."); return; }
+    setSaving(i);
+    try {
+      await saveVendorPackage({ ...r, vendor_id: vendorId, sort_order: r.sort_order ?? i } as never);
+      toast.success("Package saved");
+      onChanged();
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setSaving(null); }
+  }
+
+  async function remove(i: number) {
+    const r = rows[i];
+    if (r.id) { try { await deleteVendorPackage(r.id); toast.success("Removed"); onChanged(); } catch (e) { toast.error((e as Error).message); return; } }
+    setRows((prev) => prev.filter((_, idx) => idx !== i));
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">Add 2–3 price tiers customers can choose from — e.g. Basic, Premium, Luxury. Leave this empty to keep showing just your starting price.</p>
+      {rows.map((r, i) => (
+        <div key={r.id ?? `new-${i}`} className="grid gap-3 rounded-xl border border-border p-4 md:grid-cols-[1fr_140px_2fr_auto] items-start">
+          <Field label="Package name"><Input value={r.name ?? ""} onChange={(v) => updateRow(i, { name: v })} placeholder="Basic" /></Field>
+          <Field label="Price (₹)"><Input type="number" value={r.price?.toString() ?? ""} onChange={(v) => updateRow(i, { price: Number(v) })} placeholder="15000" /></Field>
+          <Field label="What's included (optional)"><Input value={r.description ?? ""} onChange={(v) => updateRow(i, { description: v })} placeholder="Short description" /></Field>
+          <div className="flex gap-2 pt-6">
+            <button onClick={() => save(i)} disabled={saving === i} className="rounded-lg border border-input px-3 py-2 text-xs font-semibold hover:bg-accent disabled:opacity-50">
+              {saving === i ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            </button>
+            <button onClick={() => remove(i)} className="rounded-lg border border-input px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30">
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      ))}
+      <button
+        onClick={() => setRows((prev) => [...prev, { name: "", price: undefined, description: "", sort_order: prev.length }])}
+        className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-input px-4 py-2 text-xs font-semibold hover:bg-accent"
+      >
+        <Plus className="h-3.5 w-3.5" /> Add package
+      </button>
+    </div>
+  );
 }
