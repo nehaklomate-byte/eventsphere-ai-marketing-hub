@@ -31,6 +31,7 @@ function ProfilePage() {
   const { user } = useSession();
   const qc = useQueryClient();
   const [active, setActive] = useState("basic");
+  const [partnerTermsChecked, setPartnerTermsChecked] = useState(false);
   const [form, setForm] = useState<FormState>({});
   const [uploading, setUploading] = useState<string | null>(null);
 
@@ -82,7 +83,7 @@ function ProfilePage() {
   const submitForVerification = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.from("vendors")
-        .update({ ...form, verification_status: "pending" } as never).eq("owner_id", user!.id).select().maybeSingle();
+        .update({ ...form, verification_status: "pending", partner_terms_accepted_at: new Date().toISOString() } as never).eq("owner_id", user!.id).select().maybeSingle();
       if (error) throw error;
       if (!data) throw new Error("Submission was blocked — please refresh the page and try again. If this keeps happening, contact support.");
     },
@@ -230,11 +231,20 @@ function ProfilePage() {
                 <div className="text-sm"><strong>Verification in progress.</strong> Our team reviews profiles within 24-48 hours.</div>
               </div>
             ) : (
-              <button onClick={() => submitForVerification.mutate()} disabled={submitForVerification.isPending}
-                className="mt-6 inline-flex items-center gap-2 rounded-full btn-brand btn-brand-hover px-5 py-2.5 text-sm font-semibold text-white">
-                {submitForVerification.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                Submit for verification
-              </button>
+              <div className="mt-6">
+                <label className="flex items-start gap-2.5 text-sm">
+                  <input type="checkbox" checked={partnerTermsChecked} onChange={(e) => setPartnerTermsChecked(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-input accent-[color:var(--brand-violet)]" />
+                  <span className="text-muted-foreground">
+                    I accept the <a href="/partner-terms" target="_blank" rel="noreferrer" className="text-brand-violet underline">Partner Terms</a>, including the commission structure, payout schedule, and off-platform circumvention policy.
+                  </span>
+                </label>
+                <button onClick={() => submitForVerification.mutate()} disabled={submitForVerification.isPending || !partnerTermsChecked}
+                  className="mt-3 inline-flex items-center gap-2 rounded-full btn-brand btn-brand-hover px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+                  {submitForVerification.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Submit for verification
+                </button>
+              </div>
             )}
           </div>
         )}
