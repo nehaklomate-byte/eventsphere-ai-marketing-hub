@@ -26,7 +26,7 @@ type Hall = {
   parking_photos: string[];
   room_photos: string[];
   washroom_photos: string[];
-  payment_methods: string[];
+  extra: Record<string, unknown>;
   min_guests: number | null;
   max_guests: number | null;
   indoor_capacity: number | null;
@@ -91,7 +91,7 @@ function normalize(d: Record<string, unknown>): Hall {
     parking_photos: Array.isArray(d.parking_photos) ? (d.parking_photos as string[]) : [],
     room_photos: Array.isArray(d.room_photos) ? (d.room_photos as string[]) : [],
     washroom_photos: Array.isArray(d.washroom_photos) ? (d.washroom_photos as string[]) : [],
-    payment_methods: Array.isArray(d.payment_methods) ? (d.payment_methods as string[]) : [],
+    extra: (d.additional_info as Record<string, unknown>) ?? {},
     min_guests: (d.min_guests as number) ?? null,
     max_guests: (d.max_guests as number) ?? null,
     indoor_capacity: (d.indoor_capacity as number) ?? null,
@@ -116,11 +116,27 @@ function normalize(d: Record<string, unknown>): Hall {
 function HallDetail() {
   const { hall } = Route.useLoaderData();
   const { event_id } = Route.useSearch();
-  const [reviews, setReviews] = useState<Array<{ id: string; rating: number; comment: string | null; created_at: string }>>([]);
+  const [reviews, setReviews] = useState<Array<{ id: string; rating: number; comment: string | null; created_at: string; author: string | null }>>([]);
 
+  // Reviews come from two places: legacy hall_reviews and the customer
+  // workspace's customer_reviews. Both are shown, newest first, so a review
+  // a customer just left from their dashboard appears here immediately.
   useEffect(() => {
-    supabase.from("hall_reviews").select("id,rating,comment,created_at").eq("hall_id", hall.id).order("created_at", { ascending: false }).limit(6)
-      .then(({ data }) => setReviews(data ?? []));
+    let cancelled = false;
+    Promise.all([
+      supabase.from("hall_reviews").select("id,rating,comment,created_at").eq("hall_id", hall.id).order("created_at", { ascending: false }).limit(20),
+      supabase.from("customer_reviews").select("id,rating,comment,created_at").eq("kind", "hall").eq("target_id", hall.id).order("created_at", { ascending: false }).limit(20),
+    ]).then(([a, b]) => {
+      if (cancelled) return;
+      const merged = [
+        ...((a.data ?? []) as { id: string; rating: number; comment: string | null; created_at: string }[]),
+        ...((b.data ?? []) as { id: string; rating: number; comment: string | null; created_at: string }[]),
+      ]
+        .map((r) => ({ ...r, author: null as string | null }))
+        .sort((x, y) => +new Date(y.created_at) - +new Date(x.created_at));
+      setReviews(merged);
+    });
+    return () => { cancelled = true; };
   }, [hall.id]);
 
   const cover = hall.cover_url || hall.gallery[0] || "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1600&q=70";
