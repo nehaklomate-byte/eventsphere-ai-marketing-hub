@@ -169,12 +169,12 @@ function VenueProfilePage() {
         <Field label="Cancellation policy"><Textarea value={form.cancellation_policy ?? ""} onChange={(v) => set("cancellation_policy", v as never)} /></Field>
         <Field label="Accepted payment methods (shown to customers)">
           <div className="flex flex-wrap gap-2">
-            {["Online (Razorpay)", "Bank Transfer", "UPI Direct", "Cash", "Cheque"].map((m) => {
-              const current = (form.payment_methods as string[]) ?? [];
+            {["Online (Razorpay)", "Bank transfer", "UPI", "Card", "Cash", "Cheque"].map((m) => {
+              const current = (extra.payment_methods as string[]) ?? [];
               const active = current.includes(m);
               return (
                 <button key={m} type="button"
-                  onClick={() => set("payment_methods", (active ? current.filter((x) => x !== m) : [...current, m]) as never)}
+                  onClick={() => setExtra("payment_methods", active ? current.filter((x) => x !== m) : [...current, m])}
                   className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition ${active ? "border-brand-violet bg-brand-violet text-white" : "border-border bg-background text-muted-foreground hover:bg-accent"}`}>
                   {m}
                 </button>
@@ -182,6 +182,14 @@ function VenueProfilePage() {
             })}
           </div>
         </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Booking / payment terms (shown to customers)">
+            <Textarea value={extra.payment_terms as string ?? ""} onChange={(v) => setExtra("payment_terms", v)} placeholder="e.g. 30% advance to block the date, balance on the event day. Bank transfer or UPI accepted." />
+          </Field>
+          <Field label="UPI ID for advance payment (optional, shown to customers)">
+            <Input value={extra.payment_upi as string ?? ""} onChange={(v) => setExtra("payment_upi", v)} placeholder="venue@upi" />
+          </Field>
+        </div>
       </Section>
 
       {/* Amenities */}
