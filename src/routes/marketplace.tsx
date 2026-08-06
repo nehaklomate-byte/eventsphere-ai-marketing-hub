@@ -175,8 +175,9 @@ function Marketplace() {
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="font-display text-base font-semibold truncate">{h.name}</h3>
                     {h.review_count > 0 && (
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold">
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-accent/60 px-2 py-0.5 text-xs font-semibold">
                         <Star className="h-3.5 w-3.5 fill-brand-orange text-brand-orange" />{h.rating.toFixed(1)}
+                        <span className="font-medium text-muted-foreground">({h.review_count})</span>
                       </span>
                     )}
                   </div>
