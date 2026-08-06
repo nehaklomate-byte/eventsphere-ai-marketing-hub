@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { CookieConsent } from "@/components/CookieConsent";
 
 function NotFoundComponent() {
   return (
@@ -153,6 +154,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
+      <CookieConsent />
     </QueryClientProvider>
   );
 }
