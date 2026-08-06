@@ -382,11 +382,12 @@ function NumberInput({ value, onChange }: { value?: number | null; onChange: (v:
   );
 }
 
-function Textarea({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function Textarea({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
     <textarea
       value={value}
       rows={3}
+      placeholder={placeholder}
       onChange={(e) => onChange(e.target.value)}
       className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet"
     />
