@@ -194,8 +194,11 @@ function VenueProfilePage() {
 
       {/* Amenities */}
       <Section title="Amenities">
+        <p className="-mt-2 text-xs text-muted-foreground">
+          Only the amenities you switch on here are shown to customers. Add anything specific to your venue at the bottom.
+        </p>
         <div className="flex flex-wrap gap-2">
-          {FACILITY_OPTIONS.map((name) => (
+          {Array.from(new Set([...FACILITY_OPTIONS, ...Object.keys(facilities)])).map((name) => (
             <button
               key={name}
               type="button"
@@ -208,6 +211,12 @@ function VenueProfilePage() {
             </button>
           ))}
         </div>
+        <CustomFacilityInput
+          onAdd={(name) => {
+            const current = (form.facilities as Record<string, boolean>) ?? {};
+            set("facilities", { ...current, [name]: true } as never);
+          }}
+        />
       </Section>
 
       {/* Additional details */}
