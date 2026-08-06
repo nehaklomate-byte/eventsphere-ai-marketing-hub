@@ -375,6 +375,28 @@ function NumberInput({ value, onChange }: { value?: number | null; onChange: (v:
   );
 }
 
+function CustomFacilityInput({ onAdd }: { onAdd: (name: string) => void }) {
+  const [value, setValue] = useState("");
+  function add() {
+    const name = value.trim();
+    if (!name) return;
+    onAdd(name);
+    setValue("");
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
+        placeholder="Add your own amenity — e.g. Bridal suite, Valet parking"
+        className="min-w-[16rem] flex-1 rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet"
+      />
+      <button type="button" onClick={add} className="rounded-full border border-input px-4 py-2 text-xs font-semibold hover:bg-accent">Add amenity</button>
+    </div>
+  );
+}
+
 function Textarea({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
     <textarea
