@@ -36,6 +36,7 @@ const cols = [
       { to: "/privacy", label: "Privacy Policy" },
       { to: "/terms", label: "Terms of Service" },
       { to: "/refund-policy", label: "Refund & Cancellation" },
+      { to: "/partner-terms", label: "Partner Terms" },
     ],
   },
 ] as const;
