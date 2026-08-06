@@ -3,23 +3,23 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
 import {
-  User, ShieldCheck, Lock, Eye, Bell, Palette, Globe, Loader2, Save, Upload,
-  LogOut, Trash2, AlertTriangle, X, Sun, Moon, Monitor, Copy, ShieldOff, KeyRound,
+  User, ShieldCheck, Lock, Eye, Bell, Loader2, Save, Upload,
+  LogOut, Trash2, AlertTriangle, X, Copy, ShieldOff, KeyRound,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
 import {
   fetchMyAccountProfile, updateAccountBasics, updatePreferences, setNotificationPref,
   changePassword, logoutAllDevices, requestAccountDeletion, cancelAccountDeletion, fetchPendingDeletionRequest,
-  applyTheme, TIMEZONES, LANGUAGES, NOTIFICATION_EVENT_LABEL,
+  NOTIFICATION_EVENT_LABEL,
   type AccountProfile, type Preferences, type NotificationChannel, type NotificationEvent,
 } from "@/lib/settings";
 import { listFactors, enrollTotp, verifyEnrollment, unenroll } from "@/lib/mfa";
 
-const TABS = ["basic", "security", "privacy", "notifications", "appearance"] as const;
+const TABS = ["basic", "security", "privacy", "notifications"] as const;
 type Tab = (typeof TABS)[number];
-const TAB_LABEL: Record<Tab, string> = { basic: "Basic Info", security: "Login & Security", privacy: "Privacy", notifications: "Notifications", appearance: "Appearance & Language" };
-const TAB_ICON: Record<Tab, typeof User> = { basic: User, security: Lock, privacy: Eye, notifications: Bell, appearance: Palette };
+const TAB_LABEL: Record<Tab, string> = { basic: "Basic Info", security: "Login & Security", privacy: "Privacy", notifications: "Notifications" };
+const TAB_ICON: Record<Tab, typeof User> = { basic: User, security: Lock, privacy: Eye, notifications: Bell };
 
 /**
  * Drop this into any role's settings.tsx:
@@ -60,7 +60,6 @@ export function AccountSettingsSection() {
         {tab === "security" && <SecurityTab userId={user!.id} />}
         {tab === "privacy" && <PrivacyTab profile={profile} userId={user!.id} onSaved={refresh} />}
         {tab === "notifications" && <NotificationsTab profile={profile} userId={user!.id} onSaved={refresh} />}
-        {tab === "appearance" && <AppearanceTab profile={profile} userId={user!.id} onSaved={refresh} />}
       </div>
 
       <style>{`
@@ -429,81 +428,6 @@ function NotificationsTab({ profile, userId, onSaved }: { profile: AccountProfil
         {(Object.keys(NOTIFICATION_EVENT_LABEL) as NotificationEvent[]).map((event) => (
           <ToggleRow key={event} label={NOTIFICATION_EVENT_LABEL[event]} checked={profile.preferences.notify[channel][event]} busy={busyKey === event} onChange={(v) => toggle(event, v)} />
         ))}
-      </div>
-    </div>
-  );
-}
-
-/* ---------------- Appearance & Language ---------------- */
-function AppearanceTab({ profile, userId, onSaved }: { profile: AccountProfile; userId: string; onSaved: () => void }) {
-  const [saving, setSaving] = useState<string | null>(null);
-
-  async function setTheme(theme: Preferences["theme"]) {
-    setSaving("theme");
-    applyTheme(theme); // instant visual feedback, no reload needed
-    try { await updatePreferences(userId, profile.preferences, { theme }); onSaved(); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Failed to save"); }
-    finally { setSaving(null); }
-  }
-  async function setFontSize(font_size: Preferences["font_size"]) {
-    setSaving("font_size");
-    try { await updatePreferences(userId, profile.preferences, { font_size }); onSaved(); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Failed to save"); }
-    finally { setSaving(null); }
-  }
-  async function setCompact(compact_view: boolean) {
-    setSaving("compact_view");
-    try { await updatePreferences(userId, profile.preferences, { compact_view }); onSaved(); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Failed to save"); }
-    finally { setSaving(null); }
-  }
-  async function setLanguage(language_preference: string) {
-    setSaving("language");
-    try { await updateAccountBasics(userId, { language_preference }); onSaved(); toast.success("Language preference saved"); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Failed to save"); }
-    finally { setSaving(null); }
-  }
-  async function setTimezone(timezone: string) {
-    setSaving("timezone");
-    try { await updateAccountBasics(userId, { timezone }); onSaved(); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Failed to save"); }
-    finally { setSaving(null); }
-  }
-
-  return (
-    <div className="space-y-8">
-      <div>
-        <h3 className="font-semibold text-sm mb-3">Theme</h3>
-        <div className="flex gap-2">
-          {([["light", Sun], ["dark", Moon], ["system", Monitor]] as [Preferences["theme"], typeof Sun][]).map(([t, Icon]) => (
-            <button key={t} onClick={() => setTheme(t)} disabled={saving === "theme"}
-              className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold capitalize border transition ${profile.preferences.theme === t ? "bg-gradient-brand text-white border-transparent" : "border-input hover:bg-accent"}`}>
-              <Icon className="h-3.5 w-3.5" /> {t}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div>
-        <h3 className="font-semibold text-sm mb-3">Font size</h3>
-        <div className="flex gap-2">
-          {(["small", "normal", "large"] as Preferences["font_size"][]).map((s) => (
-            <button key={s} onClick={() => setFontSize(s)} disabled={saving === "font_size"}
-              className={`rounded-full px-4 py-2 text-sm font-semibold capitalize border transition ${profile.preferences.font_size === s ? "bg-gradient-brand text-white border-transparent" : "border-input hover:bg-accent"}`}>{s}</button>
-          ))}
-        </div>
-      </div>
-      <ToggleRow label="Compact view" checked={profile.preferences.compact_view} busy={saving === "compact_view"} onChange={setCompact} />
-      <div className="border-t border-border pt-6">
-        <h3 className="font-semibold text-sm mb-3 flex items-center gap-1.5"><Globe className="h-4 w-4" /> Language</h3>
-        <select className="input max-w-xs" value={profile.language_preference} onChange={(e) => setLanguage(e.target.value)} disabled={saving === "language"}>
-          {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
-        </select>
-      </div>
-      <div>
-        <h3 className="font-semibold text-sm mb-3">Time zone</h3>
-        <select className="input max-w-xs" value={profile.timezone} onChange={(e) => setTimezone(e.target.value)} disabled={saving === "timezone"}>
-          {TIMEZONES.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
-        </select>
       </div>
     </div>
   );

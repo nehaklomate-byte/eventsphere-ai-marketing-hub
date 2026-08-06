@@ -26,7 +26,7 @@ type Hall = {
   parking_photos: string[];
   room_photos: string[];
   washroom_photos: string[];
-  payment_methods: string[];
+  extra: Record<string, unknown>;
   min_guests: number | null;
   max_guests: number | null;
   indoor_capacity: number | null;
@@ -91,7 +91,7 @@ function normalize(d: Record<string, unknown>): Hall {
     parking_photos: Array.isArray(d.parking_photos) ? (d.parking_photos as string[]) : [],
     room_photos: Array.isArray(d.room_photos) ? (d.room_photos as string[]) : [],
     washroom_photos: Array.isArray(d.washroom_photos) ? (d.washroom_photos as string[]) : [],
-    payment_methods: Array.isArray(d.payment_methods) ? (d.payment_methods as string[]) : [],
+    extra: (d.additional_info as Record<string, unknown>) ?? {},
     min_guests: (d.min_guests as number) ?? null,
     max_guests: (d.max_guests as number) ?? null,
     indoor_capacity: (d.indoor_capacity as number) ?? null,
@@ -116,11 +116,27 @@ function normalize(d: Record<string, unknown>): Hall {
 function HallDetail() {
   const { hall } = Route.useLoaderData();
   const { event_id } = Route.useSearch();
-  const [reviews, setReviews] = useState<Array<{ id: string; rating: number; comment: string | null; created_at: string }>>([]);
+  const [reviews, setReviews] = useState<Array<{ id: string; rating: number; comment: string | null; created_at: string; author: string | null }>>([]);
 
+  // Reviews come from two places: legacy hall_reviews and the customer
+  // workspace's customer_reviews. Both are shown, newest first, so a review
+  // a customer just left from their dashboard appears here immediately.
   useEffect(() => {
-    supabase.from("hall_reviews").select("id,rating,comment,created_at").eq("hall_id", hall.id).order("created_at", { ascending: false }).limit(6)
-      .then(({ data }) => setReviews(data ?? []));
+    let cancelled = false;
+    Promise.all([
+      supabase.from("hall_reviews").select("id,rating,comment,created_at").eq("hall_id", hall.id).order("created_at", { ascending: false }).limit(20),
+      supabase.from("customer_reviews").select("id,rating,comment,created_at").eq("kind", "hall").eq("target_id", hall.id).order("created_at", { ascending: false }).limit(20),
+    ]).then(([a, b]) => {
+      if (cancelled) return;
+      const merged = [
+        ...((a.data ?? []) as { id: string; rating: number; comment: string | null; created_at: string }[]),
+        ...((b.data ?? []) as { id: string; rating: number; comment: string | null; created_at: string }[]),
+      ]
+        .map((r) => ({ ...r, author: null as string | null }))
+        .sort((x, y) => +new Date(y.created_at) - +new Date(x.created_at));
+      setReviews(merged);
+    });
+    return () => { cancelled = true; };
   }, [hall.id]);
 
   const cover = hall.cover_url || hall.gallery[0] || "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1600&q=70";
@@ -198,24 +214,72 @@ function HallDetail() {
           <PhotoSection title="Guest rooms" photos={hall.room_photos} hallName={hall.name} />
           <PhotoSection title="Washrooms" photos={hall.washroom_photos} hallName={hall.name} />
 
-          {/* FACILITIES */}
-          <Card title="Facilities & amenities" icon={ShieldCheck}>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {facilityList(hall.facilities, hall.parking_slots, hall.num_rooms).map((f) => (
-                <div key={f.key} className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${f.available ? "border-brand-violet/30 bg-accent/40" : "border-border text-muted-foreground line-through"}`}>
-                  <f.icon className={`h-4 w-4 ${f.available ? "text-brand-violet" : "text-muted-foreground"}`} />
-                  {f.label}
+          {/* FACILITIES — only what this venue actually offers */}
+          {(() => {
+            const list = facilityList(hall.facilities, hall.parking_slots, hall.num_rooms);
+            if (list.length === 0) return null;
+            return (
+              <Card title="Facilities & amenities" icon={ShieldCheck}>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {list.map((f) => (
+                    <div key={f.key} className="flex items-center gap-2 rounded-xl border border-brand-violet/30 bg-accent/40 px-3 py-2 text-sm">
+                      <f.icon className="h-4 w-4 text-brand-violet" />
+                      {f.label}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </Card>
+              </Card>
+            );
+          })()}
+
+          {/* GOOD TO KNOW — venue's own rules, filled in by the owner */}
+          {(() => {
+            const rows: Array<[string, string]> = [];
+            const s = (k: string) => (typeof hall.extra[k] === "string" ? (hall.extra[k] as string).trim() : "");
+            if (s("catering_policy")) rows.push(["Catering", s("catering_policy")]);
+            if (s("decoration_policy")) rows.push(["Decoration", s("decoration_policy")]);
+            if (s("alcohol_policy")) rows.push(["Alcohol", s("alcohol_policy")]);
+            if (s("music_curfew")) rows.push(["Music / DJ curfew", s("music_curfew")]);
+            if (s("power_backup")) rows.push(["Power backup", s("power_backup")]);
+            const eventTypes = Array.isArray(hall.extra.event_types) ? (hall.extra.event_types as string[]) : [];
+            const notes = s("extra_notes");
+            if (rows.length === 0 && eventTypes.length === 0 && !notes) return null;
+            return (
+              <Card title="Good to know" icon={CheckCircle2}>
+                {rows.length > 0 && (
+                  <dl className="grid gap-3 sm:grid-cols-2">
+                    {rows.map(([k, v]) => (
+                      <div key={k} className="rounded-xl border border-border p-3">
+                        <dt className="text-[10px] uppercase tracking-widest text-muted-foreground">{k}</dt>
+                        <dd className="mt-1 text-sm font-medium">{v}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
+                {eventTypes.length > 0 && (
+                  <div className="mt-4">
+                    <div className="text-sm font-semibold">Events hosted here</div>
+                    <div className="mt-1.5 flex flex-wrap gap-2">
+                      {eventTypes.map((t) => (
+                        <span key={t} className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">{t}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {notes && <p className="mt-4 text-sm text-muted-foreground leading-relaxed">{notes}</p>}
+              </Card>
+            );
+          })()}
 
           {/* LOCATION */}
-          {(hall.address || hall.google_maps_url) && (
+          {(hall.address || hall.google_maps_url || typeof hall.extra.google_maps_link === "string" || typeof hall.extra.nearby_landmark === "string") && (
             <Card title="Location" icon={MapPin}>
               {hall.address && <p className="text-sm text-muted-foreground">{hall.address}</p>}
-              {hall.google_maps_url && (
-                <a href={hall.google_maps_url} target="_blank" rel="noreferrer"
+              {typeof hall.extra.nearby_landmark === "string" && hall.extra.nearby_landmark && (
+                <p className="mt-2 text-sm"><span className="font-semibold">Landmark:</span> <span className="text-muted-foreground">{hall.extra.nearby_landmark}</span></p>
+              )}
+              {(hall.google_maps_url || (typeof hall.extra.google_maps_link === "string" && hall.extra.google_maps_link)) && (
+                <a href={hall.google_maps_url || (hall.extra.google_maps_link as string)} target="_blank" rel="noreferrer"
                   className="mt-4 inline-flex items-center gap-2 rounded-full border border-input px-4 py-2 text-sm font-semibold hover:bg-accent">
                   Open in Google Maps <ChevronRight className="h-4 w-4" />
                 </a>
@@ -223,28 +287,46 @@ function HallDetail() {
             </Card>
           )}
 
-          {/* POLICIES */}
-          {(hall.cancellation_policy || hall.working_hours || hall.payment_methods.length > 0) && (
-            <Card title="Policies" icon={ShieldCheck}>
-              {hall.working_hours && <p className="text-sm"><span className="font-semibold">Working hours:</span> <span className="text-muted-foreground">{hall.working_hours}</span></p>}
-              {hall.payment_methods.length > 0 && (
-                <div className="mt-3">
-                  <div className="text-sm font-semibold">Payment methods accepted</div>
-                  <div className="mt-1.5 flex flex-wrap gap-2">
-                    {hall.payment_methods.map((m) => (
-                      <span key={m} className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">{m}</span>
-                    ))}
+          {/* POLICIES & PAYMENT */}
+          {(() => {
+            const methods = Array.isArray(hall.extra.payment_methods) ? (hall.extra.payment_methods as string[]) : [];
+            const terms = typeof hall.extra.payment_terms === "string" ? hall.extra.payment_terms : "";
+            const upi = typeof hall.extra.payment_upi === "string" ? hall.extra.payment_upi : "";
+            if (!hall.cancellation_policy && !hall.working_hours && methods.length === 0 && !terms && !upi) return null;
+            return (
+              <Card title="Payment & policies" icon={ShieldCheck}>
+                {hall.working_hours && <p className="text-sm"><span className="font-semibold">Working hours:</span> <span className="text-muted-foreground">{hall.working_hours}</span></p>}
+                {methods.length > 0 && (
+                  <div className="mt-3">
+                    <div className="text-sm font-semibold">Payment methods accepted</div>
+                    <div className="mt-1.5 flex flex-wrap gap-2">
+                      {methods.map((m: string) => (
+                        <span key={m} className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">{m}</span>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-              {hall.cancellation_policy && (
-                <div className="mt-3">
-                  <div className="text-sm font-semibold">Cancellation policy</div>
-                  <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{hall.cancellation_policy}</p>
-                </div>
-              )}
-            </Card>
-          )}
+                )}
+                {terms && (
+                  <div className="mt-3">
+                    <div className="text-sm font-semibold">Booking & payment terms</div>
+                    <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{terms}</p>
+                  </div>
+                )}
+                {upi && (
+                  <div className="mt-3">
+                    <div className="text-sm font-semibold">UPI ID for advance</div>
+                    <p className="mt-1 font-mono text-sm text-muted-foreground">{upi}</p>
+                  </div>
+                )}
+                {hall.cancellation_policy && (
+                  <div className="mt-3">
+                    <div className="text-sm font-semibold">Cancellation policy</div>
+                    <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{hall.cancellation_policy}</p>
+                  </div>
+                )}
+              </Card>
+            );
+          })()}
 
           {/* AVAILABILITY */}
           <Card title="Availability" icon={Calendar}>
@@ -343,18 +425,41 @@ function PhotoSection({ title, photos, hallName }: { title: string; photos: stri
   );
 }
 
+/**
+ * Renders the amenities the owner actually switched on in their venue
+ * profile — including custom ones they typed themselves — instead of a
+ * fixed checklist. Parking and guest rooms are inferred from the counts
+ * when the owner filled those in but didn't tick the matching amenity.
+ */
+const FACILITY_ICONS: Array<[RegExp, React.ComponentType<{ className?: string }>]> = [
+  [/\bac\b|air.?condition/i, Zap],
+  [/generator|backup|power/i, Zap],
+  [/lift|elevator/i, ArrowUpDown],
+  [/wheelchair|accessib/i, Accessibility],
+  [/wi.?fi|internet/i, Wifi],
+  [/cater|dining|food|kitchen/i, Utensils],
+  [/room|stay|suite/i, Bed],
+  [/parking|valet|car/i, Car],
+  [/pool|garden|lawn|stage|dj|sound|decor/i, PartyPopper],
+];
+
+function iconFor(label: string) {
+  return FACILITY_ICONS.find(([re]) => re.test(label))?.[1] ?? CheckCircle2;
+}
+
 function facilityList(f: Record<string, boolean>, parkingSlots: number | null, numRooms: number | null) {
-  return [
-    { key: "ac", label: "Air-conditioning", icon: Zap, available: !!f.ac },
-    { key: "generator", label: "Generator backup", icon: Zap, available: !!f.generator },
-    { key: "lift", label: "Lift", icon: ArrowUpDown, available: !!f.lift },
-    { key: "wheelchair", label: "Wheelchair access", icon: Accessibility, available: !!f.wheelchair },
-    { key: "wifi", label: "Wi-Fi", icon: Wifi, available: !!f.wifi },
-    { key: "decoration_allowed", label: "Decoration allowed", icon: PartyPopper, available: !!f.decoration_allowed },
-    { key: "outside_catering", label: "Outside catering", icon: Utensils, available: !!f.outside_catering },
-    { key: "parking", label: "Parking", icon: Car, available: (parkingSlots ?? 0) > 0 },
-    { key: "rooms", label: "Guest rooms", icon: Bed, available: (numRooms ?? 0) > 0 },
-  ];
+  const items = Object.entries(f ?? {})
+    .filter(([, on]) => !!on)
+    .map(([label]) => ({ key: label, label, icon: iconFor(label) }));
+
+  const has = (re: RegExp) => items.some((i) => re.test(i.label));
+  if ((parkingSlots ?? 0) > 0 && !has(/parking/i)) {
+    items.push({ key: "__parking", label: `Parking (${parkingSlots} slots)`, icon: Car });
+  }
+  if ((numRooms ?? 0) > 0 && !has(/room/i)) {
+    items.push({ key: "__rooms", label: `${numRooms} guest rooms`, icon: Bed });
+  }
+  return items;
 }
 
 /* ============================================================

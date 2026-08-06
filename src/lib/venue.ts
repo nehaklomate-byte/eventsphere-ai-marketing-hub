@@ -61,6 +61,7 @@ export type Hall = {
 export type Enquiry = {
   id: string;
   hall_id: string;
+  requester_id: string | null;
   contact_name: string;
   contact_email: string;
   contact_phone: string | null;

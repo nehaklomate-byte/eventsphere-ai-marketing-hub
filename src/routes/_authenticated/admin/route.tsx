@@ -37,7 +37,16 @@ export const Route = createFileRoute("/_authenticated/admin")({
 // param (verification.tsx already reads it) — a dedicated page per role
 // would just duplicate that screen, so this reuses it instead of stubbing
 // out four "Coming soon" placeholders.
-const NAV = [
+type NavItem = {
+  to: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  exact?: boolean;
+  search?: { role: string };
+  soon?: boolean;
+};
+
+const NAV: NavItem[] = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/admin/accounts", label: "Account Approvals", icon: UserCheck },
   { to: "/admin/verification", label: "Verification Center", icon: ShieldCheck },
