@@ -21,6 +21,12 @@ type Hall = {
   address: string | null;
   cover_url: string | null;
   gallery: string[];
+  stage_photos: string[];
+  dining_photos: string[];
+  parking_photos: string[];
+  room_photos: string[];
+  washroom_photos: string[];
+  payment_methods: string[];
   min_guests: number | null;
   max_guests: number | null;
   indoor_capacity: number | null;
@@ -80,6 +86,12 @@ function normalize(d: Record<string, unknown>): Hall {
     address: (d.address as string) ?? null,
     cover_url: (d.cover_url as string) ?? null,
     gallery: Array.isArray(d.gallery) ? (d.gallery as string[]) : [],
+    stage_photos: Array.isArray(d.stage_photos) ? (d.stage_photos as string[]) : [],
+    dining_photos: Array.isArray(d.dining_photos) ? (d.dining_photos as string[]) : [],
+    parking_photos: Array.isArray(d.parking_photos) ? (d.parking_photos as string[]) : [],
+    room_photos: Array.isArray(d.room_photos) ? (d.room_photos as string[]) : [],
+    washroom_photos: Array.isArray(d.washroom_photos) ? (d.washroom_photos as string[]) : [],
+    payment_methods: Array.isArray(d.payment_methods) ? (d.payment_methods as string[]) : [],
     min_guests: (d.min_guests as number) ?? null,
     max_guests: (d.max_guests as number) ?? null,
     indoor_capacity: (d.indoor_capacity as number) ?? null,
@@ -171,7 +183,7 @@ function HallDetail() {
             <Card title="Gallery" icon={PartyPopper}
               trailing={<span className="text-xs text-muted-foreground inline-flex items-center gap-1"><Sparkles className="h-3.5 w-3.5" /> 360° tour coming soon</span>}>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {hall.gallery.slice(0, 9).map((src: string, i: number) => (
+                {hall.gallery.map((src: string, i: number) => (
                   <div key={i} className="aspect-[4/3] overflow-hidden rounded-xl border border-border">
                     <img src={src} alt={`${hall.name} ${i + 1}`} loading="lazy" className="h-full w-full object-cover hover:scale-105 transition-transform duration-500" />
                   </div>
@@ -180,10 +192,16 @@ function HallDetail() {
             </Card>
           )}
 
+          <PhotoSection title="Stage" photos={hall.stage_photos} hallName={hall.name} />
+          <PhotoSection title="Dining area" photos={hall.dining_photos} hallName={hall.name} />
+          <PhotoSection title="Parking" photos={hall.parking_photos} hallName={hall.name} />
+          <PhotoSection title="Guest rooms" photos={hall.room_photos} hallName={hall.name} />
+          <PhotoSection title="Washrooms" photos={hall.washroom_photos} hallName={hall.name} />
+
           {/* FACILITIES */}
           <Card title="Facilities & amenities" icon={ShieldCheck}>
             <div className="grid gap-3 sm:grid-cols-2">
-              {facilityList(hall.facilities).map((f) => (
+              {facilityList(hall.facilities, hall.parking_slots, hall.num_rooms).map((f) => (
                 <div key={f.key} className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${f.available ? "border-brand-violet/30 bg-accent/40" : "border-border text-muted-foreground line-through"}`}>
                   <f.icon className={`h-4 w-4 ${f.available ? "text-brand-violet" : "text-muted-foreground"}`} />
                   {f.label}
@@ -206,9 +224,19 @@ function HallDetail() {
           )}
 
           {/* POLICIES */}
-          {(hall.cancellation_policy || hall.working_hours) && (
+          {(hall.cancellation_policy || hall.working_hours || hall.payment_methods.length > 0) && (
             <Card title="Policies" icon={ShieldCheck}>
               {hall.working_hours && <p className="text-sm"><span className="font-semibold">Working hours:</span> <span className="text-muted-foreground">{hall.working_hours}</span></p>}
+              {hall.payment_methods.length > 0 && (
+                <div className="mt-3">
+                  <div className="text-sm font-semibold">Payment methods accepted</div>
+                  <div className="mt-1.5 flex flex-wrap gap-2">
+                    {hall.payment_methods.map((m) => (
+                      <span key={m} className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">{m}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
               {hall.cancellation_policy && (
                 <div className="mt-3">
                   <div className="text-sm font-semibold">Cancellation policy</div>
@@ -300,7 +328,22 @@ function Stat({ label, value }: { label: string; value: number | null }) {
   );
 }
 
-function facilityList(f: Record<string, boolean>) {
+function PhotoSection({ title, photos, hallName }: { title: string; photos: string[]; hallName: string }) {
+  if (photos.length === 0) return null;
+  return (
+    <Card title={title} icon={PartyPopper}>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+        {photos.map((src, i) => (
+          <div key={i} className="aspect-[4/3] overflow-hidden rounded-xl border border-border">
+            <img src={src} alt={`${hallName} — ${title} ${i + 1}`} loading="lazy" className="h-full w-full object-cover hover:scale-105 transition-transform duration-500" />
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function facilityList(f: Record<string, boolean>, parkingSlots: number | null, numRooms: number | null) {
   return [
     { key: "ac", label: "Air-conditioning", icon: Zap, available: !!f.ac },
     { key: "generator", label: "Generator backup", icon: Zap, available: !!f.generator },
@@ -309,8 +352,8 @@ function facilityList(f: Record<string, boolean>) {
     { key: "wifi", label: "Wi-Fi", icon: Wifi, available: !!f.wifi },
     { key: "decoration_allowed", label: "Decoration allowed", icon: PartyPopper, available: !!f.decoration_allowed },
     { key: "outside_catering", label: "Outside catering", icon: Utensils, available: !!f.outside_catering },
-    { key: "parking", label: "Parking", icon: Car, available: true },
-    { key: "rooms", label: "Guest rooms", icon: Bed, available: true },
+    { key: "parking", label: "Parking", icon: Car, available: (parkingSlots ?? 0) > 0 },
+    { key: "rooms", label: "Guest rooms", icon: Bed, available: (numRooms ?? 0) > 0 },
   ];
 }
 
