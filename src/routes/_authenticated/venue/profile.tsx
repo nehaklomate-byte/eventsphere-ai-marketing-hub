@@ -167,6 +167,21 @@ function VenueProfilePage() {
         </div>
         <Field label="Working hours"><Input value={form.working_hours ?? ""} onChange={(v) => set("working_hours", v as never)} placeholder="e.g. 8 AM – 11 PM" /></Field>
         <Field label="Cancellation policy"><Textarea value={form.cancellation_policy ?? ""} onChange={(v) => set("cancellation_policy", v as never)} /></Field>
+        <Field label="Accepted payment methods (shown to customers)">
+          <div className="flex flex-wrap gap-2">
+            {["Online (Razorpay)", "Bank Transfer", "UPI Direct", "Cash", "Cheque"].map((m) => {
+              const current = (form.payment_methods as string[]) ?? [];
+              const active = current.includes(m);
+              return (
+                <button key={m} type="button"
+                  onClick={() => set("payment_methods", (active ? current.filter((x) => x !== m) : [...current, m]) as never)}
+                  className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition ${active ? "border-brand-violet bg-brand-violet text-white" : "border-border bg-background text-muted-foreground hover:bg-accent"}`}>
+                  {m}
+                </button>
+              );
+            })}
+          </div>
+        </Field>
       </Section>
 
       {/* Amenities */}
@@ -282,6 +297,9 @@ function VenueProfilePage() {
         <MediaGrid label="Gallery" bucket="hall-media" prefix="gallery" values={(form.gallery as string[]) ?? []} onChange={(v) => set("gallery", v as never)} upload={upload} uploading={uploading} />
         <MediaGrid label="Stage photos" bucket="hall-media" prefix="stage" values={(form.stage_photos as string[]) ?? []} onChange={(v) => set("stage_photos", v as never)} upload={upload} uploading={uploading} />
         <MediaGrid label="Dining area photos" bucket="hall-media" prefix="dining" values={(form.dining_photos as string[]) ?? []} onChange={(v) => set("dining_photos", v as never)} upload={upload} uploading={uploading} />
+        <MediaGrid label="Parking photos" bucket="hall-media" prefix="parking" values={(form.parking_photos as string[]) ?? []} onChange={(v) => set("parking_photos", v as never)} upload={upload} uploading={uploading} />
+        <MediaGrid label="Guest rooms photos" bucket="hall-media" prefix="room" values={(form.room_photos as string[]) ?? []} onChange={(v) => set("room_photos", v as never)} upload={upload} uploading={uploading} />
+        <MediaGrid label="Washroom photos" bucket="hall-media" prefix="washroom" values={(form.washroom_photos as string[]) ?? []} onChange={(v) => set("washroom_photos", v as never)} upload={upload} uploading={uploading} />
       </Section>
 
       {/* Sticky save bar */}
