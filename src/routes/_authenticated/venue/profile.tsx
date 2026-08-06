@@ -212,7 +212,7 @@ function VenueProfilePage() {
           ))}
         </div>
         <CustomFacilityInput
-          onAdd={(name) => {
+          onAdd={(name: string) => {
             const current = (form.facilities as Record<string, boolean>) ?? {};
             set("facilities", { ...current, [name]: true } as never);
           }}
