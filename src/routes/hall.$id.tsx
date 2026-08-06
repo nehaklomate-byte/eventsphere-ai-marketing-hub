@@ -425,18 +425,41 @@ function PhotoSection({ title, photos, hallName }: { title: string; photos: stri
   );
 }
 
+/**
+ * Renders the amenities the owner actually switched on in their venue
+ * profile — including custom ones they typed themselves — instead of a
+ * fixed checklist. Parking and guest rooms are inferred from the counts
+ * when the owner filled those in but didn't tick the matching amenity.
+ */
+const FACILITY_ICONS: Array<[RegExp, React.ComponentType<{ className?: string }>]> = [
+  [/\bac\b|air.?condition/i, Zap],
+  [/generator|backup|power/i, Zap],
+  [/lift|elevator/i, ArrowUpDown],
+  [/wheelchair|accessib/i, Accessibility],
+  [/wi.?fi|internet/i, Wifi],
+  [/cater|dining|food|kitchen/i, Utensils],
+  [/room|stay|suite/i, Bed],
+  [/parking|valet|car/i, Car],
+  [/pool|garden|lawn|stage|dj|sound|decor/i, PartyPopper],
+];
+
+function iconFor(label: string) {
+  return FACILITY_ICONS.find(([re]) => re.test(label))?.[1] ?? CheckCircle2;
+}
+
 function facilityList(f: Record<string, boolean>, parkingSlots: number | null, numRooms: number | null) {
-  return [
-    { key: "ac", label: "Air-conditioning", icon: Zap, available: !!f.ac },
-    { key: "generator", label: "Generator backup", icon: Zap, available: !!f.generator },
-    { key: "lift", label: "Lift", icon: ArrowUpDown, available: !!f.lift },
-    { key: "wheelchair", label: "Wheelchair access", icon: Accessibility, available: !!f.wheelchair },
-    { key: "wifi", label: "Wi-Fi", icon: Wifi, available: !!f.wifi },
-    { key: "decoration_allowed", label: "Decoration allowed", icon: PartyPopper, available: !!f.decoration_allowed },
-    { key: "outside_catering", label: "Outside catering", icon: Utensils, available: !!f.outside_catering },
-    { key: "parking", label: "Parking", icon: Car, available: (parkingSlots ?? 0) > 0 },
-    { key: "rooms", label: "Guest rooms", icon: Bed, available: (numRooms ?? 0) > 0 },
-  ];
+  const items = Object.entries(f ?? {})
+    .filter(([, on]) => !!on)
+    .map(([label]) => ({ key: label, label, icon: iconFor(label) }));
+
+  const has = (re: RegExp) => items.some((i) => re.test(i.label));
+  if ((parkingSlots ?? 0) > 0 && !has(/parking/i)) {
+    items.push({ key: "__parking", label: `Parking (${parkingSlots} slots)`, icon: Car });
+  }
+  if ((numRooms ?? 0) > 0 && !has(/room/i)) {
+    items.push({ key: "__rooms", label: `${numRooms} guest rooms`, icon: Bed });
+  }
+  return items;
 }
 
 /* ============================================================
