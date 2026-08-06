@@ -2450,6 +2450,10 @@ export type Database = {
         Args: { p_org_id: string; p_permission: string; p_user_id: string }
         Returns: boolean
       }
+      recalc_target_rating: {
+        Args: { p_kind: string; p_target: string }
+        Returns: undefined
+      }
     }
     Enums: {
       account_status: "pending_approval" | "approved" | "rejected"
