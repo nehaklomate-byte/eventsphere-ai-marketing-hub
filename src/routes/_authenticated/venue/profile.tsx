@@ -243,22 +243,6 @@ function VenueProfilePage() {
               options={["Full backup included", "Partial backup", "Not available"]} />
           </Field>
         </div>
-        <Field label="Payment modes accepted">
-          <div className="flex flex-wrap gap-2">
-            {["Cash", "UPI", "Card", "Bank transfer", "Cheque"].map((mode) => {
-              const list = (extra.payment_modes as string[]) ?? [];
-              const on = list.includes(mode);
-              return (
-                <button key={mode} type="button"
-                  onClick={() => setExtra("payment_modes", on ? list.filter((m) => m !== mode) : [...list, mode])}
-                  className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition ${on ? "border-brand-violet bg-brand-violet text-white" : "border-border bg-background text-muted-foreground hover:bg-accent"}`}
-                >
-                  {mode}
-                </button>
-              );
-            })}
-          </div>
-        </Field>
         <Field label="Event types you host">
           <div className="flex flex-wrap gap-2">
             {["Wedding", "Engagement", "Reception", "Birthday", "Corporate", "Anniversary", "Baby Shower", "Other"].map((type) => {
