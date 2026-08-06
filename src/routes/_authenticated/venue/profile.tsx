@@ -23,6 +23,7 @@ function VenueProfilePage() {
 
   const [form, setForm] = useState<Partial<Hall>>({});
   const [saving, setSaving] = useState(false);
+  const [partnerTermsChecked, setPartnerTermsChecked] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
 
   useEffect(() => {
@@ -60,6 +61,11 @@ function VenueProfilePage() {
   }
 
   async function handleSave(publish?: boolean) {
+    const wasRejectedOrNewCheck = !form.id || form.verification_status === "rejected";
+    if (publish && wasRejectedOrNewCheck && !partnerTermsChecked) {
+      toast.error("Please accept the Partner Terms before submitting for verification.");
+      return;
+    }
     setSaving(true);
     try {
       const { data: userData } = await supabase.auth.getUser();
@@ -73,7 +79,10 @@ function VenueProfilePage() {
       // the admin review queue. An already-approved venue keeps its status
       // on routine edits, so owners aren't re-blocked for small changes.
       const wasRejectedOrNew = !form.id || form.verification_status === "rejected";
-      if (wasRejectedOrNew) patch.verification_status = "pending";
+      if (wasRejectedOrNew) {
+        patch.verification_status = "pending";
+        (patch as Partial<Hall> & { partner_terms_accepted_at?: string }).partner_terms_accepted_at = new Date().toISOString();
+      }
 
       if (!form.id) {
         const created = await createHall(userData.user.id, form.name || "My Venue");
@@ -305,6 +314,15 @@ function VenueProfilePage() {
 
       {/* Sticky save bar */}
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 backdrop-blur md:pl-72">
+        {form.verification_status !== "approved" && (
+          <div className="mx-auto max-w-5xl px-4 pt-2 md:px-8">
+            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+              <input type="checkbox" checked={partnerTermsChecked} onChange={(e) => setPartnerTermsChecked(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-input accent-[color:var(--brand-violet)]" />
+              I accept the <a href="/partner-terms" target="_blank" rel="noreferrer" className="text-brand-violet underline">Partner Terms</a>
+            </label>
+          </div>
+        )}
         <div className="mx-auto flex max-w-5xl items-center justify-end gap-2 px-4 py-3 md:px-8">
           <button disabled={saving} onClick={() => handleSave()} className="flex items-center gap-1.5 rounded-full border border-input px-4 py-2 text-sm font-semibold hover:bg-accent disabled:opacity-50">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save progress
@@ -321,7 +339,7 @@ function VenueProfilePage() {
               </button>
             )
           ) : (
-            <button disabled={saving} onClick={() => handleSave(true)} className="flex items-center gap-1.5 rounded-full bg-brand-violet px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50">
+            <button disabled={saving || !partnerTermsChecked} onClick={() => handleSave(true)} className="flex items-center gap-1.5 rounded-full bg-brand-violet px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />} Submit for verification
             </button>
           )}
