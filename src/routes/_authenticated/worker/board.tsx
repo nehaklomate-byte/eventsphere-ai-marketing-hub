@@ -89,7 +89,7 @@ function BoardPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <h3 className="font-semibold text-lg truncate">{p.title}</h3>
-                        <div className="text-sm text-muted-foreground truncate">{p.poster_name ?? "Organization"} · {p.category}</div>
+                        <div className="text-sm text-muted-foreground truncate">{p.poster_name ?? "Hiring partner"} · {p.category}</div>
                       </div>
                       <span className="shrink-0 rounded-full bg-accent px-2.5 py-1 text-[10px] font-semibold">{p.slots_filled}/{p.slots_needed} filled</span>
                     </div>
