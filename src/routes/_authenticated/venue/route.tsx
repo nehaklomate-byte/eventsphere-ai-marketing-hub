@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useSession } from "@/lib/session";
 import { PhoneVerifyBanner } from "@/components/PhoneVerifyBanner";
+import { subscribeNotificationToasts } from "@/lib/realtimeToast";
 
 // beforeLoad only gates Step 1 (account_status). Step 2 (hall
 // verification_status) no longer blocks navigation — once the account is
@@ -104,7 +105,9 @@ function VenueShell() {
         () => { qc.invalidateQueries({ queryKey: ["venue-notif-unread", user.id] }); qc.invalidateQueries({ queryKey: ["venue-notifications", user.id] }); }
       )
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    const unsubToast1 = subscribeNotificationToasts(`venue-notif-toast-w-${user.id}`, "worker_notifications", user.id);
+    const unsubToast2 = subscribeNotificationToasts(`venue-notif-toast-v-${user.id}`, "vendor_notifications", user.id);
+    return () => { supabase.removeChannel(ch); unsubToast1(); unsubToast2(); };
   }, [user?.id, qc]);
 
   async function signOut() {
