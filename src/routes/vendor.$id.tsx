@@ -63,6 +63,9 @@ type Vendor = {
 };
 
 export const Route = createFileRoute("/vendor/$id")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    event_id: typeof search.event_id === "string" ? search.event_id : undefined,
+  }),
   head: ({ params }) => ({
     meta: [
       { title: "Vendor details — EventOrbit AI" },
@@ -81,6 +84,7 @@ export const Route = createFileRoute("/vendor/$id")({
 
 function VendorDetail() {
   const { vendor } = Route.useLoaderData();
+  const { event_id } = Route.useSearch();
   const stats = useVendorStats(vendor.id);
 
   return (
@@ -178,7 +182,7 @@ function VendorDetail() {
           </div>
 
           <div>
-            <BookOrEnquire vendor={vendor} />
+            <BookOrEnquire vendor={vendor} eventId={event_id} />
           </div>
         </div>
       </div>
@@ -190,15 +194,15 @@ function VendorDetail() {
  *  accepts/rejects from their dashboard, with in-app chat attached.
  *  The old "just send an enquiry" path is removed: it went nowhere
  *  trackable for the customer (see MessagesInbox/ChatPanel instead). */
-function BookOrEnquire({ vendor }: { vendor: Vendor }) {
+function BookOrEnquire({ vendor, eventId }: { vendor: Vendor; eventId?: string }) {
   return (
     <div className="sticky top-24 space-y-3">
-      <VendorHireCard vendor={vendor} />
+      <VendorHireCard vendor={vendor} eventId={eventId} />
     </div>
   );
 }
 
-function VendorHireCard({ vendor }: { vendor: Vendor }) {
+function VendorHireCard({ vendor, eventId }: { vendor: Vendor; eventId?: string }) {
   const navigate = useNavigate();
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
   const [packages, setPackages] = useState<{ id: string; name: string; price: number; description: string | null }[]>([]);
@@ -235,6 +239,7 @@ function VendorHireCard({ vendor }: { vendor: Vendor }) {
       vendor_user_id: vendor.owner_id,
       assigned_by: userRes.user.id,
       organization_name: "Direct booking",
+      customer_event_id: eventId ?? null,
       event_name: state.event_name.trim(),
       task_name: state.task_name.trim(),
       venue: state.venue || null,
