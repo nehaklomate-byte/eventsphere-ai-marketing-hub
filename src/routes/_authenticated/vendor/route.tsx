@@ -13,6 +13,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { fetchMyVendor, computeVendorCompletion } from "@/lib/vendor";
 import { useSession } from "@/lib/session";
 import { PhoneVerifyBanner } from "@/components/PhoneVerifyBanner";
+import { subscribeNotificationToasts } from "@/lib/realtimeToast";
 
 // Mirrors src/routes/_authenticated/worker/route.tsx exactly (Step-1
 // account_status gate, sidebar shell, verification badge) — same
@@ -96,7 +97,8 @@ function VendorShell() {
         () => { qc.invalidateQueries({ queryKey: ["vendor-notif-unread", user.id] }); qc.invalidateQueries({ queryKey: ["vendor-notifications", user.id] }); }
       )
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    const unsubToast = subscribeNotificationToasts(`vendor-notif-toast-${user.id}`, "vendor_notifications", user.id);
+    return () => { supabase.removeChannel(ch); unsubToast(); };
   }, [user?.id, qc]);
 
   const completion = computeVendorCompletion(vendor ?? {});
