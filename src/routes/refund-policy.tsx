@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/SiteLayout";
 import { PageHeader } from "@/components/PageHeader";
+import { BetaNotice } from "@/components/BetaNotice";
 
 export const Route = createFileRoute("/refund-policy")({
   head: () => ({
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/refund-policy")({
   component: () => (
     <SiteLayout>
       <PageHeader eyebrow="Legal" title="Refund & Cancellation Policy" description="Draft — last updated [DATE]. Cancellation windows and refund percentages below are placeholders, pending finalization against our actual vendor/venue contracts." />
+      <BetaNotice />
       <section className="mx-auto max-w-3xl px-5 md:px-8 py-16">
         <div className="legal-content">
           <p>
