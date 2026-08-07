@@ -21,6 +21,7 @@ function VendorBoardPage() {
   const [category, setCategory] = useState("");
   const [applyingTo, setApplyingTo] = useState<string | null>(null);
   const [note, setNote] = useState("");
+  const [available, setAvailable] = useState(false);
 
   const { data: vendor } = useQuery({ queryKey: ["me-vendor", user?.id], queryFn: () => fetchMyVendor(user!.id), enabled: !!user?.id });
   const { data: postings = [], isLoading } = useQuery({ queryKey: ["vendor-postings", category], queryFn: () => fetchOpenVendorPostings(category || undefined) });
@@ -34,7 +35,7 @@ function VendorBoardPage() {
       if (!vendor?.id || !user?.id) throw new Error("Complete your vendor profile before applying.");
       await applyToVendorPosting(postingId, vendor.id, user.id, note);
     },
-    onSuccess: () => { setApplyingTo(null); setNote(""); qc.invalidateQueries({ queryKey: ["vendor-applications", user?.id] }); },
+    onSuccess: () => { setApplyingTo(null); setNote(""); setAvailable(false); qc.invalidateQueries({ queryKey: ["vendor-applications", user?.id] }); },
   });
 
   const withdraw = useMutation({
@@ -96,15 +97,24 @@ function VendorBoardPage() {
                   {appliedIds.has(p.id) ? (
                     <div className="mt-4 rounded-full bg-emerald-500/10 px-4 py-2 text-center text-xs font-semibold text-emerald-700">Application sent</div>
                   ) : applyingTo === p.id ? (
-                    <div className="mt-4 space-y-2">
-                      <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} placeholder="Briefly describe why you're a good fit (optional)"
+                    <div className="mt-4 space-y-2 rounded-xl border border-border bg-muted/30 p-3">
+                      <div className="text-xs">
+                        <span className="font-semibold uppercase tracking-widest text-muted-foreground">Applying as</span>
+                        <p className="mt-0.5 font-medium">{vendor?.business_name}</p>
+                        <p className="text-muted-foreground">{vendor?.category ?? "—"} · {vendor?.years_experience ?? 0} yrs · {vendor?.city ?? "—"}</p>
+                      </div>
+                      <label className="flex items-start gap-2 text-xs">
+                        <input type="checkbox" checked={available} onChange={(e) => setAvailable(e.target.checked)} className="mt-0.5" />
+                        <span>I confirm my team is available on {new Date(`${p.event_date}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}.</span>
+                      </label>
+                      <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} placeholder="Why is your service a good fit? (min. 15 characters) *"
                         className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm" />
                       <div className="flex gap-2">
-                        <button onClick={() => apply.mutate(p.id)} disabled={apply.isPending}
+                        <button onClick={() => apply.mutate(p.id)} disabled={apply.isPending || !available || note.trim().length < 15}
                           className="inline-flex items-center gap-2 rounded-full btn-brand btn-brand-hover px-4 py-2 text-xs font-semibold text-white disabled:opacity-60">
                           {apply.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />} Send application
                         </button>
-                        <button onClick={() => { setApplyingTo(null); setNote(""); }} className="rounded-full border border-input px-4 py-2 text-xs font-semibold hover:bg-accent">Cancel</button>
+                        <button onClick={() => { setApplyingTo(null); setNote(""); setAvailable(false); }} className="rounded-full border border-input px-4 py-2 text-xs font-semibold hover:bg-accent">Cancel</button>
                       </div>
                       {apply.isError && <div className="text-xs text-destructive">{(apply.error as Error).message}</div>}
                     </div>
