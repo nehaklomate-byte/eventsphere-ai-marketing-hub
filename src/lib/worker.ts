@@ -50,6 +50,7 @@ export type WorkerTask = {
   id: string;
   worker_id: string;
   worker_user_id: string;
+  payment_status?: "unpaid" | "paid" | "refunded";
   assigned_by: string;
   organization_name: string | null;
   event_name: string;
