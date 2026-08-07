@@ -26,9 +26,14 @@ export const Route = createFileRoute("/register")({
   component: RegisterPage,
 });
 
+// "organization" is intentionally left out of this public list for now —
+// during the closed-beta phase org accounts are onboarded manually by
+// admin, not self-registered. The role, its dashboard, and its RLS
+// policies are untouched — re-add the line below whenever public
+// organization sign-up should open back up:
+//   { id: "organization", title: "Organization", desc: "Corporates, agencies and event planning teams.", icon: Building2 },
 const ROLES: { id: Role; title: string; desc: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { id: "organization", title: "Organization", desc: "Corporates, agencies and event planning teams.", icon: Building2 },
-  { id: "hall_owner", title: "Hall Owner", desc: "Banquet halls, lawns, resorts and convention centers.", icon: Building2 },
+  { id: "hall_owner", title: "Venue Owner", desc: "Banquet halls, lawns, resorts and convention centers.", icon: Building2 },
   { id: "vendor", title: "Vendor", desc: "Decorators, caterers, photographers, sound, DJs and more.", icon: Store },
   { id: "worker", title: "Worker", desc: "Stewards, chefs, technicians and on-ground crew.", icon: UserCheck },
   { id: "customer", title: "Customer", desc: "Individuals booking venues or services for personal events.", icon: User },
