@@ -8,7 +8,7 @@ import {
 import { useSession } from "@/lib/session";
 import {
   fetchMyWorker, fetchOpenPostings, fetchMyApplications, applyToPosting, withdrawApplication,
-  WORKER_CATEGORIES, statusTone, type OpenPosting, type MyApplication,
+  WORKER_CATEGORIES, statusTone, type OpenPosting, type MyApplication, type WorkerRow,
 } from "@/lib/worker";
 import { EmptyState } from "./index";
 
@@ -156,7 +156,7 @@ function BoardPage() {
       )}
 
       {applyTo && worker && (
-        <ApplyPanel posting={applyTo} workerId={worker.id} userId={user!.id}
+        <ApplyPanel posting={applyTo} worker={worker} userId={user!.id}
           onClose={() => setApplyTo(null)}
           onDone={() => { setApplyTo(null); qc.invalidateQueries({ queryKey: ["my-applications", user?.id] }); qc.invalidateQueries({ queryKey: ["open-postings"] }); }}
         />
@@ -165,16 +165,27 @@ function BoardPage() {
   );
 }
 
-function ApplyPanel({ posting, workerId, userId, onClose, onDone }: {
-  posting: OpenPosting; workerId: string; userId: string; onClose: () => void; onDone: () => void;
+function ApplyPanel({ posting, worker, userId, onClose, onDone }: {
+  posting: OpenPosting; worker: WorkerRow; userId: string; onClose: () => void; onDone: () => void;
 }) {
   const [note, setNote] = useState("");
+  const [expectedPay, setExpectedPay] = useState("");
+  const [available, setAvailable] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [touched, setTouched] = useState(false);
+
+  const noteValid = note.trim().length >= 15;
+  const canSubmit = available && noteValid;
 
   async function submit() {
+    setTouched(true);
+    if (!canSubmit) return;
     setBusy(true);
     try {
-      await applyToPosting(posting.id, workerId, userId, note);
+      const parts = [`Availability confirmed for ${new Date(posting.event_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}.`];
+      if (posting.pay_amount == null && expectedPay.trim()) parts.push(`Expected pay: ₹${expectedPay.trim()}.`);
+      parts.push("", note.trim());
+      await applyToPosting(posting.id, worker.id, userId, parts.join("\n"));
       toast.success("Application sent!");
       onDone();
     } catch (e) {
@@ -183,15 +194,44 @@ function ApplyPanel({ posting, workerId, userId, onClose, onDone }: {
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-2xl bg-card p-6 shadow-elegant" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4 overflow-y-auto" onClick={onClose}>
+      <div className="w-full max-w-md rounded-2xl bg-card p-6 shadow-elegant my-8" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">Apply to "{posting.title}"</h3>
           <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-accent"><X className="h-4 w-4" /></button>
         </div>
-        <label className="mt-4 block text-xs font-semibold uppercase tracking-widest text-muted-foreground">Cover note (optional)</label>
-        <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={4}
-          className="mt-1.5 w-full rounded-xl border border-input bg-background p-3 text-sm" placeholder="Why are you a good fit for this job?" />
+
+        <div className="mt-4 rounded-xl border border-border bg-muted/40 p-3 text-xs">
+          <p className="font-semibold uppercase tracking-widest text-muted-foreground">Applying as</p>
+          <p className="mt-1 font-medium text-sm">{worker.full_name}</p>
+          <p className="text-muted-foreground">
+            {worker.category ?? "—"} · {worker.years_experience ?? 0} yrs experience · {worker.city ?? "—"}
+          </p>
+          <p className="mt-1 text-muted-foreground">This is what the poster will see alongside your application.</p>
+        </div>
+
+        <label className="mt-4 flex items-start gap-2 text-sm">
+          <input type="checkbox" checked={available} onChange={(e) => setAvailable(e.target.checked)} className="mt-0.5" />
+          <span>I confirm I'm available on {new Date(posting.event_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+            {posting.start_time ? ` from ${posting.start_time}${posting.end_time ? ` to ${posting.end_time}` : ""}` : ""}.</span>
+        </label>
+        {touched && !available && <p className="mt-1 text-xs text-rose-600">Please confirm your availability.</p>}
+
+        {posting.pay_amount == null && (
+          <label className="mt-3 block">
+            <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Your expected pay (₹, optional)</span>
+            <input type="number" value={expectedPay} onChange={(e) => setExpectedPay(e.target.value)}
+              className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm" placeholder="e.g. 1500" />
+          </label>
+        )}
+
+        <label className="mt-3 block">
+          <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Why should they hire you? *</span>
+          <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={4}
+            className="mt-1.5 w-full rounded-xl border border-input bg-background p-3 text-sm" placeholder="Mention relevant experience, similar events you've worked, or anything that makes you a good fit." />
+        </label>
+        {touched && !noteValid && <p className="mt-1 text-xs text-rose-600">Add a few lines (at least 15 characters) so the poster knows why to pick you.</p>}
+
         <button onClick={submit} disabled={busy}
           className="mt-4 flex w-full items-center justify-center gap-2 rounded-full btn-brand btn-brand-hover px-4 py-2.5 text-sm font-semibold disabled:opacity-70">
           {busy && <Loader2 className="h-4 w-4 animate-spin" />} Send application
