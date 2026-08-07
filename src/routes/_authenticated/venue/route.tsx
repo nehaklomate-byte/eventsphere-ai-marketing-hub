@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useRouterState, useNavigate, redirect } 
 import { useEffect, useState, type ComponentType } from "react";
 import {
   LayoutDashboard, Inbox, CalendarCheck, Building2, Settings, LogOut, Menu, X, Clock, ShieldAlert, MailWarning, HardHat, Bell, Store,
-  MessageCircle,
+  MessageCircle, Briefcase,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { PayoutBanner } from "@/components/PayoutBanner";
@@ -62,6 +62,7 @@ const NAV: { to: string; label: string; icon: ComponentType<{ className?: string
   { to: "/venue/bookings", label: "Bookings", icon: CalendarCheck },
   { to: "/venue/hire-workers", label: "Hire Workers", icon: HardHat },
   { to: "/venue/hire-vendors", label: "Hire Vendors", icon: Store },
+  { to: "/venue/jobs", label: "Job Board", icon: Briefcase },
   { to: "/venue/notifications", label: "Notifications", icon: Bell },
   { to: "/venue/messages", label: "Messages", icon: MessageCircle },
   { to: "/venue/profile", label: "Venue Profile", icon: Building2 },
