@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/SiteLayout";
 import { PageHeader } from "@/components/PageHeader";
+import { BetaNotice } from "@/components/BetaNotice";
 
 export const Route = createFileRoute("/privacy")({
   head: () => ({
@@ -16,13 +17,15 @@ export const Route = createFileRoute("/privacy")({
   component: () => (
     <SiteLayout>
       <PageHeader eyebrow="Legal" title="Privacy Policy" description="Draft — last updated [DATE]. Pending final legal review before publication." />
+      <BetaNotice />
       <section className="mx-auto max-w-3xl px-5 md:px-8 py-16 legal-content">
         <p>
-          EventOrbit Technologies Private Limited ("EventOrbit AI", "we", "us", "our") operates the EventOrbit AI
-          website and mobile application (together, the "Platform"), a marketplace connecting Customers, Venue
-          Owners, Vendors, Workers, Organizations and Admin users for event-related services. This Privacy Policy
-          explains what personal data we collect, why, how we use and protect it, and the rights you have over it,
-          in accordance with the Digital Personal Data Protection Act, 2023 and other applicable Indian law.
+          EventOrbit AI ("we", "us", "our") — currently an early-stage/beta project, ahead of formal company
+          registration — operates the EventOrbit AI website and mobile application (together, the "Platform"), a
+          marketplace connecting Customers, Venue Owners, Vendors, Workers, Organizations and Admin users for
+          event-related services. This Privacy Policy explains what personal data we collect, why, how we use and
+          protect it, and the rights you have over it, in accordance with the Digital Personal Data Protection Act,
+          2023 and other applicable Indian law.
         </p>
 
         <h2>1. Information We Collect</h2>
