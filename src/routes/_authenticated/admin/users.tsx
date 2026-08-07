@@ -30,6 +30,13 @@ const ROLE_STYLE: Record<string, string> = {
 
 const ROLE_TABS = ["all", "customer", "hall_owner", "vendor", "worker", "organization", "admin"] as const;
 
+// hall_owner is displayed as "Venue owner" everywhere in the UI — the
+// underlying DB role id stays hall_owner so no migration/data change is needed.
+function roleLabel(r: string): string {
+  if (r === "hall_owner") return "venue owner";
+  return r.replace("_", " ");
+}
+
 async function fetchAllProfiles(): Promise<ProfileRow[]> {
   const { data, error } = await supabase
     .from("profiles")
@@ -85,7 +92,7 @@ function UsersPage() {
               roleTab === r ? "bg-brand-violet text-white" : "border border-border bg-card text-muted-foreground hover:bg-accent"
             }`}
           >
-            {r === "all" ? "All" : r.replace("_", " ")}
+            {r === "all" ? "All" : roleLabel(r)}
           </button>
         ))}
       </div>
@@ -118,7 +125,7 @@ function UsersPage() {
                   <td className="px-5 py-3 text-muted-foreground">{u.phone || "—"}</td>
                   <td className="px-5 py-3">
                     <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold capitalize ${ROLE_STYLE[u.primary_role ?? ""] ?? "bg-muted text-muted-foreground"}`}>
-                      {(u.primary_role ?? "unset").replace("_", " ")}
+                      {roleLabel(u.primary_role ?? "unset")}
                     </span>
                   </td>
                   <td className="px-5 py-3 text-muted-foreground">{new Date(u.created_at).toLocaleDateString()}</td>
