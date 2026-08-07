@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -115,7 +115,18 @@ function JobsPage() {
                 <div className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5" /> {t.venue ?? "Venue TBD"}{t.venue_address ? ` · ${t.venue_address}` : ""}</div>
                 <div className="flex items-center gap-2"><Calendar className="h-3.5 w-3.5" /> {new Date(t.event_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</div>
                 <div className="flex items-center gap-2"><Clock className="h-3.5 w-3.5" /> {t.start_time ?? "—"} – {t.end_time ?? "—"}</div>
-                {t.payment_amount != null && <div className="pt-1 text-sm font-semibold text-foreground">₹{Number(t.payment_amount).toLocaleString("en-IN")}</div>}
+                {t.payment_amount != null && (
+                  <div className="pt-1 flex items-center gap-2 text-sm font-semibold text-foreground">
+                    ₹{Number(t.payment_amount).toLocaleString("en-IN")}
+                    {t.payment_status === "paid" && (
+                      <>
+                        <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Paid</span>
+                        <Link to="/receipt/$type/$id" params={{ type: "vendor", id: t.id }} target="_blank"
+                          className="rounded-full border border-input px-2 py-0.5 text-[10px] font-semibold hover:bg-accent">Receipt</Link>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
 
               {t.description && <p className="mt-3 text-xs text-muted-foreground border-t border-border pt-3">{t.description}</p>}
