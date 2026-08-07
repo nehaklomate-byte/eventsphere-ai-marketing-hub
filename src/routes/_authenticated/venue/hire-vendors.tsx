@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -189,8 +189,12 @@ function MyRequests({ userId }: { userId: string }) {
                   </button>
                 )}
                 {r.payment_status === "paid" ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1.5 text-xs font-semibold text-emerald-700">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Paid
+                  <span className="flex items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Paid
+                    </span>
+                    <Link to="/receipt/$type/$id" params={{ type: "vendor", id: r.id }} target="_blank"
+                      className="rounded-full border border-input px-3 py-1.5 text-xs font-semibold hover:bg-accent">Receipt</Link>
                   </span>
                 ) : (r.status === "accepted" || r.status === "completed") && r.payment_amount ? (
                   <button onClick={() => handlePay(r)} disabled={payingId === r.id}
