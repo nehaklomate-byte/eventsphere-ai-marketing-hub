@@ -142,7 +142,11 @@ function BookingsPage() {
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
                       {b.payment_status === "paid" ? (
-                        <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" /> Paid</span>
+                        <span className="flex items-center gap-1.5">
+                          <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" /> Paid</span>
+                          <Link to="/receipt/$type/$id" params={{ type: b.kind, id: b.id }} target="_blank"
+                            className="rounded-lg border border-input px-2 py-1 text-xs font-semibold hover:bg-accent">Receipt</Link>
+                        </span>
                       ) : canPay(b) ? (
                         <button onClick={() => handlePay(b)} disabled={payingId === b.id}
                           className="inline-flex items-center gap-1.5 rounded-lg btn-brand btn-brand-hover px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-70">
