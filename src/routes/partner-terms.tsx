@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/SiteLayout";
 import { PageHeader } from "@/components/PageHeader";
+import { BetaNotice } from "@/components/BetaNotice";
 
 export const Route = createFileRoute("/partner-terms")({
   head: () => ({
@@ -15,6 +16,7 @@ export const Route = createFileRoute("/partner-terms")({
   component: () => (
     <SiteLayout>
       <PageHeader eyebrow="Legal" title="Partner Terms" description="Draft — key clauses for Vendors, Workers and Venue Owners. A full digitally-signed Partner Agreement covering these terms in detail is planned; this page is the interim acceptance record shown at verification submission." />
+      <BetaNotice />
       <section className="mx-auto max-w-3xl px-5 md:px-8 py-16 legal-content">
         <p>
           By submitting your profile for verification as a Vendor, Worker, or Venue Owner on EventOrbit AI, you agree
@@ -22,7 +24,7 @@ export const Route = createFileRoute("/partner-terms")({
         </p>
 
         <h2>1. Independent Contractor Status</h2>
-        <p>You are an independent service provider. You are not an employee, agent, or legal representative of EventOrbit Technologies Private Limited.</p>
+        <p>You are an independent service provider. You are not an employee, agent, or legal representative of EventOrbit AI (operating as an early-stage/beta project ahead of formal company registration).</p>
 
         <h2>2. Commission Structure</h2>
         <p>EventOrbit AI charges a commission/service fee on successful bookings, as disclosed to you at the time of each transaction. The exact percentage may vary by category and is shown before you accept a booking.</p>
@@ -46,7 +48,7 @@ export const Route = createFileRoute("/partner-terms")({
         <p>Your partner status may be suspended or terminated for verification lapse, repeated poor ratings, fraud, or violation of these terms, with an appeals process available through platform support.</p>
 
         <h2>9. Indemnity</h2>
-        <p>You agree to indemnify EventOrbit Technologies Private Limited against claims arising from your own service delivery (e.g., issues with food safety, décor installation, or work performed).</p>
+        <p>You agree to indemnify EventOrbit AI (operating as an early-stage/beta project ahead of formal company registration) against claims arising from your own service delivery (e.g., issues with food safety, décor installation, or work performed).</p>
 
         <p className="text-sm italic text-muted-foreground">
           This is a structural draft. A full, digitally-signed Partner Agreement covering these clauses in complete
