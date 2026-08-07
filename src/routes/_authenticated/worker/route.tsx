@@ -12,6 +12,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { fetchMyWorker, computeCompletion } from "@/lib/worker";
 import { useSession } from "@/lib/session";
 import { PhoneVerifyBanner } from "@/components/PhoneVerifyBanner";
+import { subscribeNotificationToasts } from "@/lib/realtimeToast";
 
 export const Route = createFileRoute("/_authenticated/worker")({
   beforeLoad: async () => {
@@ -89,7 +90,8 @@ function WorkerShell() {
         () => { qc.invalidateQueries({ queryKey: ["notif-unread", user.id] }); qc.invalidateQueries({ queryKey: ["notifications", user.id] }); }
       )
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    const unsubToast = subscribeNotificationToasts(`notif-toast-${user.id}`, "worker_notifications", user.id);
+    return () => { supabase.removeChannel(ch); unsubToast(); };
   }, [user?.id, qc]);
 
   const completion = computeCompletion(worker as never);
