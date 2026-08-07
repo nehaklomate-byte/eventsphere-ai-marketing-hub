@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import { useState } from "react";
-import { Building2, Store, UserCheck, Users2, User, Loader2, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Building2, Store, UserCheck, User, Loader2, ArrowRight, CheckCircle2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
 import { DASHBOARD_PATH, type PrimaryRole } from "@/lib/auth-redirect";
@@ -26,9 +26,10 @@ export const Route = createFileRoute("/onboarding")({
   component: Onboarding,
 });
 
+// "organization" hidden here too, same reasoning as register.tsx — org
+// accounts are admin-onboarded during closed beta, not self-selected.
 const ROLES: { id: PrimaryRole; title: string; desc: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { id: "organization", title: "Organization", desc: "Corporates, agencies and event planning teams.", icon: Users2 },
-  { id: "hall_owner", title: "Hall Owner", desc: "Banquet halls, lawns, resorts and convention centers.", icon: Building2 },
+  { id: "hall_owner", title: "Venue Owner", desc: "Banquet halls, lawns, resorts and convention centers.", icon: Building2 },
   { id: "vendor", title: "Vendor", desc: "Decorators, caterers, photographers, DJs and more.", icon: Store },
   { id: "worker", title: "Worker", desc: "Stewards, chefs, technicians and on-ground crew.", icon: UserCheck },
   { id: "customer", title: "Customer", desc: "Booking venues and services for personal events.", icon: User },
