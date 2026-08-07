@@ -207,6 +207,7 @@ export type OpenPosting = {
   id: string;
   org_id: string | null;
   vendor_id: string | null;
+  hall_id: string | null;
   title: string;
   category: string;
   description: string | null;
@@ -246,10 +247,17 @@ export async function fetchOpenPostings(category?: string): Promise<OpenPosting[
   if (postings.length === 0) return postings;
 
   const orgIds = Array.from(new Set(postings.map((p) => p.org_id).filter(Boolean))) as string[];
-  if (orgIds.length === 0) return postings;
-  const { data: orgs } = await supabase.from("organizations").select("id, name").in("id", orgIds);
-  const nameById = new Map((orgs ?? []).map((o) => [o.id, o.name]));
-  return postings.map((p) => ({ ...p, poster_name: p.org_id ? nameById.get(p.org_id) : undefined }));
+  const hallIds = Array.from(new Set(postings.map((p) => p.hall_id).filter(Boolean))) as string[];
+  const [orgsRes, hallsRes] = await Promise.all([
+    orgIds.length ? supabase.from("organizations").select("id, name").in("id", orgIds) : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+    hallIds.length ? supabase.from("halls").select("id, name").in("id", hallIds) : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+  ]);
+  const orgNameById = new Map((orgsRes.data ?? []).map((o) => [o.id, o.name]));
+  const hallNameById = new Map((hallsRes.data ?? []).map((h) => [h.id, h.name]));
+  return postings.map((p) => ({
+    ...p,
+    poster_name: p.org_id ? orgNameById.get(p.org_id) : p.hall_id ? hallNameById.get(p.hall_id) : undefined,
+  }));
 }
 
 export async function fetchMyApplications(userId: string): Promise<MyApplication[]> {
