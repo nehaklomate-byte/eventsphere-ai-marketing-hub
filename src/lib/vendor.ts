@@ -284,3 +284,70 @@ export async function deleteVendorPackage(id: string): Promise<void> {
   const { error } = await supabase.from("vendor_packages" as never).delete().eq("id" as never, id as never);
   if (error) throw error;
 }
+
+// ============================================================
+// Vendor AS EMPLOYER — posting worker jobs (e.g. a catering vendor
+// needing extra waitstaff for a big event). This is a DIFFERENT system
+// from fetchOpenVendorPostings/applyToVendorPosting above, which is
+// "vendor_job_postings" — orgs/venues hiring a VENDOR's service. This
+// section is the worker_job_postings table, mirroring
+// src/lib/organization.ts and src/lib/venue.ts's twin functions. A
+// vendor posting is a row with vendor_id set instead of org_id/hall_id.
+// Requires migration 20260807110000_vendor_job_postings_and_admin.sql.
+// ============================================================
+
+import type { JobPosting, JobApplication } from "./organization";
+export type { JobPosting as WorkerJobPosting, JobApplication as WorkerJobApplication };
+
+export async function fetchMyPostedJobs(vendorId: string): Promise<JobPosting[]> {
+  const { data, error } = await supabase
+    .from("worker_job_postings" as never)
+    .select("*")
+    .eq("vendor_id" as never, vendorId as never)
+    .order("created_at" as never, { ascending: false });
+  if (error) throw error;
+  return (data as unknown as JobPosting[]) ?? [];
+}
+
+export async function createWorkerJobPosting(
+  vendorId: string,
+  patch: Omit<JobPosting, "id" | "org_id" | "vendor_id" | "hall_id" | "posted_by" | "slots_filled" | "status" | "created_at">
+): Promise<JobPosting> {
+  const { data: userData } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from("worker_job_postings" as never)
+    .insert({ vendor_id: vendorId, org_id: null, hall_id: null, posted_by: userData.user?.id, ...patch } as never)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data as unknown as JobPosting;
+}
+
+export async function closeWorkerJobPosting(id: string): Promise<void> {
+  const { data, error } = await supabase
+    .from("worker_job_postings" as never)
+    .update({ status: "cancelled" } as never)
+    .eq("id" as never, id as never)
+    .select()
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("Update was blocked — you may not have permission to manage this posting.");
+}
+
+export async function fetchApplicationsForWorkerJobPosting(postingId: string): Promise<JobApplication[]> {
+  const { data: apps, error } = await supabase
+    .from("worker_job_applications" as never)
+    .select("*")
+    .eq("posting_id" as never, postingId as never)
+    .order("applied_at" as never, { ascending: true });
+  if (error) throw error;
+  const list = (apps as unknown as JobApplication[]) ?? [];
+  if (list.length === 0) return list;
+
+  const { data: workers } = await supabase
+    .from("workers")
+    .select("id, full_name, category, years_experience, city, photo_url")
+    .in("id", list.map((a) => a.worker_id));
+  const byId = new Map((workers ?? []).map((w) => [w.id, w]));
+  return list.map((a) => ({ ...a, worker: byId.get(a.worker_id) as JobApplication["worker"] }));
+}
