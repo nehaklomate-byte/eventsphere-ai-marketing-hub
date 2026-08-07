@@ -153,3 +153,72 @@ export async function updateBookingStatus(id: string, status: HallBooking["statu
   const { error } = await supabase.from("customer_bookings" as never).update({ status } as never).eq("id" as never, id as never);
   if (error) throw error;
 }
+
+// ============================================================
+// Venue Worker Job Board — Venue Owners post staffing needs the same
+// way Organizations do (see src/lib/organization.ts for the
+// Organization-side twin of these functions). Both write to the same
+// public.worker_job_postings / worker_job_applications tables — a hall
+// posting is just a row with hall_id set instead of org_id. Shortlist/
+// reject/accept are intentionally NOT duplicated here — they don't care
+// who posted the job, so reuse shortlistApplication/rejectApplication/
+// acceptApplication from src/lib/organization.ts as-is.
+// Requires migration 20260807090000_venue_job_postings.sql.
+// ============================================================
+
+import type { JobPosting, JobApplication } from "./organization";
+export type { JobPosting, JobApplication };
+
+export async function fetchHallPostings(hallId: string): Promise<JobPosting[]> {
+  const { data, error } = await supabase
+    .from("worker_job_postings" as never)
+    .select("*")
+    .eq("hall_id" as never, hallId as never)
+    .order("created_at" as never, { ascending: false });
+  if (error) throw error;
+  return (data as unknown as JobPosting[]) ?? [];
+}
+
+export async function createHallJobPosting(
+  hallId: string,
+  patch: Omit<JobPosting, "id" | "org_id" | "vendor_id" | "hall_id" | "posted_by" | "slots_filled" | "status" | "created_at">
+): Promise<JobPosting> {
+  const { data: userData } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from("worker_job_postings" as never)
+    .insert({ hall_id: hallId, org_id: null, posted_by: userData.user?.id, ...patch } as never)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data as unknown as JobPosting;
+}
+
+/** Shared with organization.ts's closePosting — same table, same column, no hall-specific logic needed. */
+export async function closeHallPosting(id: string): Promise<void> {
+  const { data, error } = await supabase
+    .from("worker_job_postings" as never)
+    .update({ status: "cancelled" } as never)
+    .eq("id" as never, id as never)
+    .select()
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("Update was blocked — you may not have permission to manage this posting.");
+}
+
+export async function fetchApplicationsForHallPosting(postingId: string): Promise<JobApplication[]> {
+  const { data: apps, error } = await supabase
+    .from("worker_job_applications" as never)
+    .select("*")
+    .eq("posting_id" as never, postingId as never)
+    .order("applied_at" as never, { ascending: true });
+  if (error) throw error;
+  const list = (apps as unknown as JobApplication[]) ?? [];
+  if (list.length === 0) return list;
+
+  const { data: workers } = await supabase
+    .from("workers")
+    .select("id, full_name, category, years_experience, city, photo_url")
+    .in("id", list.map((a) => a.worker_id));
+  const byId = new Map((workers ?? []).map((w) => [w.id, w]));
+  return list.map((a) => ({ ...a, worker: byId.get(a.worker_id) as JobApplication["worker"] }));
+}
