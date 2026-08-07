@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, Link, useRouterState, useNavigate, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import {
-  LayoutDashboard, ShieldCheck, Users, Building2, Landmark, Briefcase, HardHat,
+  LayoutDashboard, ShieldCheck, Users, Briefcase,
   Bell, Settings, LogOut, Menu, X, UserCheck, IndianRupee,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
@@ -32,11 +32,11 @@ export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminShell,
 });
 
-// Organizations / Venue Owners / Vendors / Workers all open the same
-// Verification Center, pre-filtered to that role via the `role` search
-// param (verification.tsx already reads it) — a dedicated page per role
-// would just duplicate that screen, so this reuses it instead of stubbing
-// out four "Coming soon" placeholders.
+// Organizations / Venue Owners / Vendors / Workers used to be separate nav
+// items pointing at the Verification Center pre-filtered by `role`, but that
+// filter only applied on first load (not on switching between them without a
+// full page reload), so they looked broken. Removed — the Verification
+// Center page itself has role filter tabs built in, so nothing is lost.
 type NavItem = {
   to: string;
   label: string;
@@ -50,10 +50,6 @@ const NAV: NavItem[] = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/admin/accounts", label: "Account Approvals", icon: UserCheck },
   { to: "/admin/verification", label: "Verification Center", icon: ShieldCheck },
-  { to: "/admin/verification", label: "Organizations", icon: Building2, search: { role: "organization" } },
-  { to: "/admin/verification", label: "Venue Owners", icon: Landmark, search: { role: "venue" } },
-  { to: "/admin/verification", label: "Vendors", icon: Briefcase, search: { role: "vendor" } },
-  { to: "/admin/verification", label: "Workers", icon: HardHat, search: { role: "worker" } },
   { to: "/admin/jobs", label: "Job Board", icon: Briefcase },
   { to: "/admin/earnings", label: "Earnings", icon: IndianRupee },
   { to: "/admin/users", label: "Users", icon: Users },
