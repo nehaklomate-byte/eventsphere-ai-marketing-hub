@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
 import { PhoneVerifyBanner } from "@/components/PhoneVerifyBanner";
 import { ensureCustomerBootstrapped } from "@/lib/customer";
+import { subscribeNotificationToasts } from "@/lib/realtimeToast";
 
 export const Route = createFileRoute("/_authenticated/customer")({
   head: () => ({ meta: [{ title: "Customer workspace — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
@@ -63,7 +64,8 @@ function CustomerLayout() {
     const ch = supabase.channel("cnotif-" + user.id)
       .on("postgres_changes", { event: "*", schema: "public", table: "customer_notifications", filter: `user_id=eq.${user.id}` }, refresh)
       .subscribe();
-    return () => { mounted = false; supabase.removeChannel(ch); };
+    const unsubToast = subscribeNotificationToasts("cnotif-toast-" + user.id, "customer_notifications", user.id);
+    return () => { mounted = false; supabase.removeChannel(ch); unsubToast(); };
   }, [user?.id]);
 
   async function signOut() {
