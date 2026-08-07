@@ -54,6 +54,7 @@ const NAV: NavItem[] = [
   { to: "/admin/verification", label: "Venue Owners", icon: Landmark, search: { role: "venue" } },
   { to: "/admin/verification", label: "Vendors", icon: Briefcase, search: { role: "vendor" } },
   { to: "/admin/verification", label: "Workers", icon: HardHat, search: { role: "worker" } },
+  { to: "/admin/jobs", label: "Job Board", icon: Briefcase },
   { to: "/admin/earnings", label: "Earnings", icon: IndianRupee },
   { to: "/admin/users", label: "Users", icon: Users },
   { to: "/admin/notifications", label: "Broadcast Center", icon: Bell },
