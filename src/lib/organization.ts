@@ -95,6 +95,7 @@ export const PERMISSIONS = [
   { key: "approve_registrations", label: "Approve Registrations" },
   { key: "manage_departments", label: "Manage Departments" },
   { key: "invite_members", label: "Invite Team Members" },
+  { key: "hire_workers", label: "Post Jobs & Hire Workers" },
 ] as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[number]["key"];
@@ -516,6 +517,7 @@ export type JobPosting = {
   id: string;
   org_id: string | null;
   vendor_id: string | null;
+  hall_id: string | null;
   event_id: string | null;
   posted_by: string;
   title: string;
@@ -558,12 +560,12 @@ export async function fetchOrgPostings(orgId: string): Promise<JobPosting[]> {
 
 export async function createJobPosting(
   orgId: string,
-  patch: Omit<JobPosting, "id" | "org_id" | "vendor_id" | "posted_by" | "slots_filled" | "status" | "created_at">
+  patch: Omit<JobPosting, "id" | "org_id" | "vendor_id" | "hall_id" | "posted_by" | "slots_filled" | "status" | "created_at">
 ): Promise<JobPosting> {
   const { data: userData } = await supabase.auth.getUser();
   const { data, error } = await supabase
     .from("worker_job_postings" as never)
-    .insert({ org_id: orgId, posted_by: userData.user?.id, ...patch } as never)
+    .insert({ org_id: orgId, hall_id: null, posted_by: userData.user?.id, ...patch } as never)
     .select("*")
     .single();
   if (error) throw error;
