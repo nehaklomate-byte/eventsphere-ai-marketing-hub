@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/SiteLayout";
 import { PageHeader } from "@/components/PageHeader";
+import { BetaNotice } from "@/components/BetaNotice";
 
 export const Route = createFileRoute("/terms")({
   head: () => ({
@@ -16,11 +17,14 @@ export const Route = createFileRoute("/terms")({
   component: () => (
     <SiteLayout>
       <PageHeader eyebrow="Legal" title="Terms & Conditions" description="Draft — last updated [DATE]. Pending final legal review before publication." />
+      <BetaNotice />
       <section className="mx-auto max-w-3xl px-5 md:px-8 py-16 legal-content">
         <p>
-          These Terms & Conditions ("Terms") govern your access to and use of the EventOrbit AI platform, operated
-          by EventOrbit Technologies Private Limited (CIN: [CIN NUMBER]), registered office at [ADDRESS]
-          ("Company", "we", "us"). By registering on the Platform, you agree to these Terms.
+          These Terms & Conditions ("Terms") govern your access to and use of the EventOrbit AI platform, currently
+          operated as an early-stage/beta project by its founder(s) ("Company", "we", "us"). Formal company
+          registration (CIN), a registered office address, and a signed legal review are in progress — this section
+          will be updated with those details, replacing the [CIN NUMBER]/[ADDRESS] placeholders below, before public
+          launch. By registering on the Platform, you agree to these Terms.
         </p>
 
         <h2>1. Role of the Platform</h2>
