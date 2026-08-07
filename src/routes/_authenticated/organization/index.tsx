@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, Users, CalendarDays, ShieldCheck, ShieldAlert, Clock, Plus } from "lucide-react";
-import { fetchMyOrganization, fetchDepartments, fetchMembers, fetchOrgEvents } from "@/lib/organization";
+import { Building2, Users, CalendarDays, ShieldCheck, ShieldAlert, Clock, Plus, Briefcase, CheckCircle2, TrendingUp } from "lucide-react";
+import { fetchMyOrganization, fetchDepartments, fetchMembers, fetchOrgEvents, fetchOrgPostings } from "@/lib/organization";
 
 export const Route = createFileRoute("/_authenticated/organization/")({
   head: () => ({ meta: [{ title: "Organization Dashboard — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
@@ -32,10 +32,18 @@ function OrganizationDashboardHome() {
     queryFn: () => fetchOrgEvents(org!.id),
     enabled: !!org?.id,
   });
+  const { data: postings } = useQuery({
+    queryKey: ["organization-postings", org?.id],
+    queryFn: () => fetchOrgPostings(org!.id),
+    enabled: !!org?.id,
+  });
 
   const activeMembers = (members ?? []).filter((m) => m.status === "active").length;
   const pendingInvites = (members ?? []).filter((m) => m.status === "invited").length;
   const upcomingEvents = (events ?? []).filter((e) => e.status === "published" || e.status === "ongoing").length;
+  const completedEvents = (events ?? []).filter((e) => e.status === "completed").length;
+  const totalSlotsFilled = (postings ?? []).reduce((s, p) => s + (p.slots_filled ?? 0), 0);
+  const totalSlotsNeeded = (postings ?? []).reduce((s, p) => s + (p.slots_needed ?? 0), 0);
 
   return (
     <div className="space-y-8">
@@ -60,6 +68,21 @@ function OrganizationDashboardHome() {
           )}
         </div>
       )}
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> Completed events</div>
+          <div className="mt-1.5 text-2xl font-bold">{completedEvents}</div>
+        </div>
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground"><Briefcase className="h-4 w-4 text-brand-violet" /> Job postings</div>
+          <div className="mt-1.5 text-2xl font-bold">{postings?.length ?? 0}</div>
+        </div>
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground"><TrendingUp className="h-4 w-4 text-amber-600" /> Slots filled</div>
+          <div className="mt-1.5 text-2xl font-bold">{totalSlotsFilled}/{totalSlotsNeeded || 0}</div>
+        </div>
+      </div>
 
       <div className="grid gap-4 md:grid-cols-3">
         <Link to="/organization/departments" className="group rounded-2xl border border-border bg-card p-6 transition hover:border-brand-violet/40 hover:shadow-soft">
