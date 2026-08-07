@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, Link, useRouterState, useNavigate, redirect } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { subscribeNotificationToasts } from "@/lib/realtimeToast";
 import {
   LayoutDashboard, Users, Building2, CalendarDays, Settings, LogOut, Menu, X, Clock, ShieldAlert, MailWarning, ShieldCheck, Briefcase,
 } from "lucide-react";
@@ -64,6 +65,16 @@ function OrganizationShell() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  // Organizations receive verification/account updates via
+  // platform_notifications (see notify() in lib/admin.ts), but nothing ever
+  // subscribed here — the row landed in the DB and no one saw it in real
+  // time. This pops a toast the moment one arrives.
+  useEffect(() => {
+    if (!user?.id) return;
+    const unsub = subscribeNotificationToasts(`org-notif-toast-${user.id}`, "platform_notifications", user.id);
+    return unsub;
+  }, [user?.id]);
 
   async function signOut() {
     await qc.cancelQueries();
