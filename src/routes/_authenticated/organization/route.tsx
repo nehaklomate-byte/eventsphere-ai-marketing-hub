@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, Link, useRouterState, useNavigate, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import {
-  LayoutDashboard, Users, Building2, CalendarDays, Settings, LogOut, Menu, X, Clock, ShieldAlert, MailWarning, ShieldCheck,
+  LayoutDashboard, Users, Building2, CalendarDays, Settings, LogOut, Menu, X, Clock, ShieldAlert, MailWarning, ShieldCheck, Briefcase,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,6 +53,7 @@ const NAV = [
   { to: "/organization/members", label: "Team Members", icon: Users },
   { to: "/organization/roles", label: "Roles & Permissions", icon: ShieldCheck },
   { to: "/organization/events", label: "Events", icon: CalendarDays },
+  { to: "/organization/jobs", label: "Job Board", icon: Briefcase },
   { to: "/organization/settings", label: "Settings", icon: Settings },
 ];
 
