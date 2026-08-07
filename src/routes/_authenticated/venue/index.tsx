@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, Inbox, CalendarCheck, ShieldCheck, ShieldAlert, Clock, Plus } from "lucide-react";
+import { Building2, Inbox, CalendarCheck, ShieldCheck, ShieldAlert, Clock, Plus, IndianRupee, TrendingUp, CheckCircle2 } from "lucide-react";
 import { fetchMyHalls, fetchEnquiries, fetchHallBookings } from "@/lib/venue";
 
 export const Route = createFileRoute("/_authenticated/venue/")({
@@ -33,6 +33,8 @@ function VenueDashboardHome() {
 
   const newEnquiries = (enquiries ?? []).filter((e) => e.status === "new").length;
   const pendingBookings = (bookings ?? []).filter((b) => b.status === "pending").length;
+  const confirmedBookings = (bookings ?? []).filter((b) => b.status === "confirmed" || b.status === "completed").length;
+  const totalRevenue = (bookings ?? []).filter((b) => b.payment_status === "paid").reduce((s, b) => s + Number(b.amount ?? 0), 0);
   const primaryHall = halls?.[0];
 
   return (
@@ -67,6 +69,21 @@ function VenueDashboardHome() {
           )}
         </div>
       )}
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground"><IndianRupee className="h-4 w-4 text-emerald-600" /> Total revenue</div>
+          <div className="mt-1.5 text-2xl font-bold">₹{totalRevenue.toLocaleString("en-IN")}</div>
+        </div>
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground"><CheckCircle2 className="h-4 w-4 text-brand-violet" /> Confirmed bookings</div>
+          <div className="mt-1.5 text-2xl font-bold">{confirmedBookings}</div>
+        </div>
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground"><TrendingUp className="h-4 w-4 text-amber-600" /> Enquiry → booking rate</div>
+          <div className="mt-1.5 text-2xl font-bold">{(enquiries?.length ?? 0) > 0 ? `${Math.round(((bookings?.length ?? 0) / (enquiries!.length)) * 100)}%` : "—"}</div>
+        </div>
+      </div>
 
       <div className="grid gap-4 md:grid-cols-3">
         <Link to="/venue/enquiries" className="group rounded-2xl border border-border bg-card p-6 transition hover:border-brand-violet/40 hover:shadow-soft">
