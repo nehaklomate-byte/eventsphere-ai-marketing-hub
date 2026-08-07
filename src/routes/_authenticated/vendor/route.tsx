@@ -30,6 +30,7 @@ const nav: { to: string; label: string; icon: typeof LayoutDashboard; exact?: bo
   { to: "/vendor", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/vendor/jobs", label: "Assigned Jobs", icon: Briefcase },
   { to: "/vendor/board", label: "Job Board", icon: ClipboardList },
+  { to: "/vendor/post-jobs", label: "Post Jobs", icon: Briefcase },
   { to: "/vendor/calendar", label: "Calendar", icon: CalendarDays },
   { to: "/vendor/availability", label: "Availability", icon: CalendarCheck },
   { to: "/vendor/hire-workers", label: "Hire Workers", icon: UsersRound },
