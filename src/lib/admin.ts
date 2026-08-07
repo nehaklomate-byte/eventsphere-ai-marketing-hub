@@ -444,3 +444,65 @@ export async function fetchRecentBroadcasts(): Promise<{ title: string; body: st
   }
   return Array.from(groups.values()).filter((g) => g.recipient_count > 1).slice(0, 30);
 }
+
+// ============================================================
+// Platform-wide analytics for the admin dashboard home page.
+// Everything here reads tables admin already has RLS access to
+// (see 20260722120000_admin_verification_center.sql,
+// 20260805110000_admin_payment_visibility.sql, and
+// 20260807120000_admin_events_visibility.sql for customer_events).
+// ============================================================
+export type PlatformAnalytics = {
+  usersByRole: { customer: number; organization: number; hall_owner: number; vendor: number; worker: number; admin: number };
+  totalUsers: number;
+  totalEvents: number;
+  totalBookings: number;      // hall bookings + vendor tasks + worker tasks, any status
+  totalRevenue: number;       // sum of everything actually paid
+  totalCommission: number;    // platform's cut of totalRevenue
+  activeJobPostings: number;
+};
+
+export async function fetchPlatformAnalytics(): Promise<PlatformAnalytics> {
+  const [
+    profilesRes, eventsRes, bookingsRes, workerTasksRes, vendorTasksRes, postingsRes,
+  ] = await Promise.all([
+    supabase.from("profiles").select("primary_role"),
+    supabase.from("customer_events").select("id", { count: "exact", head: true }),
+    supabase.from("customer_bookings").select("amount, commission_amount, payment_status"),
+    supabase.from("worker_tasks" as never).select("payment_amount, commission_amount, payment_status" as never),
+    supabase.from("vendor_tasks" as never).select("payment_amount, commission_amount, payment_status" as never),
+    supabase.from("worker_job_postings" as never).select("id", { count: "exact", head: true } as never).eq("status" as never, "open" as never),
+  ]);
+
+  const usersByRole = { customer: 0, organization: 0, hall_owner: 0, vendor: 0, worker: 0, admin: 0 };
+  for (const p of (profilesRes.data ?? []) as { primary_role: string | null }[]) {
+    if (p.primary_role && p.primary_role in usersByRole) {
+      usersByRole[p.primary_role as keyof typeof usersByRole] += 1;
+    }
+  }
+  const totalUsers = Object.values(usersByRole).reduce((a, b) => a + b, 0);
+
+  type Paid = { amount?: number | null; payment_amount?: number | null; commission_amount?: number | null; payment_status: string };
+  const bookings = (bookingsRes.data ?? []) as unknown as Paid[];
+  const workerTasks = (workerTasksRes.data ?? []) as unknown as Paid[];
+  const vendorTasks = (vendorTasksRes.data ?? []) as unknown as Paid[];
+
+  let totalRevenue = 0;
+  let totalCommission = 0;
+  for (const b of bookings) {
+    if (b.payment_status === "paid") { totalRevenue += Number(b.amount ?? 0); totalCommission += Number(b.commission_amount ?? 0); }
+  }
+  for (const t of [...workerTasks, ...vendorTasks]) {
+    if (t.payment_status === "paid") { totalRevenue += Number(t.payment_amount ?? 0); totalCommission += Number(t.commission_amount ?? 0); }
+  }
+
+  return {
+    usersByRole,
+    totalUsers,
+    totalEvents: eventsRes.count ?? 0,
+    totalBookings: bookings.length + workerTasks.length + vendorTasks.length,
+    totalRevenue,
+    totalCommission,
+    activeJobPostings: postingsRes.count ?? 0,
+  };
+}
