@@ -253,7 +253,7 @@ function VenueShell() {
                 : "Complete your Venue Profile fully and submit it for verification — customers only see the \"Verified\" badge and your listing on the marketplace once that's approved."}
             </div>
           )}
-          <Outlet />
+          <div key={pathname} className="animate-page-in"><Outlet /></div>
         </main>
       </div>
     </div>
