@@ -245,7 +245,7 @@ function WorkerShell() {
               <Link to="/worker/profile" className="rounded-full btn-brand btn-brand-hover px-4 py-2 text-xs font-semibold text-white">Complete Profile</Link>
             </div>
           )}
-          <Outlet />
+          <div key={location.pathname} className="animate-page-in"><Outlet /></div>
         </main>
       </div>
     </div>
