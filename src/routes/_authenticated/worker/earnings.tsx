@@ -1,8 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
-import { Wallet, TrendingUp, Clock, CheckCircle2 } from "lucide-react";
+import { Wallet, TrendingUp, Clock, CheckCircle2, Download } from "lucide-react";
 import type { WorkerTask } from "@/lib/worker";
 
 export const Route = createFileRoute("/_authenticated/worker/earnings")({
@@ -52,7 +52,7 @@ function EarningsPage() {
 
       <div className="grid gap-6 md:grid-cols-2">
         <PaymentTable title="Pending payments" sum={pendingSum} rows={pending} tone="amber" />
-        <PaymentTable title="Completed payments" sum={completedSum} rows={completed} tone="green" />
+        <PaymentTable title="Completed payments" sum={completedSum} rows={completed} tone="green" showReceipt />
       </div>
     </div>
   );
@@ -68,7 +68,7 @@ function Stat({ icon: Icon, label, value, tone }: { icon: typeof Wallet; label: 
   );
 }
 
-function PaymentTable({ title, sum, rows, tone }: { title: string; sum: number; rows: WorkerTask[]; tone: string }) {
+function PaymentTable({ title, sum, rows, tone, showReceipt }: { title: string; sum: number; rows: WorkerTask[]; tone: string; showReceipt?: boolean }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
       <div className="flex items-center justify-between mb-4">
@@ -85,7 +85,15 @@ function PaymentTable({ title, sum, rows, tone }: { title: string; sum: number; 
                 <div className="text-sm font-medium truncate">{t.task_name}</div>
                 <div className="text-xs text-muted-foreground">{t.event_date}</div>
               </div>
-              <div className="text-sm font-semibold">₹{Number(t.payment_amount ?? 0).toLocaleString("en-IN")}</div>
+              <div className="flex items-center gap-3">
+                <div className="text-sm font-semibold">₹{Number(t.payment_amount ?? 0).toLocaleString("en-IN")}</div>
+                {showReceipt && (
+                  <Link to="/receipt/$type/$id" params={{ type: "worker", id: t.id }} target="_blank"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-brand-violet hover:underline">
+                    <Download className="h-3.5 w-3.5" />
+                  </Link>
+                )}
+              </div>
             </div>
           ))}
         </div>
