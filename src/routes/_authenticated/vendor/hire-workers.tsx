@@ -1,9 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  HardHat, MapPin, Star, Search, Wallet, Send, X, Loader2, Briefcase, IndianRupee, CheckCircle2, Clock3, ImageIcon,
+  HardHat, MapPin, Star, Search, Wallet, Send, X, Loader2, Briefcase, IndianRupee, CheckCircle2, Clock3, ImageIcon, Download,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
@@ -183,9 +183,15 @@ function MyRequests({ userId }: { userId: string }) {
                   </button>
                 )}
                 {r.payment_status === "paid" ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1.5 text-xs font-semibold text-emerald-700">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Paid
-                  </span>
+                  <>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Paid
+                    </span>
+                    <Link to="/receipt/$type/$id" params={{ type: "worker", id: r.id }} target="_blank"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-input px-3 py-1.5 text-xs font-semibold hover:bg-accent">
+                      <Download className="h-3.5 w-3.5" /> Receipt
+                    </Link>
+                  </>
                 ) : (r.status === "accepted" || r.status === "completed") && r.payment_amount ? (
                   <button onClick={() => handlePay(r)} disabled={payingId === r.id}
                     className="inline-flex items-center gap-1.5 rounded-full btn-brand btn-brand-hover px-4 py-2 text-xs font-semibold text-white disabled:opacity-70">
