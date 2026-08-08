@@ -129,7 +129,7 @@ function CustomerLayout() {
 
         <main className="min-h-dvh flex-1 px-4 md:px-8 py-6 md:py-10">
           {user && !user.phone_confirmed_at && <PhoneVerifyBanner user={user} />}
-          <Outlet />
+          <div key={pathname} className="animate-page-in"><Outlet /></div>
         </main>
       </div>
     </div>
