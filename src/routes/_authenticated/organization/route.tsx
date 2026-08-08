@@ -193,7 +193,7 @@ function OrganizationShell() {
                 : "Your organization is pending verification — you can still set up departments, invite members, and draft events in the meantime."}
             </div>
           )}
-          <Outlet />
+          <div key={pathname} className="animate-page-in"><Outlet /></div>
         </main>
       </div>
     </div>
