@@ -43,9 +43,9 @@ export const Route = createFileRoute("/marketplace")({
   }),
   head: () => ({
     meta: [
-      { title: "Marketplace — EventOrbit Nova" },
+      { title: "Marketplace — EventOrbit AI" },
       { name: "description", content: "Discover verified venues, vendors and workers across India for your next event — transparent pricing, instant enquiries." },
-      { property: "og:title", content: "Marketplace — EventOrbit Nova" },
+      { property: "og:title", content: "Marketplace — EventOrbit AI" },
       { property: "og:description", content: "Verified venues, vendors and workers. Transparent pricing, instant enquiries." },
       { property: "og:url", content: "/marketplace" },
     ],
@@ -146,10 +146,10 @@ function Marketplace() {
         ) : filtered.length === 0 ? (
           <EmptyState tab={tab} />
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4 stagger-children">
             {filtered.map((h) => (
               <Link key={h.id} to={`${meta.detailBase}/$id`} params={{ id: h.id }} search={search.event_id ? { event_id: search.event_id } : undefined}
-                className="group overflow-hidden rounded-2xl border border-border bg-card shadow-soft hover:shadow-elegant transition-all">
+                className="group card-interactive overflow-hidden rounded-2xl border border-border bg-card shadow-soft hover:shadow-elegant">
                 <div className="relative h-44 overflow-hidden bg-accent">
                   {h.cover_url || h.gallery[0] ? (
                     <img src={h.cover_url || h.gallery[0]} alt={h.name} loading="lazy"
