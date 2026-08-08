@@ -4,7 +4,7 @@ import {
   ShieldCheck, Building2, Landmark, Briefcase, HardHat, ArrowUpRight, UserCheck,
   Users, CalendarDays, IndianRupee, ClipboardList, Bell, Settings2, Wallet,
 } from "lucide-react";
-import { fetchPendingCounts, fetchPendingAccountCount, fetchPlatformAnalytics, ROLE_LABEL, type VerificationRole } from "@/lib/admin";
+import { fetchPendingCounts, fetchPendingAccountCount, fetchPlatformAnalytics, ROLE_LABEL, type VerificationRole } from "@/lib/admin.ts";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
   head: () => ({ meta: [{ title: "Admin Dashboard — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
