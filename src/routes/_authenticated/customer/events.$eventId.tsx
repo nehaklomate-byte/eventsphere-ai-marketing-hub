@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, MapPin, Users, Wallet, Building2, Store, HardHat, Plus, ArrowLeft, IndianRupee } from "lucide-react";
+import { Calendar, MapPin, Users, Wallet, Building2, Store, HardHat, Plus, ArrowLeft, IndianRupee, Download } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/customer/events/$eventId")({
   head: () => ({ meta: [{ title: "Event — EventOrbit AI" }] }),
@@ -81,7 +81,7 @@ function EventDetailPage() {
         {venueBookings.length === 0 ? (
           <EmptyRow text="No venue booked for this event yet." />
         ) : venueBookings.map((b) => (
-          <Row key={b.id} name={b.target_name} status={b.status} paid={b.payment_status === "paid"} amount={b.amount} />
+          <Row key={b.id} id={b.id} kind="hall" name={b.target_name} status={b.status} paid={b.payment_status === "paid"} amount={b.amount} />
         ))}
       </Section>
 
@@ -94,7 +94,7 @@ function EventDetailPage() {
         {vendors.length === 0 ? (
           <EmptyRow text="No vendor hired for this event yet." />
         ) : vendors.map((v) => (
-          <Row key={v.id} name={`${v.vendor?.business_name ?? "Vendor"} — ${v.task_name}`} status={v.status} paid={v.payment_status === "paid"} amount={v.payment_amount ?? undefined} />
+          <Row key={v.id} id={v.id} kind="vendor" name={`${v.vendor?.business_name ?? "Vendor"} — ${v.task_name}`} status={v.status} paid={v.payment_status === "paid"} amount={v.payment_amount ?? undefined} />
         ))}
       </Section>
 
@@ -107,7 +107,7 @@ function EventDetailPage() {
         {workers.length === 0 ? (
           <EmptyRow text="No worker hired for this event yet." />
         ) : workers.map((w) => (
-          <Row key={w.id} name={`${w.worker?.full_name ?? "Worker"} — ${w.task_name}`} status={w.status} paid={w.payment_status === "paid"} amount={w.payment_amount ?? undefined} />
+          <Row key={w.id} id={w.id} kind="worker" name={`${w.worker?.full_name ?? "Worker"} — ${w.task_name}`} status={w.status} paid={w.payment_status === "paid"} amount={w.payment_amount ?? undefined} />
         ))}
       </Section>
     </div>
@@ -132,14 +132,22 @@ function Section({ icon: Icon, title, children, actionTo, actionLabel }: {
   );
 }
 
-function Row({ name, status, paid, amount }: { name: string; status: string; paid: boolean; amount?: number }) {
+function Row({ id, kind, name, status, paid, amount }: { id: string; kind: "hall" | "vendor" | "worker"; name: string; status: string; paid: boolean; amount?: number }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-muted/40 px-3 py-2 text-sm">
       <span className="font-medium">{name}</span>
       <span className="flex items-center gap-2 text-xs">
         <span className={`rounded-full px-2 py-0.5 font-semibold capitalize ${statusTone[status] ?? "bg-muted"}`}>{status.replace("_", " ")}</span>
         {amount != null && <span className="flex items-center gap-0.5 font-semibold text-foreground"><IndianRupee className="h-3 w-3" />{amount.toLocaleString("en-IN")}</span>}
-        {paid && <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 font-semibold text-emerald-700">Paid</span>}
+        {paid && (
+          <>
+            <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 font-semibold text-emerald-700">Paid</span>
+            <Link to="/receipt/$type/$id" params={{ type: kind, id }} target="_blank"
+              className="inline-flex items-center gap-1 rounded-full border border-input px-2 py-0.5 font-semibold text-brand-violet hover:bg-accent">
+              <Download className="h-3 w-3" /> Receipt
+            </Link>
+          </>
+        )}
       </span>
     </div>
   );
