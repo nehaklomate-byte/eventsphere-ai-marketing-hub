@@ -9,7 +9,7 @@ import {
 } from "@/lib/vendor";
 
 export const Route = createFileRoute("/_authenticated/vendor/board")({
-  head: () => ({ meta: [{ title: "Job Board — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Job Board — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: VendorBoardPage,
 });
 

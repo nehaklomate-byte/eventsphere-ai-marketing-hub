@@ -35,7 +35,7 @@ export const Route = createFileRoute("/contact")({
             <h3 className="font-display text-lg font-semibold">What to expect</h3>
             <div className="mt-4 space-y-3 text-sm text-muted-foreground">
               <p>Messages are read by the team building the product, not a call centre. We reply within one business day.</p>
-              <p className="flex items-center gap-3 text-foreground"><Mail className="h-4 w-4 text-brand-violet" /> hello@eventorbit.ai</p>
+              <p className="flex items-center gap-3 text-foreground"><Mail className="h-4 w-4 text-brand-violet" /> hello@eventorbitnova.com</p>
               <p className="flex items-center gap-3 text-foreground"><MapPin className="h-4 w-4 text-brand-violet" /> Operating from Maharashtra, India</p>
             </div>
           </div>

@@ -6,9 +6,9 @@ import { BetaNotice } from "@/components/BetaNotice";
 export const Route = createFileRoute("/terms")({
   head: () => ({
     meta: [
-      { title: "Terms & Conditions — EventOrbit AI" },
-      { name: "description", content: "The terms that govern using the EventOrbit AI marketplace." },
-      { property: "og:title", content: "Terms & Conditions — EventOrbit AI" },
+      { title: "Terms & Conditions — EventOrbit Nova" },
+      { name: "description", content: "The terms that govern using the EventOrbit Nova marketplace." },
+      { property: "og:title", content: "Terms & Conditions — EventOrbit Nova" },
       { property: "og:description", content: "Our terms of service." },
       { property: "og:url", content: "/terms" },
     ],
@@ -20,7 +20,7 @@ export const Route = createFileRoute("/terms")({
       <BetaNotice />
       <section className="mx-auto max-w-3xl px-5 md:px-8 py-16 legal-content">
         <p>
-          These Terms & Conditions ("Terms") govern your access to and use of the EventOrbit AI platform, currently
+          These Terms & Conditions ("Terms") govern your access to and use of the EventOrbit Nova platform, currently
           operated as an early-stage/beta project by its founder(s) ("Company", "we", "us"). Formal company
           registration (CIN), a registered office address, and a signed legal review are in progress — this section
           will be updated with those details, replacing the [CIN NUMBER]/[ADDRESS] placeholders below, before public
@@ -29,7 +29,7 @@ export const Route = createFileRoute("/terms")({
 
         <h2>1. Role of the Platform</h2>
         <p>
-          EventOrbit AI is an intermediary marketplace platform that connects Customers, Organizations, Venue
+          EventOrbit Nova is an intermediary marketplace platform that connects Customers, Organizations, Venue
           Owners, Vendors and Workers. We facilitate discovery, booking, task assignment and payment routing between
           these parties. We are not the provider of catering, decoration, venue, or any other event service — the
           actual service is provided directly by the respective Venue Owner, Vendor, or Worker, who is solely
@@ -76,7 +76,7 @@ export const Route = createFileRoute("/terms")({
 
         <h2>7. Intellectual Property</h2>
         <p>
-          The EventOrbit AI name, logo, and platform technology are the property of the Company. Users retain
+          The EventOrbit Nova name, logo, and platform technology are the property of the Company. Users retain
           ownership of content they upload (photos, portfolios, descriptions) but grant the Company a license to
           display this content on the Platform for the purpose of operating the marketplace.
         </p>

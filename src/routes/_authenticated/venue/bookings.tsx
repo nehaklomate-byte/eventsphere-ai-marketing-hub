@@ -8,7 +8,7 @@ import { downloadCsv } from "@/lib/admin";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/venue/bookings")({
-  head: () => ({ meta: [{ title: "Bookings — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Bookings — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: BookingsPage,
 });
 

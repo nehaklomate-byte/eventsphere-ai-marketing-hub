@@ -10,7 +10,7 @@ import {
 } from "@/lib/admin";
 
 export const Route = createFileRoute("/_authenticated/admin/accounts")({
-  head: () => ({ meta: [{ title: "Account Approvals — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Account Approvals — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: AccountApprovalsPage,
 });
 

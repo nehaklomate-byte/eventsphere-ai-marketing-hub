@@ -5,7 +5,7 @@ import { Users as UsersIcon, Search, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/admin/users")({
-  head: () => ({ meta: [{ title: "Users — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Users — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: UsersPage,
 });
 

@@ -7,7 +7,7 @@ import type { VendorNotification } from "@/lib/vendor";
 import { PlatformAnnouncements } from "@/components/PlatformAnnouncements";
 
 export const Route = createFileRoute("/_authenticated/vendor/notifications")({
-  head: () => ({ meta: [{ title: "Notifications — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Notifications — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: NotificationsPage,
 });
 

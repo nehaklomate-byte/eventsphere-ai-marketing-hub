@@ -7,7 +7,7 @@ import { FileText, Upload, Loader2, ExternalLink, Trash2 } from "lucide-react";
 import { fetchMyVendor, uploadVendorFile } from "@/lib/vendor";
 
 export const Route = createFileRoute("/_authenticated/vendor/documents")({
-  head: () => ({ meta: [{ title: "Documents — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Documents — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: DocumentsPage,
 });
 

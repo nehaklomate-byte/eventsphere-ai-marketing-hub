@@ -4,7 +4,7 @@ import { CheckCircle2, Circle } from "lucide-react";
 import { fetchMyMemberships, PERMISSIONS, type PermissionKey } from "@/lib/organization";
 
 export const Route = createFileRoute("/_authenticated/team-member/")({
-  head: () => ({ meta: [{ title: "My Dashboard - EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "My Dashboard - EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: TeamMemberHome,
 });
 

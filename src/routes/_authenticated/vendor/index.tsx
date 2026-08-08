@@ -5,7 +5,7 @@ import { Briefcase, CheckCircle2, AlertCircle, Wallet, Bell, TrendingUp, Calenda
 import { fetchMyVendor, computeVendorCompletion, fetchMyVendorTasks, type VendorTask } from "@/lib/vendor";
 
 export const Route = createFileRoute("/_authenticated/vendor/")({
-  head: () => ({ meta: [{ title: "Vendor Dashboard — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Vendor Dashboard — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: VendorDashboardHome,
 });
 

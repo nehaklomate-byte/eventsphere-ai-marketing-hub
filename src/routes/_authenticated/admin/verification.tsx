@@ -11,7 +11,7 @@ import {
 } from "@/lib/admin";
 
 export const Route = createFileRoute("/_authenticated/admin/verification")({
-  head: () => ({ meta: [{ title: "Verification Center — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Verification Center — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   validateSearch: (s: Record<string, unknown>) => ({
     role: (s.role as VerificationRole | undefined) ?? undefined,
   }),

@@ -4,7 +4,7 @@ import { Building2, Inbox, CalendarCheck, ShieldCheck, ShieldAlert, Clock, Plus,
 import { fetchMyHalls, fetchEnquiries, fetchHallBookings } from "@/lib/venue";
 
 export const Route = createFileRoute("/_authenticated/venue/")({
-  head: () => ({ meta: [{ title: "Venue Dashboard — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Venue Dashboard — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: VenueDashboardHome,
 });
 

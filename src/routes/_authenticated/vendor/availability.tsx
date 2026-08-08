@@ -7,7 +7,7 @@ import { Loader2, Save, CalendarX } from "lucide-react";
 import { fetchMyVendor, WEEKDAYS } from "@/lib/vendor";
 
 export const Route = createFileRoute("/_authenticated/vendor/availability")({
-  head: () => ({ meta: [{ title: "Availability — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Availability — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: AvailabilityPage,
 });
 

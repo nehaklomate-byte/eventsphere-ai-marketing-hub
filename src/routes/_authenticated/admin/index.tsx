@@ -7,7 +7,7 @@ import {
 import { fetchPendingCounts, fetchPendingAccountCount, fetchPlatformAnalytics, ROLE_LABEL, type VerificationRole } from "@/lib/admin.ts";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
-  head: () => ({ meta: [{ title: "Admin Dashboard — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Admin Dashboard — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: AdminDashboardHome,
 });
 

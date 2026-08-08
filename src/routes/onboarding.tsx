@@ -9,7 +9,7 @@ export const Route = createFileRoute("/onboarding")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Choose your workspace — EventOrbit AI" },
+      { title: "Choose your workspace — EventOrbit Nova" },
       { name: "robots", content: "noindex" },
     ],
   }),

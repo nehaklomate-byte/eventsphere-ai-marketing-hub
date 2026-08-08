@@ -6,7 +6,7 @@ import { Briefcase, Search, Loader2, MapPin, Calendar, Wallet, Users, ChevronDow
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/admin/jobs")({
-  head: () => ({ meta: [{ title: "Job Board — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Job Board — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: AdminJobsPage,
 });
 

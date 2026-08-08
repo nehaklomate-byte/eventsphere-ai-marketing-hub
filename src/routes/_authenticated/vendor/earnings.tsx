@@ -5,7 +5,7 @@ import { Wallet, TrendingUp, Clock, Download } from "lucide-react";
 import { fetchMyVendorTasks, vendorStatusTone } from "@/lib/vendor";
 
 export const Route = createFileRoute("/_authenticated/vendor/earnings")({
-  head: () => ({ meta: [{ title: "Earnings — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Earnings — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: EarningsPage,
 });
 

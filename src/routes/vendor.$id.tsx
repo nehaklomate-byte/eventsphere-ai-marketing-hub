@@ -68,8 +68,8 @@ export const Route = createFileRoute("/vendor/$id")({
   }),
   head: ({ params }) => ({
     meta: [
-      { title: "Vendor details — EventOrbit AI" },
-      { name: "description", content: "Verified event vendor on EventOrbit AI." },
+      { title: "Vendor details — EventOrbit Nova" },
+      { name: "description", content: "Verified event vendor on EventOrbit Nova." },
       { property: "og:url", content: `/vendor/${params.id}` },
     ],
     links: [{ rel: "canonical", href: `/vendor/${params.id}` }],

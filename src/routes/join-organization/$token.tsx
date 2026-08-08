@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lookupInvite, acceptInvite } from "@/lib/organization";
 
 export const Route = createFileRoute("/join-organization/$token")({
-  head: () => ({ meta: [{ title: "Join Organization - EventOrbit AI" }] }),
+  head: () => ({ meta: [{ title: "Join Organization - EventOrbit Nova" }] }),
   component: JoinOrganizationPage,
 });
 

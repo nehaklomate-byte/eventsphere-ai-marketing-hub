@@ -5,7 +5,7 @@ import { Plus, Trash2, ShieldCheck, Shield } from "lucide-react";
 import { fetchMyOrganization, fetchRoles, createRole, updateRole, deleteRole, PERMISSIONS, type PermissionKey } from "@/lib/organization";
 
 export const Route = createFileRoute("/_authenticated/organization/roles")({
-  head: () => ({ meta: [{ title: "Roles & Permissions — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Roles & Permissions — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: RolesPage,
 });
 

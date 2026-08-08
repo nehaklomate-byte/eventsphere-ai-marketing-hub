@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { fetchMyVendorTasks, type VendorTask } from "@/lib/vendor";
 
 export const Route = createFileRoute("/_authenticated/vendor/calendar")({
-  head: () => ({ meta: [{ title: "Calendar — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Calendar — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: CalendarPage,
 });
 

@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Calendar, MapPin, Users, Wallet, Building2, Store, HardHat, Plus, ArrowLeft, IndianRupee, Download } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/customer/events/$eventId")({
-  head: () => ({ meta: [{ title: "Event — EventOrbit AI" }] }),
+  head: () => ({ meta: [{ title: "Event — EventOrbit Nova" }] }),
   component: EventDetailPage,
 });
 

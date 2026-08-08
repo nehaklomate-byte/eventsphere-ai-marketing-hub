@@ -11,7 +11,7 @@ export function BetaNotice() {
   return (
     <div className="mx-auto max-w-3xl px-5 md:px-8">
       <div className="mt-8 rounded-2xl border border-amber-300/60 bg-amber-50 dark:bg-amber-950/20 px-5 py-4 text-sm text-amber-900 dark:text-amber-300">
-        <p className="font-semibold">You're using an early/closed-beta version of EventOrbit AI.</p>
+        <p className="font-semibold">You're using an early/closed-beta version of EventOrbit Nova.</p>
         <p className="mt-1">
           The operating company is not yet registered and the document below is an unfinished draft — it has not
           been reviewed by a lawyer and is not a final, enforceable agreement. It is shared here only so early

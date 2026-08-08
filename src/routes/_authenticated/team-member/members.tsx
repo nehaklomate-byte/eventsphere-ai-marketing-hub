@@ -5,7 +5,7 @@ import { UserPlus, Lock } from "lucide-react";
 import { fetchMyMemberships, fetchRoles, inviteMember, memberHasPermission } from "@/lib/organization";
 
 export const Route = createFileRoute("/_authenticated/team-member/members")({
-  head: () => ({ meta: [{ title: "Invite Members - EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Invite Members - EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: TeamMemberInvitePage,
 });
 

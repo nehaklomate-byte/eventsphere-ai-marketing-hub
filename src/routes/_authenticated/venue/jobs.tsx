@@ -12,7 +12,7 @@ import { shortlistApplication, rejectApplication, acceptApplication } from "@/li
 import { WORKER_CATEGORIES } from "@/lib/worker";
 
 export const Route = createFileRoute("/_authenticated/venue/jobs")({
-  head: () => ({ meta: [{ title: "Job Board — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Job Board — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: VenueJobsPage,
 });
 

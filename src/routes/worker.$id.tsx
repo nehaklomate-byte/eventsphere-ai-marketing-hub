@@ -76,8 +76,8 @@ export const Route = createFileRoute("/worker/$id")({
   }),
   head: ({ params }) => ({
     meta: [
-      { title: "Worker profile — EventOrbit AI" },
-      { name: "description", content: "Verified event worker on EventOrbit AI." },
+      { title: "Worker profile — EventOrbit Nova" },
+      { name: "description", content: "Verified event worker on EventOrbit Nova." },
       { property: "og:url", content: `/worker/${params.id}` },
     ],
     links: [{ rel: "canonical", href: `/worker/${params.id}` }],

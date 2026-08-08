@@ -244,7 +244,7 @@ function VendorShell() {
           {completion < 60 && vStatus !== "approved" && location.pathname !== "/vendor/profile" && (
             <div className="mb-6 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <div className="text-sm font-semibold text-foreground">Welcome to EventOrbit AI 👋</div>
+                <div className="text-sm font-semibold text-foreground">Welcome to EventOrbit Nova 👋</div>
                 <div className="text-xs text-muted-foreground">Complete your profile to get verified and start receiving enquiries. You're at {completion}%.</div>
               </div>
               <Link to="/vendor/profile" className="rounded-full btn-brand btn-brand-hover px-4 py-2 text-xs font-semibold text-white">Complete Profile</Link>

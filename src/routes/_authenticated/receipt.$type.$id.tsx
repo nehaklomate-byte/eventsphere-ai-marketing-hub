@@ -5,7 +5,7 @@ import { Printer, CheckCircle2, Loader2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 
 export const Route = createFileRoute("/_authenticated/receipt/$type/$id")({
-  head: () => ({ meta: [{ title: "Payment Receipt — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Payment Receipt — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: ReceiptPage,
 });
 
@@ -154,7 +154,7 @@ function ReceiptPage() {
           )}
         </div>
 
-        <p className="mt-8 text-center text-[11px] text-muted-foreground">This is a system-generated receipt from EventOrbit AI and does not require a signature.</p>
+        <p className="mt-8 text-center text-[11px] text-muted-foreground">This is a system-generated receipt from EventOrbit Nova and does not require a signature.</p>
       </div>
 
       <style>{`

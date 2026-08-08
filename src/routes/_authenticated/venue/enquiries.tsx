@@ -8,7 +8,7 @@ import { useSession } from "@/lib/session";
 import { MessageButton } from "@/components/chat/ChatPanel";
 
 export const Route = createFileRoute("/_authenticated/venue/enquiries")({
-  head: () => ({ meta: [{ title: "Enquiries — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Enquiries — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: EnquiriesPage,
 });
 

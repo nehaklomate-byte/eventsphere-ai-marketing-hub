@@ -7,7 +7,7 @@ import {
 } from "@/lib/organization";
 
 export const Route = createFileRoute("/_authenticated/team-member/events")({
-  head: () => ({ meta: [{ title: "Events - EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Events - EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: TeamMemberEventsPage,
 });
 

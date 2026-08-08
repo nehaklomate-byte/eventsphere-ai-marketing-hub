@@ -5,8 +5,8 @@ import logoWhite from "@/assets/logo-white.png.asset.json";
 export function Logo({ variant = "primary", className = "h-9" }: { variant?: "primary" | "white" | "mark"; className?: string }) {
   const src = variant === "white" ? logoWhite.url : logoPrimary.url;
   return (
-    <Link to="/" className="inline-flex items-center gap-2 shrink-0" aria-label="EventOrbit AI home">
-      <img src={src} alt="EventOrbit AI" className={`${className} w-auto object-contain`} />
+    <Link to="/" className="inline-flex items-center gap-2 shrink-0" aria-label="EventOrbit Nova home">
+      <img src={src} alt="EventOrbit Nova" className={`${className} w-auto object-contain`} />
     </Link>
   );
 }

@@ -14,10 +14,10 @@ import { z } from "zod";
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
-      { title: "Log in — EventOrbit AI" },
-      { name: "description", content: "Sign in to the EventOrbit AI operations console." },
-      { property: "og:title", content: "Log in — EventOrbit AI" },
-      { property: "og:description", content: "Sign in to EventOrbit AI." },
+      { title: "Log in — EventOrbit Nova" },
+      { name: "description", content: "Sign in to the EventOrbit Nova operations console." },
+      { property: "og:title", content: "Log in — EventOrbit Nova" },
+      { property: "og:description", content: "Sign in to EventOrbit Nova." },
       { name: "robots", content: "noindex" },
     ],
     links: [{ rel: "canonical", href: "/login" }],
@@ -163,7 +163,7 @@ function LoginPage() {
         <div className="w-full max-w-md">
           <div className="lg:hidden mb-8"><Link to="/"><Logo className="h-9" /></Link></div>
           <h1 className="font-display text-3xl font-semibold tracking-tight">Welcome back</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Sign in to the EventOrbit AI console.</p>
+          <p className="mt-2 text-sm text-muted-foreground">Sign in to the EventOrbit Nova console.</p>
 
           <button
             type="button"

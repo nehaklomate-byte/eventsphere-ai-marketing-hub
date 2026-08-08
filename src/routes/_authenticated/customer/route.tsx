@@ -14,7 +14,7 @@ import { ensureCustomerBootstrapped } from "@/lib/customer";
 import { subscribeNotificationToasts } from "@/lib/realtimeToast";
 
 export const Route = createFileRoute("/_authenticated/customer")({
-  head: () => ({ meta: [{ title: "Customer workspace — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Customer workspace — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: CustomerLayout,
 });
 

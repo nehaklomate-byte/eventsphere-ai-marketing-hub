@@ -4,7 +4,7 @@ import { Building2, Users, CalendarDays, ShieldCheck, ShieldAlert, Clock, Plus, 
 import { fetchMyOrganization, fetchDepartments, fetchMembers, fetchOrgEvents, fetchOrgPostings } from "@/lib/organization";
 
 export const Route = createFileRoute("/_authenticated/organization/")({
-  head: () => ({ meta: [{ title: "Organization Dashboard — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Organization Dashboard — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: OrganizationDashboardHome,
 });
 

@@ -6,7 +6,7 @@ import { Bell, Loader2, Send, Users } from "lucide-react";
 import { sendBroadcast, fetchRecentBroadcasts, type BroadcastAudience } from "@/lib/admin";
 
 export const Route = createFileRoute("/_authenticated/admin/notifications")({
-  head: () => ({ meta: [{ title: "Broadcast Center — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Broadcast Center — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: BroadcastPage,
 });
 

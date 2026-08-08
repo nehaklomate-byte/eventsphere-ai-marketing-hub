@@ -6,9 +6,9 @@ import { BetaNotice } from "@/components/BetaNotice";
 export const Route = createFileRoute("/privacy")({
   head: () => ({
     meta: [
-      { title: "Privacy Policy — EventOrbit AI" },
-      { name: "description", content: "How EventOrbit AI collects, uses, and protects your information." },
-      { property: "og:title", content: "Privacy Policy — EventOrbit AI" },
+      { title: "Privacy Policy — EventOrbit Nova" },
+      { name: "description", content: "How EventOrbit Nova collects, uses, and protects your information." },
+      { property: "og:title", content: "Privacy Policy — EventOrbit Nova" },
       { property: "og:description", content: "Our privacy commitments." },
       { property: "og:url", content: "/privacy" },
     ],
@@ -20,8 +20,8 @@ export const Route = createFileRoute("/privacy")({
       <BetaNotice />
       <section className="mx-auto max-w-3xl px-5 md:px-8 py-16 legal-content">
         <p>
-          EventOrbit AI ("we", "us", "our") — currently an early-stage/beta project, ahead of formal company
-          registration — operates the EventOrbit AI website and mobile application (together, the "Platform"), a
+          EventOrbit Nova ("we", "us", "our") — currently an early-stage/beta project, ahead of formal company
+          registration — operates the EventOrbit Nova website and mobile application (together, the "Platform"), a
           marketplace connecting Customers, Venue Owners, Vendors, Workers, Organizations and Admin users for
           event-related services. This Privacy Policy explains what personal data we collect, why, how we use and
           protect it, and the rights you have over it, in accordance with the Digital Personal Data Protection Act,

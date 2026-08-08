@@ -9,7 +9,7 @@ import { payForWorkerTask } from "@/lib/razorpay";
 import { PageShell, EmptyState, LoadingRows } from "./-ui";
 
 export const Route = createFileRoute("/_authenticated/customer/bookings")({
-  head: () => ({ meta: [{ title: "Bookings — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Bookings — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: BookingsPage,
 });
 

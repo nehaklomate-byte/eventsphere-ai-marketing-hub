@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchMyHalls, createHall, updateHall, type Hall } from "@/lib/venue";
 
 export const Route = createFileRoute("/_authenticated/venue/profile")({
-  head: () => ({ meta: [{ title: "Venue Profile — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Venue Profile — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: VenueProfilePage,
 });
 

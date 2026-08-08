@@ -53,9 +53,9 @@ export const Route = createFileRoute("/hall/$id")({
   }),
   head: ({ params }) => ({
     meta: [
-      { title: `Venue details — EventOrbit AI` },
-      { name: "description", content: "Verified venue on EventOrbit AI. See capacity, facilities, pricing and availability." },
-      { property: "og:title", content: "Venue on EventOrbit AI" },
+      { title: `Venue details — EventOrbit Nova` },
+      { name: "description", content: "Verified venue on EventOrbit Nova. See capacity, facilities, pricing and availability." },
+      { property: "og:title", content: "Venue on EventOrbit Nova" },
       { property: "og:url", content: `/hall/${params.id}` },
     ],
     links: [{ rel: "canonical", href: `/hall/${params.id}` }],

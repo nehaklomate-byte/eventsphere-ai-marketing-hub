@@ -43,9 +43,9 @@ export const Route = createFileRoute("/marketplace")({
   }),
   head: () => ({
     meta: [
-      { title: "Marketplace — EventOrbit AI" },
+      { title: "Marketplace — EventOrbit Nova" },
       { name: "description", content: "Discover verified venues, vendors and workers across India for your next event — transparent pricing, instant enquiries." },
-      { property: "og:title", content: "Marketplace — EventOrbit AI" },
+      { property: "og:title", content: "Marketplace — EventOrbit Nova" },
       { property: "og:description", content: "Verified venues, vendors and workers. Transparent pricing, instant enquiries." },
       { property: "og:url", content: "/marketplace" },
     ],

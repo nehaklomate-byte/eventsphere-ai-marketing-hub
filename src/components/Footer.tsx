@@ -73,9 +73,9 @@ export function Footer() {
           ))}
         </div>
         <div className="mt-14 flex flex-col-reverse items-start justify-between gap-4 border-t border-border pt-6 md:flex-row md:items-center">
-          <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} EventOrbit AI. All rights reserved.</p>
-          <a href="mailto:hello@eventorbit.ai" className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground">
-            <Mail className="h-3.5 w-3.5" /> hello@eventorbit.ai
+          <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} EventOrbit Nova. All rights reserved.</p>
+          <a href="mailto:hello@eventorbitnova.com" className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground">
+            <Mail className="h-3.5 w-3.5" /> hello@eventorbitnova.com
           </a>
         </div>
       </div>

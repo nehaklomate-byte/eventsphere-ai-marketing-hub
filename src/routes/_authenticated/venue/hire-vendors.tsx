@@ -13,7 +13,7 @@ import { VENDOR_CATEGORIES } from "@/lib/vendor";
 import { payForWorkerTask } from "@/lib/razorpay";
 
 export const Route = createFileRoute("/_authenticated/venue/hire-vendors")({
-  head: () => ({ meta: [{ title: "Hire Vendors — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Hire Vendors — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: HireVendorsPage,
 });
 

@@ -6,9 +6,9 @@ import { BetaNotice } from "@/components/BetaNotice";
 export const Route = createFileRoute("/refund-policy")({
   head: () => ({
     meta: [
-      { title: "Refund & Cancellation Policy — EventOrbit AI" },
-      { name: "description", content: "How cancellations and refunds work on EventOrbit AI." },
-      { property: "og:title", content: "Refund & Cancellation Policy — EventOrbit AI" },
+      { title: "Refund & Cancellation Policy — EventOrbit Nova" },
+      { name: "description", content: "How cancellations and refunds work on EventOrbit Nova." },
+      { property: "og:title", content: "Refund & Cancellation Policy — EventOrbit Nova" },
       { property: "og:description", content: "Our refund and cancellation terms." },
       { property: "og:url", content: "/refund-policy" },
     ],
@@ -21,7 +21,7 @@ export const Route = createFileRoute("/refund-policy")({
       <section className="mx-auto max-w-3xl px-5 md:px-8 py-16">
         <div className="legal-content">
           <p>
-            This policy explains what happens to your payment when a booking or task on EventOrbit AI is cancelled,
+            This policy explains what happens to your payment when a booking or task on EventOrbit Nova is cancelled,
             rescheduled, or not completed as agreed. It applies alongside our <Link to="/terms">Terms & Conditions</Link>.
           </p>
         </div>

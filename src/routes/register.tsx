@@ -15,10 +15,10 @@ import { insertRoleRow, type Role } from "@/lib/registration";
 export const Route = createFileRoute("/register")({
   head: () => ({
     meta: [
-      { title: "Create your account — EventOrbit AI" },
-      { name: "description", content: "Register your organization, venue, vendor profile or personal account on EventOrbit AI." },
-      { property: "og:title", content: "Create your account — EventOrbit AI" },
-      { property: "og:description", content: "Join EventOrbit AI." },
+      { title: "Create your account — EventOrbit Nova" },
+      { name: "description", content: "Register your organization, venue, vendor profile or personal account on EventOrbit Nova." },
+      { property: "og:title", content: "Create your account — EventOrbit Nova" },
+      { property: "og:description", content: "Join EventOrbit Nova." },
       { name: "robots", content: "noindex" },
     ],
     links: [{ rel: "canonical", href: "/register" }],

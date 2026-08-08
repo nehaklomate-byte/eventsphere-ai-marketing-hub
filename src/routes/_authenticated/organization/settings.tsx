@@ -7,7 +7,7 @@ import { fetchMyOrganization, type Organization } from "@/lib/organization";
 import { AccountSettingsSection } from "@/components/AccountSettingsSections";
 
 export const Route = createFileRoute("/_authenticated/organization/settings")({
-  head: () => ({ meta: [{ title: "Settings — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Settings — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: SettingsPage,
 });
 

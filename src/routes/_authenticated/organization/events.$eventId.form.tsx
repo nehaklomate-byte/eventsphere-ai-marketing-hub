@@ -10,7 +10,7 @@ import {
 import type { FieldType, EventFormField } from "@/lib/organization";
 
 export const Route = createFileRoute("/_authenticated/organization/events/$eventId/form")({
-  head: () => ({ meta: [{ title: "Registration Form - EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Registration Form - EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: FormBuilderPage,
 });
 

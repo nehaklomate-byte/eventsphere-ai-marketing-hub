@@ -13,7 +13,7 @@ import {
 import { EmptyState } from "./index";
 
 export const Route = createFileRoute("/_authenticated/worker/board")({
-  head: () => ({ meta: [{ title: "Job Board — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Job Board — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: BoardPage,
 });
 

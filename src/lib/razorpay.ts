@@ -56,7 +56,7 @@ export async function payForWorkerTask(opts: {
       amount,
       currency,
       order_id,
-      name: "EventOrbit AI",
+      name: "EventOrbit Nova",
       description: entityType === "vendor" ? "Vendor payment" : entityType === "hall" ? "Venue booking payment" : "Worker payment",
       prefill: { name: opts.payerName, email: opts.payerEmail, contact: opts.payerPhone },
       theme: { color: "#7c3aed" },

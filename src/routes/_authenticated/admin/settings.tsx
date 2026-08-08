@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AccountSettingsSection } from "@/components/AccountSettingsSections";
 
 export const Route = createFileRoute("/_authenticated/admin/settings")({
-  head: () => ({ meta: [{ title: "Settings — EventOrbit AI Admin" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Settings — EventOrbit Nova Admin" }, { name: "robots", content: "noindex" }] }),
   component: SettingsPage,
 });
 

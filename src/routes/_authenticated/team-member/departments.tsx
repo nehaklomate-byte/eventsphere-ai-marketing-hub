@@ -5,7 +5,7 @@ import { Plus, Trash2, Building2, Lock } from "lucide-react";
 import { fetchMyMemberships, fetchDepartments, createDepartment, deleteDepartment, memberHasPermission } from "@/lib/organization";
 
 export const Route = createFileRoute("/_authenticated/team-member/departments")({
-  head: () => ({ meta: [{ title: "Departments - EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Departments - EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: TeamMemberDepartmentsPage,
 });
 

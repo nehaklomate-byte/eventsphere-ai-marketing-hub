@@ -3,7 +3,7 @@ import { useState } from "react";
 import { LifeBuoy, Mail, ChevronDown, Send, CheckCircle2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/vendor/support")({
-  head: () => ({ meta: [{ title: "Support — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Support — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: SupportPage,
 });
 
@@ -51,7 +51,7 @@ function SupportPage() {
             className="mt-4 space-y-3"
             onSubmit={(e) => {
               e.preventDefault();
-              window.location.href = `mailto:support@eventorbit.ai?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+              window.location.href = `mailto:support@eventorbitnova.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
               setSent(true);
             }}
           >
@@ -65,7 +65,7 @@ function SupportPage() {
           </form>
         )}
         <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> support@eventorbit.ai</span>
+          <span className="inline-flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> support@eventorbitnova.com</span>
           <Link to="/contact" className="font-semibold text-brand-violet hover:underline">Contact page</Link>
         </div>
       </section>

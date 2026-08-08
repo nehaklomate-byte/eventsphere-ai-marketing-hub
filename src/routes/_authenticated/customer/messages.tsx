@@ -4,7 +4,7 @@ import { useSession } from "@/lib/session";
 import { MessagesInbox } from "@/components/chat/MessagesInbox";
 
 export const Route = createFileRoute("/_authenticated/customer/messages")({
-  head: () => ({ meta: [{ title: "Messages — EventOrbit AI" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Messages — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: MessagesPage,
 });
 

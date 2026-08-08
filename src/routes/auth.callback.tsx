@@ -8,7 +8,7 @@ import { insertRoleRow, type Role } from "@/lib/registration";
 export const Route = createFileRoute("/auth/callback")({
   head: () => ({
     meta: [
-      { title: "Signing you in — EventOrbit AI" },
+      { title: "Signing you in — EventOrbit Nova" },
       { name: "robots", content: "noindex" },
     ],
   }),
