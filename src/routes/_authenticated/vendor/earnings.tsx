@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "@/lib/session";
-import { Wallet, TrendingUp, Clock } from "lucide-react";
+import { Wallet, TrendingUp, Clock, Download } from "lucide-react";
 import { fetchMyVendorTasks, vendorStatusTone } from "@/lib/vendor";
 
 export const Route = createFileRoute("/_authenticated/vendor/earnings")({
@@ -48,6 +48,7 @@ function EarningsPage() {
                   <th className="px-5 py-3 text-left font-semibold">Date</th>
                   <th className="px-5 py-3 text-left font-semibold">Status</th>
                   <th className="px-5 py-3 text-right font-semibold">Amount</th>
+                  <th className="px-5 py-3 text-right font-semibold">Receipt</th>
                 </tr>
               </thead>
               <tbody>
@@ -62,6 +63,14 @@ function EarningsPage() {
                       </span>
                     </td>
                     <td className="px-5 py-3 text-right font-semibold">₹{Number(t.payment_amount ?? 0).toLocaleString("en-IN")}</td>
+                    <td className="px-5 py-3 text-right">
+                      {t.payment_status === "paid" ? (
+                        <Link to="/receipt/$type/$id" params={{ type: "vendor", id: t.id }} target="_blank"
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-brand-violet hover:underline">
+                          <Download className="h-3.5 w-3.5" /> Download
+                        </Link>
+                      ) : "—"}
+                    </td>
                   </tr>
                 ))}
               </tbody>
