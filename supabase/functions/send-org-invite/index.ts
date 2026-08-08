@@ -5,7 +5,7 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-const SITE_URL = Deno.env.get("SITE_URL") ?? "https://eventsphere-ai-marketing-hub.vercel.app";
+const SITE_URL = Deno.env.get("SITE_URL") ?? "https://eventorbitnova.com";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -30,13 +30,13 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "EventOrbit AI <invites@yourdomain.com>", // change once you verify a domain in Resend
+        from: "EventOrbit Nova <invites@eventorbitnova.com>", // change once you verify a domain in Resend
         to: [email],
-        subject: `You're invited to join ${orgName} on EventOrbit AI`,
+        subject: `You're invited to join ${orgName} on EventOrbit Nova`,
         html: `
           <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
             <h2>You're invited to ${orgName}</h2>
-            <p>As <strong>${roleName}</strong> on EventOrbit AI.</p>
+            <p>As <strong>${roleName}</strong> on EventOrbit Nova.</p>
             <p>
               <a href="${joinLink}" style="display:inline-block;background:#7c3aed;color:#fff;padding:12px 24px;border-radius:999px;text-decoration:none;font-weight:600;">
                 Join ${orgName}
