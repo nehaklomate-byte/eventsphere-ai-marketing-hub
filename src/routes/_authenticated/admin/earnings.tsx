@@ -1,8 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { IndianRupee, Loader2, Wallet, ArrowDownCircle, ArrowUpCircle, CheckCircle2 } from "lucide-react";
+import { IndianRupee, Loader2, Wallet, ArrowDownCircle, ArrowUpCircle, CheckCircle2, Download } from "lucide-react";
 import { useSession } from "@/lib/session";
 import {
   fetchIncomingPayments, fetchPayouts, markPayoutPaid, downloadCsv,
@@ -98,6 +98,7 @@ function IncomingTable({ rows, isLoading }: { rows: IncomingPayment[]; isLoading
             <th className="px-5 py-3">Commission</th>
             <th className="px-5 py-3">Razorpay ID</th>
             <th className="px-5 py-3">Paid at</th>
+            <th className="px-5 py-3">Receipt</th>
           </tr>
         </thead>
         <tbody>
@@ -109,6 +110,12 @@ function IncomingTable({ rows, isLoading }: { rows: IncomingPayment[]; isLoading
               <td className="px-5 py-3 text-muted-foreground">{r.commission_amount > 0 ? money(r.commission_amount) : "—"}</td>
               <td className="px-5 py-3 text-muted-foreground font-mono text-xs">{r.razorpay_payment_id || "—"}</td>
               <td className="px-5 py-3 text-muted-foreground">{r.paid_at ? new Date(r.paid_at).toLocaleString("en-IN") : "—"}</td>
+              <td className="px-5 py-3">
+                <Link to="/receipt/$type/$id" params={{ type: r.source, id: r.id }} target="_blank"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-brand-violet hover:underline">
+                  <Download className="h-3.5 w-3.5" /> View
+                </Link>
+              </td>
             </tr>
           ))}
         </tbody>
