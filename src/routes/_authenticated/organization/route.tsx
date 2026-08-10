@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useRouterState, useNavigate, redirect } 
 import { useEffect, useState } from "react";
 import { subscribeNotificationToasts } from "@/lib/realtimeToast";
 import {
-  LayoutDashboard, Users, Building2, CalendarDays, Settings, LogOut, Menu, X, Clock, ShieldAlert, MailWarning, ShieldCheck, Briefcase,
+  LayoutDashboard, Users, Building2, CalendarDays, Settings, LogOut, Menu, X, Clock, ShieldAlert, MailWarning, ShieldCheck, Briefcase, Bell,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
@@ -55,6 +55,7 @@ const NAV = [
   { to: "/organization/roles", label: "Roles & Permissions", icon: ShieldCheck },
   { to: "/organization/events", label: "Events", icon: CalendarDays },
   { to: "/organization/jobs", label: "Job Board", icon: Briefcase },
+  { to: "/organization/notifications", label: "Notifications", icon: Bell },
   { to: "/organization/settings", label: "Settings", icon: Settings },
 ];
 
@@ -67,14 +68,35 @@ function OrganizationShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   // Organizations receive verification/account updates via
-  // platform_notifications (see notify() in lib/admin.ts), but nothing ever
-  // subscribed here — the row landed in the DB and no one saw it in real
-  // time. This pops a toast the moment one arrives.
+  // platform_notifications (see notify() in lib/admin.ts). This used to
+  // only pop a toast while someone happened to be online — there was no
+  // badge and no history, so a missed toast meant the notification was
+  // effectively gone. Now it also drives the sidebar badge and persists
+  // in /organization/notifications.
+  const { data: unread = 0 } = useQuery({
+    queryKey: ["org-notif-unread", user?.id],
+    queryFn: async () => {
+      const { count } = await supabase.from("platform_notifications" as never)
+        .select("id", { count: "exact", head: true })
+        .eq("user_id" as never, user!.id as never).is("read_at" as never, null as never);
+      return count ?? 0;
+    },
+    enabled: !!user?.id,
+    refetchInterval: 30000,
+  });
+
   useEffect(() => {
     if (!user?.id) return;
+    const qc2 = qc;
+    const ch = supabase.channel(`org-notif-${user.id}`)
+      .on("postgres_changes",
+        { event: "*", schema: "public", table: "platform_notifications", filter: `user_id=eq.${user.id}` },
+        () => { qc2.invalidateQueries({ queryKey: ["org-notif-unread", user.id] }); qc2.invalidateQueries({ queryKey: ["org-notifications", user.id] }); }
+      )
+      .subscribe();
     const unsub = subscribeNotificationToasts(`org-notif-toast-${user.id}`, "platform_notifications", user.id);
-    return unsub;
-  }, [user?.id]);
+    return () => { supabase.removeChannel(ch); unsub(); };
+  }, [user?.id, qc]);
 
   async function signOut() {
     await qc.cancelQueries();
@@ -159,6 +181,9 @@ function OrganizationShell() {
                   <span className="flex items-center gap-3">
                     <Icon className="h-4 w-4" /> {it.label}
                   </span>
+                  {it.to === "/organization/notifications" && unread > 0 && (
+                    <span className="rounded-full bg-brand-violet px-2 py-0.5 text-[10px] font-semibold text-white">{unread > 99 ? "99+" : unread}</span>
+                  )}
                 </Link>
               );
             })}
