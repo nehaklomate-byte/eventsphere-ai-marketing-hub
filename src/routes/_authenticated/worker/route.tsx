@@ -6,7 +6,6 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
-import { PayoutBanner } from "@/components/PayoutBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { fetchMyWorker, computeCompletion } from "@/lib/worker";
@@ -70,13 +69,22 @@ function WorkerShell() {
   const { data: unread = 0 } = useQuery({
     queryKey: ["notif-unread", user?.id],
     queryFn: async () => {
-      const { count } = await supabase.from("worker_notifications" as never)
-        .select("id", { count: "exact", head: true })
-        .eq("user_id" as never, user!.id as never)
-        .is("read_at" as never, null as never);
-      return count ?? 0;
+      // Task notifications only make sense once approved (no jobs before
+      // that), but platform_notifications carries the approval/rejection
+      // decision itself — that one must NOT be gated on already being
+      // approved, or a pending worker would never see the badge for the
+      // one notification that matters most to them right now.
+      const [w, p] = await Promise.all([
+        gate?.account_status === "approved"
+          ? supabase.from("worker_notifications" as never).select("id", { count: "exact", head: true })
+              .eq("user_id" as never, user!.id as never).is("read_at" as never, null as never)
+          : Promise.resolve({ count: 0 }),
+        supabase.from("platform_notifications" as never).select("id", { count: "exact", head: true })
+          .eq("user_id" as never, user!.id as never).is("read_at" as never, null as never),
+      ]);
+      return (w.count ?? 0) + (p.count ?? 0);
     },
-    enabled: !!user?.id && gate?.account_status === "approved",
+    enabled: !!user?.id,
     refetchInterval: 30000,
   });
 
@@ -89,22 +97,18 @@ function WorkerShell() {
         { event: "*", schema: "public", table: "worker_notifications", filter: `user_id=eq.${user.id}` },
         () => { qc.invalidateQueries({ queryKey: ["notif-unread", user.id] }); qc.invalidateQueries({ queryKey: ["notifications", user.id] }); }
       )
+      .on("postgres_changes",
+        { event: "*", schema: "public", table: "platform_notifications", filter: `user_id=eq.${user.id}` },
+        () => { qc.invalidateQueries({ queryKey: ["notif-unread", user.id] }); qc.invalidateQueries({ queryKey: ["notifications", user.id] }); }
+      )
       .subscribe();
-    const unsubToast = subscribeNotificationToasts(`notif-toast-${user.id}`, "worker_notifications", user.id);
-    return () => { supabase.removeChannel(ch); unsubToast(); };
+    const unsubToast1 = subscribeNotificationToasts(`notif-toast-${user.id}`, "worker_notifications", user.id);
+    const unsubToast2 = subscribeNotificationToasts(`notif-toast-p-${user.id}`, "platform_notifications", user.id);
+    return () => { supabase.removeChannel(ch); unsubToast1(); unsubToast2(); };
   }, [user?.id, qc]);
 
   const completion = computeCompletion(worker as never);
   const vStatus = worker?.verification_status ?? "unsubmitted";
-
-  const savePayout = useMutation({
-    mutationFn: async (upi: string) => {
-      if (!worker?.id) throw new Error("Worker profile not found");
-      const { error } = await supabase.from("workers").update({ payout_upi_id: upi }).eq("id", worker.id);
-      if (error) throw error;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["me-worker", user?.id] }),
-  });
 
   async function signOut() {
     await qc.cancelQueries();
@@ -233,9 +237,6 @@ function WorkerShell() {
         </header>
         <main className="p-4 md:p-8">
           {user && !user.phone_confirmed_at && <PhoneVerifyBanner user={user} />}
-          {worker && !worker.payout_upi_id && (
-            <PayoutBanner saving={savePayout.isPending} onSave={(upi) => savePayout.mutateAsync(upi)} />
-          )}
           {completion < 60 && vStatus === "unsubmitted" && location.pathname !== "/worker/profile" && (
             <div className="mb-6 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 flex flex-wrap items-center justify-between gap-3">
               <div>
