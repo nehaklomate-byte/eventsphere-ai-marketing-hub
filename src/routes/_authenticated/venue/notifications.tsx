@@ -4,31 +4,38 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
 import { Bell, Check, Trash2 } from "lucide-react";
 import type { WorkerNotification } from "@/lib/worker";
-import { PlatformAnnouncements } from "@/components/PlatformAnnouncements";
 
 export const Route = createFileRoute("/_authenticated/venue/notifications")({
   head: () => ({ meta: [{ title: "Notifications — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
   component: NotificationsPage,
 });
 
-type Source = "worker" | "vendor";
+type Source = "worker" | "vendor" | "platform";
 type Notif = WorkerNotification & { source: Source };
 
 async function fetchAll(userId: string): Promise<Notif[]> {
-  const [{ data: w, error: wErr }, { data: v, error: vErr }] = await Promise.all([
+  const [{ data: w, error: wErr }, { data: v, error: vErr }, { data: p, error: pErr }] = await Promise.all([
     supabase.from("worker_notifications" as never).select("*").eq("user_id" as never, userId as never)
       .order("created_at" as never, { ascending: false }).limit(100),
     supabase.from("vendor_notifications" as never).select("*").eq("user_id" as never, userId as never)
       .order("created_at" as never, { ascending: false }).limit(100),
+    supabase.from("platform_notifications" as never).select("*").eq("user_id" as never, userId as never)
+      .order("created_at" as never, { ascending: false }).limit(100),
   ]);
   if (wErr) throw wErr;
   if (vErr) throw vErr;
+  if (pErr) throw pErr;
   const worker = ((w ?? []) as unknown as WorkerNotification[]).map((n) => ({ ...n, source: "worker" as const }));
   const vendor = ((v ?? []) as unknown as WorkerNotification[]).map((n) => ({ ...n, source: "vendor" as const }));
-  return [...worker, ...vendor].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const platform = ((p ?? []) as unknown as WorkerNotification[]).map((n) => ({ ...n, category: "system" as WorkerNotification["category"], source: "platform" as const }));
+  return [...worker, ...vendor, ...platform].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }
 
-function tableFor(source: Source) { return source === "vendor" ? "vendor_notifications" : "worker_notifications"; }
+function tableFor(source: Source) {
+  if (source === "vendor") return "vendor_notifications";
+  if (source === "platform") return "platform_notifications";
+  return "worker_notifications";
+}
 
 function NotificationsPage() {
   const { user } = useSession();
@@ -57,8 +64,11 @@ function NotificationsPage() {
         .update({ read_at: new Date().toISOString() } as never).eq("user_id" as never, user!.id as never).is("read_at" as never, null as never);
       const { error: e2 } = await supabase.from("vendor_notifications" as never)
         .update({ read_at: new Date().toISOString() } as never).eq("user_id" as never, user!.id as never).is("read_at" as never, null as never);
+      const { error: e3 } = await supabase.from("platform_notifications" as never)
+        .update({ read_at: new Date().toISOString() } as never).eq("user_id" as never, user!.id as never).is("read_at" as never, null as never);
       if (e1) throw e1;
       if (e2) throw e2;
+      if (e3) throw e3;
     },
     onSuccess: invalidate,
   });
@@ -79,7 +89,7 @@ function NotificationsPage() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Notifications</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {unread.length} unread · {notifs.length} total — worker &amp; vendor accept / reject / completion updates land here.
+            {unread.length} unread · {notifs.length} total — worker &amp; vendor job updates and account/admin notices all land here.
           </p>
         </div>
         {unread.length > 0 && (
@@ -89,13 +99,11 @@ function NotificationsPage() {
         )}
       </div>
 
-      <PlatformAnnouncements />
-
       {notifs.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card p-8 text-center">
           <Bell className="mx-auto h-8 w-8 text-muted-foreground" />
           <p className="mt-3 text-sm font-semibold text-foreground">No notifications</p>
-          <p className="mt-1 text-sm text-muted-foreground">You'll see it here the moment a worker or vendor accepts, rejects, or completes a task you assigned.</p>
+          <p className="mt-1 text-sm text-muted-foreground">You'll see it here the moment a worker or vendor updates a task you assigned, or the admin team sends an account update.</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -103,7 +111,9 @@ function NotificationsPage() {
             <div key={`${n.source}-${n.id}`} className={`group flex items-start justify-between gap-4 rounded-2xl border p-4 transition-colors ${n.read_at ? "border-border bg-card" : "border-brand-violet/30 bg-brand-violet/5"}`}>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{n.source} · {n.category.replace("_", " ")}</span>
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    {n.source === "platform" ? "Account" : `${n.source} · ${n.category.replace("_", " ")}`}
+                  </span>
                   {!n.read_at && <span className="h-1.5 w-1.5 rounded-full bg-brand-violet" />}
                 </div>
                 <div className="mt-1.5 text-sm font-semibold text-foreground">{n.title}</div>
