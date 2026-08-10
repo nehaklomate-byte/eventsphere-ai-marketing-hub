@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_authenticated/vendor/profile")({
 const SECTIONS = [
   { id: "basic", label: "Basic" },
   { id: "location", label: "Location" },
-  { id: "legal", label: "Legal & Links" },
+  { id: "legal", label: "Legal & Payout" },
   { id: "portfolio", label: "Portfolio" },
   { id: "packages", label: "Packages" },
   { id: "review", label: "Review" },
@@ -164,6 +164,7 @@ function ProfilePage() {
         )}
 
         {active === "legal" && (
+          <>
           <FieldGrid>
             <Field label="GST number"><Input value={(form.gst_number as string) ?? ""} onChange={(v) => set("gst_number", v)} placeholder="Optional" /></Field>
             <Field label="PAN number"><Input value={(form.pan_number as string) ?? ""} onChange={(v) => set("pan_number", v)} placeholder="Optional" /></Field>
@@ -175,6 +176,14 @@ function ProfilePage() {
               {form.price_catalogue_url ? <p className="mt-1.5 text-xs text-emerald-700 dark:text-emerald-400">Catalogue uploaded ✓</p> : null}
             </Field>
           </FieldGrid>
+          <div className="mt-4 rounded-2xl border border-border p-5 bg-muted/30">
+            <h3 className="font-semibold mb-1">Payout details</h3>
+            <p className="text-xs text-muted-foreground mb-3">Private — only used by EventOrbit Nova to pay you for completed jobs. Never shown to customers.</p>
+            <FieldGrid>
+              <Field label="UPI ID"><Input value={(form.payout_upi_id as string) ?? ""} onChange={(v) => set("payout_upi_id", v)} placeholder="yourname@okhdfcbank" /></Field>
+            </FieldGrid>
+          </div>
+          </>
         )}
 
         {active === "portfolio" && (
