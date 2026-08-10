@@ -36,8 +36,10 @@ const TAB_META: Record<Tab, { label: string; icon: typeof Building2; empty: stri
   worker: { label: "Workers", icon: HardHat, empty: "skilled worker profile", detailBase: "/worker", listBtn: "List your worker profile" },
 };
 
+type MarketplaceSearch = { event_id?: string; tab?: Tab };
+
 export const Route = createFileRoute("/marketplace")({
-  validateSearch: (search: Record<string, unknown>) => ({
+  validateSearch: (search: Record<string, unknown>): MarketplaceSearch => ({
     event_id: typeof search.event_id === "string" ? search.event_id : undefined,
     tab: (search.tab === "vendor" || search.tab === "worker" || search.tab === "venue") ? search.tab : undefined,
   }),
