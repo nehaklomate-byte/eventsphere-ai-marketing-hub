@@ -7,7 +7,6 @@ import {
 } from "lucide-react";
 
 import { Logo } from "@/components/Logo";
-import { PayoutBanner } from "@/components/PayoutBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { fetchMyVendor, computeVendorCompletion } from "@/lib/vendor";
@@ -79,11 +78,13 @@ function VendorShell() {
   const { data: unread = 0 } = useQuery({
     queryKey: ["vendor-notif-unread", user?.id],
     queryFn: async () => {
-      const { count } = await supabase.from("vendor_notifications" as never)
-        .select("id", { count: "exact", head: true })
-        .eq("user_id" as never, user!.id as never)
-        .is("read_at" as never, null as never);
-      return count ?? 0;
+      const [w, p] = await Promise.all([
+        supabase.from("vendor_notifications" as never).select("id", { count: "exact", head: true })
+          .eq("user_id" as never, user!.id as never).is("read_at" as never, null as never),
+        supabase.from("platform_notifications" as never).select("id", { count: "exact", head: true })
+          .eq("user_id" as never, user!.id as never).is("read_at" as never, null as never),
+      ]);
+      return (w.count ?? 0) + (p.count ?? 0);
     },
     enabled: !!user?.id,
     refetchInterval: 30000,
@@ -96,22 +97,18 @@ function VendorShell() {
         { event: "*", schema: "public", table: "vendor_notifications", filter: `user_id=eq.${user.id}` },
         () => { qc.invalidateQueries({ queryKey: ["vendor-notif-unread", user.id] }); qc.invalidateQueries({ queryKey: ["vendor-notifications", user.id] }); }
       )
+      .on("postgres_changes",
+        { event: "*", schema: "public", table: "platform_notifications", filter: `user_id=eq.${user.id}` },
+        () => { qc.invalidateQueries({ queryKey: ["vendor-notif-unread", user.id] }); qc.invalidateQueries({ queryKey: ["vendor-notifications", user.id] }); }
+      )
       .subscribe();
-    const unsubToast = subscribeNotificationToasts(`vendor-notif-toast-${user.id}`, "vendor_notifications", user.id);
-    return () => { supabase.removeChannel(ch); unsubToast(); };
+    const unsubToast1 = subscribeNotificationToasts(`vendor-notif-toast-${user.id}`, "vendor_notifications", user.id);
+    const unsubToast2 = subscribeNotificationToasts(`vendor-notif-toast-p-${user.id}`, "platform_notifications", user.id);
+    return () => { supabase.removeChannel(ch); unsubToast1(); unsubToast2(); };
   }, [user?.id, qc]);
 
   const completion = computeVendorCompletion(vendor ?? {});
   const vStatus = vendor?.verification_status ?? "pending";
-
-  const savePayout = useMutation({
-    mutationFn: async (upi: string) => {
-      if (!vendor?.id) throw new Error("Vendor profile not found");
-      const { error } = await supabase.from("vendors").update({ payout_upi_id: upi }).eq("id", vendor.id);
-      if (error) throw error;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["me-vendor", user?.id] }),
-  });
 
   async function signOut() {
     await qc.cancelQueries();
@@ -238,9 +235,6 @@ function VendorShell() {
         </header>
         <main className="p-4 md:p-8">
           {user && !user.phone_confirmed_at && <PhoneVerifyBanner user={user} />}
-          {vendor && !vendor.payout_upi_id && (
-            <PayoutBanner saving={savePayout.isPending} onSave={(upi) => savePayout.mutateAsync(upi)} />
-          )}
           {completion < 60 && vStatus !== "approved" && location.pathname !== "/vendor/profile" && (
             <div className="mb-6 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 flex flex-wrap items-center justify-between gap-3">
               <div>
