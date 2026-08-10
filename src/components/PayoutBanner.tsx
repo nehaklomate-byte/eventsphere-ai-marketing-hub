@@ -14,7 +14,7 @@ export function PayoutBanner({ onSave, saving }: { onSave: (upi: string) => Prom
 
   async function handleSave() {
     const trimmed = value.trim();
-    if (!/^[\w.\-]{2,}@[a-zA-Z]{2,}$/.test(trimmed)) {
+    if (!/^[\w.-]{2,}@[a-zA-Z]{2,}$/.test(trimmed)) {
       setErr("Enter a valid UPI ID, e.g. yourname@okhdfcbank");
       return;
     }
