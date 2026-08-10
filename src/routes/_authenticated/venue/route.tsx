@@ -5,7 +5,6 @@ import {
   MessageCircle, Briefcase,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
-import { PayoutBanner } from "@/components/PayoutBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useSession } from "@/lib/session";
@@ -81,13 +80,22 @@ function VenueShell() {
   const { data: unread = 0 } = useQuery({
     queryKey: ["venue-notif-unread", user?.id],
     queryFn: async () => {
-      const [w, v] = await Promise.all([
+      // A venue owner has no single dedicated notifications table — task
+      // updates from workers/vendors they've hired land in
+      // worker_notifications/vendor_notifications (as the "assigner"), while
+      // account approvals, rejections and admin broadcasts land in
+      // platform_notifications (see notify() in lib/admin.ts). The badge
+      // used to only count the first two, so approvals/broadcasts never
+      // made the bell light up — this counts all three.
+      const [w, v, p] = await Promise.all([
         supabase.from("worker_notifications" as never).select("id", { count: "exact", head: true })
           .eq("user_id" as never, user!.id as never).is("read_at" as never, null as never),
         supabase.from("vendor_notifications" as never).select("id", { count: "exact", head: true })
           .eq("user_id" as never, user!.id as never).is("read_at" as never, null as never),
+        supabase.from("platform_notifications" as never).select("id", { count: "exact", head: true })
+          .eq("user_id" as never, user!.id as never).is("read_at" as never, null as never),
       ]);
-      return (w.count ?? 0) + (v.count ?? 0);
+      return (w.count ?? 0) + (v.count ?? 0) + (p.count ?? 0);
     },
     enabled: !!user?.id,
     refetchInterval: 30000,
@@ -104,10 +112,15 @@ function VenueShell() {
         { event: "*", schema: "public", table: "vendor_notifications", filter: `user_id=eq.${user.id}` },
         () => { qc.invalidateQueries({ queryKey: ["venue-notif-unread", user.id] }); qc.invalidateQueries({ queryKey: ["venue-notifications", user.id] }); }
       )
+      .on("postgres_changes",
+        { event: "*", schema: "public", table: "platform_notifications", filter: `user_id=eq.${user.id}` },
+        () => { qc.invalidateQueries({ queryKey: ["venue-notif-unread", user.id] }); qc.invalidateQueries({ queryKey: ["venue-notifications", user.id] }); }
+      )
       .subscribe();
     const unsubToast1 = subscribeNotificationToasts(`venue-notif-toast-w-${user.id}`, "worker_notifications", user.id);
     const unsubToast2 = subscribeNotificationToasts(`venue-notif-toast-v-${user.id}`, "vendor_notifications", user.id);
-    return () => { supabase.removeChannel(ch); unsubToast1(); unsubToast2(); };
+    const unsubToast3 = subscribeNotificationToasts(`venue-notif-toast-p-${user.id}`, "platform_notifications", user.id);
+    return () => { supabase.removeChannel(ch); unsubToast1(); unsubToast2(); unsubToast3(); };
   }, [user?.id, qc]);
 
   async function signOut() {
@@ -116,15 +129,6 @@ function VenueShell() {
     await supabase.auth.signOut();
     navigate({ to: "/login", replace: true } as never);
   }
-
-  const savePayout = useMutation({
-    mutationFn: async (upi: string) => {
-      if (!user?.id) throw new Error("Not signed in");
-      const { error } = await supabase.from("profiles").update({ payout_upi_id: upi }).eq("id", user.id);
-      if (error) throw error;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["venue-gate"] }),
-  });
 
   if (isLoading) {
     return <div className="grid min-h-dvh place-items-center bg-background"><Loader /></div>;
@@ -240,9 +244,6 @@ function VenueShell() {
 
         <main className="min-h-dvh flex-1 px-4 md:px-8 py-6 md:py-10">
           {user && !user.phone_confirmed_at && <PhoneVerifyBanner user={user} />}
-          {data?.profile && !data.profile.payout_upi_id && (
-            <PayoutBanner saving={savePayout.isPending} onSave={(upi) => savePayout.mutateAsync(upi)} />
-          )}
           {!isVerified && (
             <div className={`mb-6 flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold ${
               hall?.verification_status === "rejected" ? "bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300" : "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
