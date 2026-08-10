@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Building2, Upload, Loader2, X, Save, Eye, EyeOff } from "lucide-react";
+import { Building2, Upload, Loader2, X, Save, Eye, EyeOff, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchMyHalls, createHall, updateHall, type Hall } from "@/lib/venue";
 
@@ -312,6 +312,9 @@ function VenueProfilePage() {
         <MediaGrid label="Washroom photos" bucket="hall-media" prefix="washroom" values={(form.washroom_photos as string[]) ?? []} onChange={(v) => set("washroom_photos", v as never)} upload={upload} uploading={uploading} />
       </Section>
 
+      {/* Payout — private, separate from the customer-facing "payment_upi" above */}
+      <PayoutSection />
+
       {/* Sticky save bar */}
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 backdrop-blur md:pl-72">
         {form.verification_status !== "approved" && (
@@ -350,6 +353,56 @@ function VenueProfilePage() {
 }
 
 /* ---------- small shared UI helpers (same pattern as worker/profile.tsx) ---------- */
+
+function PayoutSection() {
+  const qc = useQueryClient();
+  const [upi, setUpi] = useState("");
+  const [loaded, setLoaded] = useState(false);
+
+  const { data: profile } = useQuery({
+    queryKey: ["venue-owner-payout"],
+    queryFn: async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return null;
+      const { data } = await supabase.from("profiles").select("payout_upi_id").eq("id", userData.user.id).maybeSingle();
+      return data as { payout_upi_id: string | null } | null;
+    },
+  });
+
+  useEffect(() => {
+    if (profile && !loaded) { setUpi(profile.payout_upi_id ?? ""); setLoaded(true); }
+  }, [profile, loaded]);
+
+  const save = useMutation({
+    mutationFn: async (value: string) => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("Not signed in");
+      const { error } = await supabase.from("profiles").update({ payout_upi_id: value }).eq("id", userData.user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Payout details saved"); qc.invalidateQueries({ queryKey: ["venue-owner-payout"] }); },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Could not save"),
+  });
+
+  return (
+    <Section title="Payout details">
+      <p className="-mt-2 text-xs text-muted-foreground">Private — only used by EventOrbit Nova to pay you your share of bookings. Never shown to customers (that's the separate "UPI for advance payment" field above).</p>
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="min-w-[240px] flex-1">
+          <label className="mb-1.5 block text-xs font-semibold text-muted-foreground">UPI ID</label>
+          <div className="flex items-center gap-2 rounded-xl border border-input bg-background px-3 py-2">
+            <Wallet className="h-4 w-4 text-muted-foreground shrink-0" />
+            <input value={upi} onChange={(e) => setUpi(e.target.value)} placeholder="yourname@okhdfcbank" className="w-full bg-transparent text-sm outline-none" />
+          </div>
+        </div>
+        <button onClick={() => save.mutate(upi.trim())} disabled={save.isPending || !upi.trim()}
+          className="flex items-center gap-1.5 rounded-full btn-brand btn-brand-hover px-4 py-2.5 text-sm font-semibold disabled:opacity-60">
+          {save.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Save
+        </button>
+      </div>
+    </Section>
+  );
+}
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
