@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Github, Linkedin, Twitter, Instagram, Youtube, Mail } from "lucide-react";
+import { Mail } from "lucide-react";
 import { Logo } from "./Logo";
 
 const cols = [
@@ -18,14 +18,13 @@ const cols = [
       { to: "/features", label: "Features" },
       { to: "/solutions", label: "Solutions" },
       { to: "/marketplace", label: "Marketplace" },
-      { to: "/pricing", label: "Pricing" },
     ],
   },
   {
     title: "Resources",
     links: [
       { to: "/blog", label: "Guides" },
-      { to: "/research", label: "Case Studies" },
+      { to: "/research", label: "Roadmap" },
       { to: "/contact", label: "Support" },
       { to: "/register", label: "Early Access" },
     ],
@@ -51,13 +50,6 @@ export function Footer() {
             <p className="mt-4 max-w-sm text-sm text-muted-foreground">
               One intelligent cloud platform to plan, manage and execute every event — from intimate weddings to enterprise summits.
             </p>
-            <div className="mt-6 flex items-center gap-3">
-              {[Twitter, Linkedin, Instagram, Youtube, Github].map((Icon, i) => (
-                <a key={i} href="#" aria-label="social" className="grid h-9 w-9 place-items-center rounded-full border border-border hover:bg-accent transition-colors">
-                  <Icon className="h-4 w-4" />
-                </a>
-              ))}
-            </div>
           </div>
           {cols.map((c) => (
             <div key={c.title}>
