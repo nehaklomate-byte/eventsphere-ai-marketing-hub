@@ -1,11 +1,14 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import {
   ArrowRight, Building2, Store, UserCheck, ShieldCheck, CheckCircle2, Users2,
   BellRing, Wallet, ClipboardCheck, Search, FileCheck2, CalendarRange, ChevronRight,
-  CircleDashed, Hammer,
+  CircleDashed, Hammer, Loader2,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { SiteLayout } from "@/components/SiteLayout";
+import { supabase } from "@/integrations/supabase/client";
+import { resolveDashboardPath } from "@/lib/auth-redirect";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -31,6 +34,39 @@ const fadeUp = {
 };
 
 function Home() {
+  // When the app is opened from the installed home-screen icon (PWA
+  // "standalone" mode) rather than a normal browser tab, a signed-in
+  // person should land straight on their dashboard, not the marketing
+  // homepage — that's what made the installed app feel like "just the
+  // website" instead of a real app. Regular browser visits to "/" are
+  // untouched, even when logged in.
+  const navigate = useNavigate();
+  const [checkingStandaloneAuth, setCheckingStandaloneAuth] = useState(false);
+
+  useEffect(() => {
+    const nav = navigator as Navigator & { standalone?: boolean };
+    const standalone = window.matchMedia?.("(display-mode: standalone)").matches || nav.standalone === true;
+    if (!standalone) return;
+
+    setCheckingStandaloneAuth(true);
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (data.session) {
+        const path = await resolveDashboardPath(data.session.user.id);
+        navigate({ to: path, replace: true } as never);
+        return;
+      }
+      setCheckingStandaloneAuth(false);
+    });
+  }, [navigate]);
+
+  if (checkingStandaloneAuth) {
+    return (
+      <div className="grid min-h-dvh place-items-center bg-background">
+        <Loader2 className="h-6 w-6 animate-spin text-brand-violet" />
+      </div>
+    );
+  }
+
   return (
     <SiteLayout>
       <Hero />
