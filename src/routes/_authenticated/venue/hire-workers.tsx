@@ -245,7 +245,7 @@ function HirePanel({ worker, bookings, userId, onClose }: {
   const qc = useQueryClient();
   const activeBookings = bookings.filter((b) => b.status !== "cancelled");
   const [form, setForm] = useState({
-    event_name: "", task_name: "", booking_id: activeBookings[0]?.id ?? "", event_date: activeBookings[0]?.event_date ?? "", start_time: "", end_time: "", pay_amount: "",
+    event_name: "", task_name: "", booking_id: activeBookings[0]?.id ?? "", event_date: activeBookings[0]?.event_date ?? "", start_time: "", end_time: "", pay_amount: "", advance_amount: "",
   });
 
   const mutation = useMutation({
@@ -270,6 +270,7 @@ function HirePanel({ worker, bookings, userId, onClose }: {
         priority: "normal",
         status: "pending",
         payment_amount: form.pay_amount ? Number(form.pay_amount) : null,
+        advance_amount: form.advance_amount ? Number(form.advance_amount) : null,
       } as never).select().maybeSingle();
       if (error) throw error;
       if (!data) throw new Error("Request was blocked — please refresh and try again.");
@@ -317,6 +318,11 @@ function HirePanel({ worker, bookings, userId, onClose }: {
           <div className="relative">
             <Wallet className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input type="number" placeholder="Pay amount (₹, optional)" value={form.pay_amount} onChange={(e) => setForm((f) => ({ ...f, pay_amount: e.target.value }))}
+              className="w-full rounded-xl border border-input bg-background pl-9 pr-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
+          </div>
+          <div className="relative">
+            <Wallet className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input type="number" placeholder="Advance amount (₹, optional — lets them pay this part first)" value={form.advance_amount} onChange={(e) => setForm((f) => ({ ...f, advance_amount: e.target.value }))}
               className="w-full rounded-xl border border-input bg-background pl-9 pr-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
           </div>
         </div>
