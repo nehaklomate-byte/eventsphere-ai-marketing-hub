@@ -15,7 +15,7 @@ const SECTIONS = [
   { id: "basic", label: "Basic" },
   { id: "professional", label: "Professional" },
   { id: "location", label: "Location" },
-  { id: "charges", label: "Charges" },
+  { id: "charges", label: "Charges & Payout" },
   { id: "portfolio", label: "Portfolio" },
   { id: "verification", label: "Verification" },
   { id: "review", label: "Review" },
@@ -294,6 +294,7 @@ function ProfilePage() {
           )}
 
           {active === "charges" && (
+            <>
             <FieldGrid>
               <Field label="Payment type" required>
                 <Select value={(form.payment_type as string) ?? "daily"} onChange={(v) => set("payment_type", v)}
@@ -305,6 +306,14 @@ function ProfilePage() {
               <Field label="Monthly charge (₹)"><Input type="number" min={0} value={(form.monthly_charges as number)?.toString() ?? ""} onChange={(v) => set("monthly_charges", v === "" ? null : Number(v))} /></Field>
               <Field label="Minimum booking price (₹)"><Input type="number" min={0} value={(form.min_booking_price as number)?.toString() ?? ""} onChange={(v) => set("min_booking_price", v === "" ? null : Number(v))} /></Field>
             </FieldGrid>
+            <div className="mt-4 rounded-2xl border border-border p-5 bg-muted/30">
+              <h3 className="font-semibold mb-1">Payout details</h3>
+              <p className="text-xs text-muted-foreground mb-3">Private — only used by EventOrbit Nova to pay you for completed jobs. Never shown to customers.</p>
+              <FieldGrid>
+                <Field label="UPI ID"><Input value={(form.payout_upi_id as string) ?? ""} onChange={(v) => set("payout_upi_id", v)} placeholder="yourname@okhdfcbank" /></Field>
+              </FieldGrid>
+            </div>
+            </>
           )}
 
           {active === "portfolio" && (
