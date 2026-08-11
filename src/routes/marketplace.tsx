@@ -148,11 +148,11 @@ function Marketplace() {
         ) : filtered.length === 0 ? (
           <EmptyState tab={tab} />
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4 stagger-children">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 stagger-children">
             {filtered.map((h) => (
               <Link key={h.id} to={`${meta.detailBase}/$id`} params={{ id: h.id }} search={search.event_id ? { event_id: search.event_id } : undefined}
                 className="group card-interactive overflow-hidden rounded-2xl border border-border bg-card shadow-soft hover:shadow-elegant">
-                <div className="relative h-44 overflow-hidden bg-accent">
+                <div className="relative h-64 overflow-hidden bg-accent">
                   {h.cover_url || h.gallery[0] ? (
                     <img src={h.cover_url || h.gallery[0]} alt={h.name} loading="lazy"
                       className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
