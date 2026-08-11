@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import { SiteLayout } from "@/components/SiteLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveDashboardPath } from "@/lib/auth-redirect";
-import { Capacitor } from "@capacitor/core";
+import { isNativeAppShell } from "@/lib/platform";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -45,10 +45,7 @@ function Home() {
   const [checkingStandaloneAuth, setCheckingStandaloneAuth] = useState(false);
 
   useEffect(() => {
-    const nav = navigator as Navigator & { standalone?: boolean };
-    const standalone = window.matchMedia?.("(display-mode: standalone)").matches || nav.standalone === true;
-    const isNativeApp = Capacitor.isNativePlatform();
-    if (!standalone && !isNativeApp) return;
+    if (!isNativeAppShell()) return;
 
     setCheckingStandaloneAuth(true);
     supabase.auth.getSession().then(async ({ data }) => {
@@ -57,13 +54,8 @@ function Home() {
         navigate({ to: path, replace: true } as never);
         return;
       }
-      if (isNativeApp) {
-        navigate({ to: "/login", replace: true } as never);
-        return;
-      }
       setCheckingStandaloneAuth(false);
     });
-    
   }, [navigate]);
 
   if (checkingStandaloneAuth) {
