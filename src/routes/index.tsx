@@ -44,7 +44,7 @@ function Home() {
   const navigate = useNavigate();
   const [checkingStandaloneAuth, setCheckingStandaloneAuth] = useState(false);
 
-  useEffect(() => {
+ useEffect(() => {
     if (!isNativeAppShell()) return;
 
     setCheckingStandaloneAuth(true);
@@ -54,7 +54,7 @@ function Home() {
         navigate({ to: path, replace: true } as never);
         return;
       }
-      setCheckingStandaloneAuth(false);
+      navigate({ to: "/login", replace: true } as never);
     });
   }, [navigate]);
 
