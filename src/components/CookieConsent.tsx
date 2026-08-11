@@ -1,16 +1,21 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Cookie, X } from "lucide-react";
+import { isNativeAppShell } from "@/lib/platform";
 
 const STORAGE_KEY = "eventorbit-cookie-consent";
 
 /** Simple accept/dismiss cookie notice — no third-party consent-management
  * vendor, matching the site's current actual cookie usage (auth session +
- * basic analytics). Shown once until the visitor makes a choice. */
+ * basic analytics). Shown once until the visitor makes a choice.
+ * Never shown inside the native app shell (Play Store app / installed
+ * PWA) — people who downloaded an app don't expect a browser-cookie
+ * disclosure, and app-store review guidelines treat it as web-only. */
 export function CookieConsent() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    if (isNativeAppShell()) return;
     if (typeof localStorage === "undefined") return;
     if (!localStorage.getItem(STORAGE_KEY)) setVisible(true);
   }, []);
