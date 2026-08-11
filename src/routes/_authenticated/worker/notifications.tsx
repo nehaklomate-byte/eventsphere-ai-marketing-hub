@@ -5,11 +5,17 @@ import { useSession } from "@/lib/session";
 import { Bell, Check, Trash2 } from "lucide-react";
 import { EmptyState } from "./index";
 import type { WorkerNotification } from "@/lib/worker";
-import { PlatformAnnouncements } from "@/components/PlatformAnnouncements";
 
 export const Route = createFileRoute("/_authenticated/worker/notifications")({
   component: NotificationsPage,
 });
+
+type Source = "worker" | "platform";
+type Notif = WorkerNotification & { source: Source };
+
+function tableFor(source: Source) {
+  return source === "platform" ? "platform_notifications" : "worker_notifications";
+}
 
 function NotificationsPage() {
   const { user } = useSession();
@@ -18,19 +24,25 @@ function NotificationsPage() {
   const { data: notifs = [] } = useQuery({
     queryKey: ["notifications", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("worker_notifications" as never)
-        .select("*").eq("user_id" as never, user!.id as never)
-        .order("created_at" as never, { ascending: false }).limit(100);
-      if (error) throw error;
-      return (data ?? []) as unknown as WorkerNotification[];
+      const [{ data: w, error: wErr }, { data: p, error: pErr }] = await Promise.all([
+        supabase.from("worker_notifications" as never).select("*").eq("user_id" as never, user!.id as never)
+          .order("created_at" as never, { ascending: false }).limit(100),
+        supabase.from("platform_notifications" as never).select("*").eq("user_id" as never, user!.id as never)
+          .order("created_at" as never, { ascending: false }).limit(100),
+      ]);
+      if (wErr) throw wErr;
+      if (pErr) throw pErr;
+      const worker = ((w ?? []) as unknown as WorkerNotification[]).map((n) => ({ ...n, source: "worker" as const }));
+      const platform = ((p ?? []) as unknown as WorkerNotification[]).map((n) => ({ ...n, category: "system" as WorkerNotification["category"], source: "platform" as const }));
+      return [...worker, ...platform].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) as Notif[];
     },
     enabled: !!user?.id,
   });
 
   const markRead = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("worker_notifications" as never)
-        .update({ read_at: new Date().toISOString() } as never).eq("id" as never, id as never);
+    mutationFn: async (n: Notif) => {
+      const { error } = await supabase.from(tableFor(n.source) as never)
+        .update({ read_at: new Date().toISOString() } as never).eq("id" as never, n.id as never);
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["notifications", user?.id] }); qc.invalidateQueries({ queryKey: ["notif-unread", user?.id] }); },
@@ -38,17 +50,21 @@ function NotificationsPage() {
 
   const markAllRead = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("worker_notifications" as never)
+      const { error: e1 } = await supabase.from("worker_notifications" as never)
         .update({ read_at: new Date().toISOString() } as never)
         .eq("user_id" as never, user!.id as never).is("read_at" as never, null as never);
-      if (error) throw error;
+      const { error: e2 } = await supabase.from("platform_notifications" as never)
+        .update({ read_at: new Date().toISOString() } as never)
+        .eq("user_id" as never, user!.id as never).is("read_at" as never, null as never);
+      if (e1) throw e1;
+      if (e2) throw e2;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["notifications", user?.id] }); qc.invalidateQueries({ queryKey: ["notif-unread", user?.id] }); },
   });
 
   const del = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("worker_notifications" as never).delete().eq("id" as never, id as never);
+    mutationFn: async (n: Notif) => {
+      const { error } = await supabase.from(tableFor(n.source) as never).delete().eq("id" as never, n.id as never);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications", user?.id] }),
@@ -70,19 +86,19 @@ function NotificationsPage() {
         )}
       </div>
 
-      <PlatformAnnouncements />
-
       {notifs.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card p-8">
-          <EmptyState icon={Bell} title="No notifications" body="You're all caught up. New assignments and updates will appear here." />
+          <EmptyState icon={Bell} title="No notifications" body="You're all caught up. New assignments, account updates and admin notices will appear here." />
         </div>
       ) : (
         <div className="space-y-2">
           {notifs.map((n) => (
-            <div key={n.id} className={`group flex items-start justify-between gap-4 rounded-2xl border p-4 transition-colors ${n.read_at ? "border-border bg-card" : "border-brand-violet/30 bg-brand-violet/5"}`}>
+            <div key={`${n.source}-${n.id}`} className={`group flex items-start justify-between gap-4 rounded-2xl border p-4 transition-colors ${n.read_at ? "border-border bg-card" : "border-brand-violet/30 bg-brand-violet/5"}`}>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{n.category.replace("_", " ")}</span>
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    {n.source === "platform" ? "Account" : n.category.replace("_", " ")}
+                  </span>
                   {!n.read_at && <span className="h-1.5 w-1.5 rounded-full bg-brand-violet" />}
                 </div>
                 <div className="mt-1.5 text-sm font-semibold text-foreground">{n.title}</div>
@@ -90,10 +106,12 @@ function NotificationsPage() {
                 <div className="mt-1 text-[11px] text-muted-foreground">{new Date(n.created_at).toLocaleString("en-IN")}</div>
               </div>
               <div className="flex items-center gap-1">
-                {!n.read_at && (
-                  <button onClick={() => markRead.mutate(n.id)} className="grid h-8 w-8 place-items-center rounded-full hover:bg-accent" title="Mark read"><Check className="h-3.5 w-3.5" /></button>
+                {!n.read_at ? (
+                  <button onClick={() => markRead.mutate(n)} className="grid h-8 w-8 place-items-center rounded-full hover:bg-accent" title="Mark read"><Check className="h-3.5 w-3.5" /></button>
+                ) : (
+                  <span className="flex items-center gap-1 px-1 text-[11px] text-emerald-600" title={`Read ${new Date(n.read_at).toLocaleString("en-IN")}`}><Check className="h-3.5 w-3.5" /> Read</span>
                 )}
-                <button onClick={() => del.mutate(n.id)} className="grid h-8 w-8 place-items-center rounded-full text-rose-600 hover:bg-rose-500/10" title="Delete"><Trash2 className="h-3.5 w-3.5" /></button>
+                <button onClick={() => del.mutate(n)} className="grid h-8 w-8 place-items-center rounded-full text-rose-600 hover:bg-rose-500/10" title="Delete"><Trash2 className="h-3.5 w-3.5" /></button>
               </div>
             </div>
           ))}
