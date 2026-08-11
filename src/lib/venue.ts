@@ -56,6 +56,7 @@ export type Hall = {
   review_count: number;
   created_at: string;
   additional_info: Record<string, unknown>;
+  documents: { name: string; url: string; uploaded_at?: string }[];
 };
 
 export type Enquiry = {
