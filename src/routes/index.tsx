@@ -42,8 +42,7 @@ function Home() {
   // website" instead of a real app. Regular browser visits to "/" are
   // untouched, even when logged in.
   const navigate = useNavigate();
-  const [checkingStandaloneAuth, setCheckingStandaloneAuth] = useState(false);
-
+  const [checkingStandaloneAuth, setCheckingStandaloneAuth] = useState(() => isNativeAppShell());
  useEffect(() => {
     if (!isNativeAppShell()) return;
 
