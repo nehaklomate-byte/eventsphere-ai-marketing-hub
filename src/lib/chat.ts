@@ -116,7 +116,32 @@ export async function sendMessage(conversationId: string, senderId: string, body
     .insert({ conversation_id: conversationId, sender_id: senderId, body } as never)
     .select().single();
   if (error) throw error;
+
+  // Push notification for whoever else is in this conversation — fire
+  // and forget, never blocks sending. The in-app notification (bell,
+  // badge, toast) is handled separately by a DB trigger on this insert.
+  notifyOtherParticipants(conversationId, senderId, body).catch(() => {});
+
   return data as unknown as Message;
+}
+
+async function notifyOtherParticipants(conversationId: string, senderId: string, body: string): Promise<void> {
+  const { data: participants } = await supabase
+    .from("conversation_participants" as never)
+    .select("user_id")
+    .eq("conversation_id" as never, conversationId as never);
+  const otherIds = ((participants as unknown as { user_id: string }[]) ?? [])
+    .map((p) => p.user_id)
+    .filter((id) => id !== senderId);
+  if (otherIds.length === 0) return;
+
+  const { data: sender } = await supabase.from("profiles" as never).select("full_name, business_name").eq("id" as never, senderId as never).maybeSingle();
+  const senderRow = sender as unknown as { full_name?: string; business_name?: string } | null;
+  const senderName = senderRow?.full_name || senderRow?.business_name || "Someone";
+
+  await supabase.functions.invoke("send-push", {
+    body: { user_ids: otherIds, title: `New message from ${senderName}`, body: body.slice(0, 120), url: "/" },
+  });
 }
 
 export async function markConversationRead(conversationId: string, userId: string): Promise<void> {
