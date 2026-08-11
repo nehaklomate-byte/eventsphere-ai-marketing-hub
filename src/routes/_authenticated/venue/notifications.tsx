@@ -121,8 +121,10 @@ function NotificationsPage() {
                 <div className="mt-1 text-[11px] text-muted-foreground">{new Date(n.created_at).toLocaleString("en-IN")}</div>
               </div>
               <div className="flex items-center gap-1">
-                {!n.read_at && (
+                {!n.read_at ? (
                   <button onClick={() => markRead.mutate(n)} className="grid h-8 w-8 place-items-center rounded-full hover:bg-accent" title="Mark read"><Check className="h-3.5 w-3.5" /></button>
+                ) : (
+                  <span className="flex items-center gap-1 px-1 text-[11px] text-emerald-600" title={`Read ${new Date(n.read_at).toLocaleString("en-IN")}`}><Check className="h-3.5 w-3.5" /> Read</span>
                 )}
                 <button onClick={() => del.mutate(n)} className="grid h-8 w-8 place-items-center rounded-full text-rose-600 hover:bg-rose-500/10" title="Delete"><Trash2 className="h-3.5 w-3.5" /></button>
               </div>
