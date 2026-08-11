@@ -130,6 +130,25 @@ async function setStatus(
   const patch: Record<string, unknown> = { verification_status: status };
   if (reason !== undefined) patch.rejection_reason = reason || null;
 
+  // Approving in the Verification Center used to only flip
+  // verification_status — the listing still needed a SEPARATE manual
+  // "Publish" toggle from the owner's own profile page before it would
+  // ever appear on the marketplace (which filters on `status='published'`
+  // for venues/vendors, or `marketplace_visible=true` for workers, not
+  // verification_status). That gap meant "verified" and "visible on
+  // marketplace" could silently disagree for days. Approval now flips
+  // publish state too, so verified = live immediately. Losing approval
+  // (rejected/suspended/blacklisted) takes the listing back down.
+  if (role !== "organization") {
+    if (status === "approved") {
+      if (role === "worker") patch.marketplace_visible = true;
+      else patch.status = "published";
+    } else if (status === "rejected" || status === "suspended" || status === "blacklisted") {
+      if (role === "worker") patch.marketplace_visible = false;
+      else patch.status = "draft";
+    }
+  }
+
   const { data, error } = await supabase.from(table as never).update(patch as never).eq("id" as never, id as never).select("id");
   if (error) throw error;
   if (!data || data.length === 0) {
@@ -139,7 +158,7 @@ async function setStatus(
   await writeAudit(action, table, id, null, patch);
 
   const messages: Record<VerificationStatus, { title: string; body: string; type: "success" | "warning" | "error" | "info" }> = {
-    approved: { title: "You're verified! 🎉", body: `Your ${ROLE_LABEL[role]} profile has been approved. Your dashboard is now fully active.`, type: "success" },
+    approved: { title: "You're verified! 🎉", body: `Your ${ROLE_LABEL[role]} profile has been approved and is now live on the marketplace.`, type: "success" },
     rejected: { title: "Verification not approved", body: reason ? `Reason: ${reason}` : "Please review and resubmit your details.", type: "error" },
     suspended: { title: "Account suspended", body: reason ? `Reason: ${reason}` : "Your account has been temporarily suspended.", type: "warning" },
     blacklisted: { title: "Account blacklisted", body: reason ? `Reason: ${reason}` : "Your account has been blacklisted.", type: "error" },
