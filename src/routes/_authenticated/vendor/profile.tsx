@@ -48,7 +48,6 @@ function ProfilePage() {
   useEffect(() => { if (vendor) setForm(vendor as unknown as FormState); }, [vendor]);
 
   const set = (k: string, v: unknown) => setForm((prev) => ({ ...prev, [k]: v }));
-  const setList = (k: string, csv: string) => set(k, csv.split(",").map((s) => s.trim()).filter(Boolean));
 
   async function upload(key: string, file: File): Promise<string | null> {
     if (!user) return null;
@@ -158,8 +157,8 @@ function ProfilePage() {
             <Field label="State" required><Input value={(form.state as string) ?? ""} onChange={(v) => set("state", v)} /></Field>
             <Field label="Pincode" required><Input value={(form.pincode as string) ?? ""} onChange={(v) => set("pincode", v)} /></Field>
             <Field label="Address"><Input value={(form.address as string) ?? ""} onChange={(v) => set("address", v)} /></Field>
-            <Field label="Service areas"><Input value={serviceAreas.join(", ")} onChange={(v) => setList("service_areas", v)} placeholder="Comma-separated cities you serve" /></Field>
-            <Field label="Available days"><Input value={availableDays.join(", ")} onChange={(v) => setList("available_days", v)} placeholder="e.g., Mon–Sat, All days on request" /></Field>
+            <Field label="Service areas"><CsvInput key={`sa-${vendor?.id ?? "new"}`} initial={serviceAreas} onCommit={(arr) => set("service_areas", arr)} placeholder="Comma-separated cities you serve, e.g. Pune, Mumbai, Nashik" /></Field>
+            <Field label="Available days"><CsvInput key={`ad-${vendor?.id ?? "new"}`} initial={availableDays} onCommit={(arr) => set("available_days", arr)} placeholder="e.g., Mon, Tue, Wed or All days on request" /></Field>
           </FieldGrid>
         )}
 
@@ -279,6 +278,28 @@ function Field({ label, required, children }: { label: string; required?: boolea
 function Input({ value, onChange, type = "text", ...rest }: { value: string; onChange: (v: string) => void; type?: string } & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type">) {
   return <input type={type} value={value} onChange={(e) => onChange(e.target.value)} {...rest}
     className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-violet/40" />;
+}
+// Free-typing comma-separated input. Fixed bug: the old version derived its
+// displayed value straight from the parsed-and-filtered array on every
+// keystroke, so a trailing comma or a space right after a comma was wiped
+// out before the person could type the next item. This keeps its own raw
+// text while typing and only parses into an array on blur / when the
+// person is done.
+function CsvInput({ initial, onCommit, placeholder }: { initial: string[]; onCommit: (arr: string[]) => void; placeholder?: string }) {
+  const [text, setText] = useState(initial.join(", "));
+  function commit(t: string) {
+    onCommit(t.split(",").map((s) => s.trim()).filter(Boolean));
+  }
+  return (
+    <input
+      type="text"
+      value={text}
+      placeholder={placeholder}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={(e) => commit(e.target.value)}
+      className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-violet/40"
+    />
+  );
 }
 function Select({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: (string | [string, string])[] }) {
   return (
