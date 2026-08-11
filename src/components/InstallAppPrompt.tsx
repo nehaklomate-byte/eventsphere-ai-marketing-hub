@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Download, Share, SquarePlus, X } from "lucide-react";
+import { isNativeAppShell } from "@/lib/platform";
 
 // Chrome/Edge/Android fire this event when the site qualifies as
 // installable (manifest + service worker + HTTPS). We stash it and
@@ -15,9 +16,7 @@ const DISMISS_KEY = "eon-install-prompt-dismissed-at";
 const DISMISS_DAYS = 14;
 
 function isStandalone(): boolean {
-  if (typeof window === "undefined") return false;
-  const nav = navigator as Navigator & { standalone?: boolean };
-  return window.matchMedia?.("(display-mode: standalone)").matches || nav.standalone === true;
+  return isNativeAppShell();
 }
 
 function isIOS(): boolean {
