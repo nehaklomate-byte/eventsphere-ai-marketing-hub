@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Building2, Upload, Loader2, X, Save, Eye, EyeOff, Wallet } from "lucide-react";
+import { Building2, Upload, Loader2, X, Save, Eye, EyeOff, Wallet, FileCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchMyHalls, createHall, updateHall, type Hall } from "@/lib/venue";
 
@@ -42,6 +42,12 @@ function VenueProfilePage() {
   function setExtra(key: string, value: unknown) {
     const current = (form.additional_info as Record<string, unknown>) ?? {};
     set("additional_info", { ...current, [key]: value } as never);
+  }
+
+  function setDocument(name: string, url: string) {
+    const current = (form.documents as { name: string; url: string }[]) ?? [];
+    const withoutExisting = current.filter((d) => d.name !== name);
+    set("documents", [...withoutExisting, { name, url, uploaded_at: new Date().toISOString() }] as never);
   }
 
   async function upload(bucket: string, key: string, file: File): Promise<string | null> {
@@ -175,6 +181,10 @@ function VenueProfilePage() {
           <Field label="Advance amount (₹)"><NumberInput value={form.advance_amount} onChange={(v) => set("advance_amount", v as never)} /></Field>
         </div>
         <Field label="Working hours"><Input value={form.working_hours ?? ""} onChange={(v) => set("working_hours", v as never)} placeholder="e.g. 8 AM – 11 PM" /></Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Maximum event duration (hours)"><NumberInput value={extra.max_event_duration_hours as number | undefined} onChange={(v) => setExtra("max_event_duration_hours", v as never)} /></Field>
+          <Field label="Extra-hour charges (₹ per hour, beyond max duration)"><NumberInput value={extra.extra_hour_charge as number | undefined} onChange={(v) => setExtra("extra_hour_charge", v as never)} /></Field>
+        </div>
         <Field label="Cancellation policy"><Textarea value={form.cancellation_policy ?? ""} onChange={(v) => set("cancellation_policy", v as never)} /></Field>
         <Field label="Accepted payment methods (shown to customers)">
           <div className="flex flex-wrap gap-2">
@@ -290,6 +300,30 @@ function VenueProfilePage() {
         </Field>
       </Section>
 
+      {/* Compliance & Verification — GST is optional (not every venue is
+          GST-registered); the two proofs feed straight into the same
+          `documents` list the admin Verification Center already reviews. */}
+      <Section title="Compliance & Verification">
+        <p className="-mt-2 text-xs text-muted-foreground">These help the admin team verify your venue faster. GST is only needed if your venue is GST-registered.</p>
+        <Field label="GST number / business registration number (if applicable)">
+          <Input value={extra.gst_number as string ?? ""} onChange={(v) => setExtra("gst_number", v)} placeholder="e.g. 27ABCDE1234F1Z5" />
+        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <DocField label="Ownership / authorization proof" docName="Ownership/Authorization Proof"
+            documents={(form.documents as { name: string; url: string }[]) ?? []}
+            uploading={uploading === "doc-ownership"} onUpload={async (f) => {
+              const url = await upload("hall-media", "doc-ownership", f);
+              if (url) setDocument("Ownership/Authorization Proof", url);
+            }} />
+          <DocField label="Owner identity verification (Aadhaar / PAN / etc.)" docName="Owner Identity Proof"
+            documents={(form.documents as { name: string; url: string }[]) ?? []}
+            uploading={uploading === "doc-identity"} onUpload={async (f) => {
+              const url = await upload("hall-media", "doc-identity", f);
+              if (url) setDocument("Owner Identity Proof", url);
+            }} />
+        </div>
+      </Section>
+
       {/* Media */}
       <Section title="Photos & videos">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -309,7 +343,6 @@ function VenueProfilePage() {
         <MediaGrid label="Dining area photos" bucket="hall-media" prefix="dining" values={(form.dining_photos as string[]) ?? []} onChange={(v) => set("dining_photos", v as never)} upload={upload} uploading={uploading} />
         <MediaGrid label="Parking photos" bucket="hall-media" prefix="parking" values={(form.parking_photos as string[]) ?? []} onChange={(v) => set("parking_photos", v as never)} upload={upload} uploading={uploading} />
         <MediaGrid label="Guest rooms photos" bucket="hall-media" prefix="room" values={(form.room_photos as string[]) ?? []} onChange={(v) => set("room_photos", v as never)} upload={upload} uploading={uploading} />
-        <MediaGrid label="Washroom photos" bucket="hall-media" prefix="washroom" values={(form.washroom_photos as string[]) ?? []} onChange={(v) => set("washroom_photos", v as never)} upload={upload} uploading={uploading} />
       </Section>
 
       {/* Payout — private, separate from the customer-facing "payment_upi" above */}
@@ -410,6 +443,28 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h2 className="mb-4 font-display text-lg font-semibold">{title}</h2>
       <div className="space-y-4">{children}</div>
     </div>
+  );
+}
+
+function DocField({ label, docName, documents, uploading, onUpload }: {
+  label: string; docName: string; documents: { name: string; url: string }[]; uploading?: boolean; onUpload: (f: File) => void;
+}) {
+  const existing = documents.find((d) => d.name === docName);
+  return (
+    <Field label={label}>
+      <div className="flex items-center gap-3">
+        {existing && (
+          <a href={existing.url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+            <FileCheck className="h-3.5 w-3.5" /> Uploaded
+          </a>
+        )}
+        <label className="inline-flex items-center gap-2 rounded-xl border border-dashed border-input px-3 py-2 text-xs font-medium cursor-pointer hover:bg-accent">
+          {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+          {existing ? "Replace file" : "Upload file"}
+          <input type="file" accept="image/*,.pdf" className="hidden" disabled={uploading} onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f); e.target.value = ""; }} />
+        </label>
+      </div>
+    </Field>
   );
 }
 
