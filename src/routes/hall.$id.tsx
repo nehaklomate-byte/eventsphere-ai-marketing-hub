@@ -143,7 +143,7 @@ function HallDetail() {
 
   return (
     <SiteLayout>
-      <section className="relative h-[52vh] min-h-[380px] w-full overflow-hidden">
+      <section className="relative h-[62vh] min-h-[460px] w-full overflow-hidden">
         <img src={cover} alt={hall.name} className="h-full w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/40" />
         <div className="absolute inset-x-0 top-0 mx-auto max-w-7xl px-5 md:px-8 py-6 flex items-center justify-between">
@@ -198,9 +198,9 @@ function HallDetail() {
           {hall.gallery.length > 0 && (
             <Card title="Gallery" icon={PartyPopper}
               trailing={<span className="text-xs text-muted-foreground inline-flex items-center gap-1"><Sparkles className="h-3.5 w-3.5" /> 360° tour coming soon</span>}>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {hall.gallery.map((src: string, i: number) => (
-                  <div key={i} className="aspect-[4/3] overflow-hidden rounded-xl border border-border">
+                  <div key={i} className="aspect-[16/11] overflow-hidden rounded-xl border border-border">
                     <img src={src} alt={`${hall.name} ${i + 1}`} loading="lazy" className="h-full w-full object-cover hover:scale-105 transition-transform duration-500" />
                   </div>
                 ))}
@@ -212,7 +212,6 @@ function HallDetail() {
           <PhotoSection title="Dining area" photos={hall.dining_photos} hallName={hall.name} />
           <PhotoSection title="Parking" photos={hall.parking_photos} hallName={hall.name} />
           <PhotoSection title="Guest rooms" photos={hall.room_photos} hallName={hall.name} />
-          <PhotoSection title="Washrooms" photos={hall.washroom_photos} hallName={hall.name} />
 
           {/* FACILITIES — only what this venue actually offers */}
           {(() => {
@@ -414,9 +413,9 @@ function PhotoSection({ title, photos, hallName }: { title: string; photos: stri
   if (photos.length === 0) return null;
   return (
     <Card title={title} icon={PartyPopper}>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {photos.map((src, i) => (
-          <div key={i} className="aspect-[4/3] overflow-hidden rounded-xl border border-border">
+          <div key={i} className="aspect-[16/11] overflow-hidden rounded-xl border border-border">
             <img src={src} alt={`${hallName} — ${title} ${i + 1}`} loading="lazy" className="h-full w-full object-cover hover:scale-105 transition-transform duration-500" />
           </div>
         ))}
@@ -567,6 +566,7 @@ function BookingForm({
       customer_event_id: eventId ?? null,
       event_date: d.event_date,
       amount: pricePerDay ?? 0,
+      advance_amount: advanceAmount ?? null,
       status: "pending",
       payment_status: "pending",
       notes: d.special_instructions || null,
