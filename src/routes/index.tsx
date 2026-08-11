@@ -10,6 +10,7 @@ import { SiteLayout } from "@/components/SiteLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveDashboardPath } from "@/lib/auth-redirect";
 import { isNativeAppShell } from "@/lib/platform";
+import { SplashScreen } from "@capacitor/splash-screen";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -46,14 +47,16 @@ function Home() {
  useEffect(() => {
     if (!isNativeAppShell()) return;
 
-    setCheckingStandaloneAuth(true);
+   setCheckingStandaloneAuth(true);
     supabase.auth.getSession().then(async ({ data }) => {
       if (data.session) {
         const path = await resolveDashboardPath(data.session.user.id);
         navigate({ to: path, replace: true } as never);
+        SplashScreen.hide();
         return;
       }
       navigate({ to: "/login", replace: true } as never);
+      SplashScreen.hide();
     });
   }, [navigate]);
 
