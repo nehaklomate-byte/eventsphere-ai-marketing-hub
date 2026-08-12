@@ -158,7 +158,7 @@ function RootComponent() {
     // "/"), this guarantees the native splash never stays stuck on
     // screen forever — max 4 seconds. No-op in a normal browser tab.
     import("@capacitor/splash-screen").then(({ SplashScreen }) => {
-      setTimeout(() => SplashScreen.hide(), 2500);
+      setTimeout(() => SplashScreen.hide(), 2200);
     }).catch(() => {});
   }, []);
   return (
