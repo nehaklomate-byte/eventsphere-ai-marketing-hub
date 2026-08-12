@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { CookieConsent } from "@/components/CookieConsent";
 import { InstallAppPrompt } from "@/components/InstallAppPrompt";
+import { isNativeAppShell } from "@/lib/platform";
 
 function ComingSoonPage() {
   return (
