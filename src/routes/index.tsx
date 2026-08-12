@@ -37,28 +37,31 @@ const fadeUp = {
 
 function Home() {
   const navigate = useNavigate();
-
-  const [checkingStandaloneAuth] = useState(() => isNativeAppShell());
+  const isApp = isNativeAppShell();
 
   useEffect(() => {
-    if (!isNativeAppShell()) return;
+    if (!isApp) return;
 
-    supabase.auth.getSession().then(async ({ data }) => {
+    const redirect = async () => {
+      const { data } = await supabase.auth.getSession();
+
       if (data.session) {
         const path = await resolveDashboardPath(data.session.user.id);
         navigate({ to: path, replace: true } as never);
       } else {
         navigate({ to: "/login", replace: true } as never);
       }
-    });
-  }, [navigate]);
+    };
 
-  if (checkingStandaloneAuth) {
-    return (
-      <div className="min-h-dvh bg-background" />
-    );
+    redirect();
+  }, [isApp, navigate]);
+
+  // Android app मध्ये homepage अजिबात render करू नका
+  if (isApp) {
+    return <div className="min-h-dvh bg-background" />;
   }
 
+  // Browser मध्ये homepage पूर्वीसारखीच राहील
   return (
     <SiteLayout>
       <Hero />
