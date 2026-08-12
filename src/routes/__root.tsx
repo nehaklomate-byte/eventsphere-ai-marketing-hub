@@ -32,7 +32,7 @@ function ComingSoonPage() {
 // Site-wide "Coming Soon" gate. While true, EVERY route (including
 // login/admin) renders this page instead — there is no bypass. Flip
 // back to false to restore normal access.
-const COMING_SOON = true;
+const COMING_SOON = false;
 
 function NotFoundComponent() {
   return (
@@ -139,7 +139,7 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 function RootComponent() {
-  if (COMING_SOON) return <ComingSoonPage />;
+ if (COMING_SOON && !isNativeAppShell()) return <ComingSoonPage />;
 
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
