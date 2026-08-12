@@ -14,6 +14,26 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { CookieConsent } from "@/components/CookieConsent";
 import { InstallAppPrompt } from "@/components/InstallAppPrompt";
 
+function ComingSoonPage() {
+  return (
+    <div className="flex min-h-dvh flex-col items-center justify-center bg-gradient-brand px-4 text-center text-white">
+      <img src="/favicon.png" alt="EventOrbit Nova" className="h-16 w-16 rounded-2xl shadow-lg" />
+      <h1 className="mt-6 font-display text-3xl font-bold sm:text-5xl">EventOrbit Nova</h1>
+      <p className="mt-4 max-w-md text-base text-white/85 sm:text-lg">
+        We're putting the finishing touches on something exciting. Our new booking platform for venues, vendors and workers is coming soon.
+      </p>
+      <div className="mt-8 inline-flex items-center gap-2 rounded-full bg-white/15 px-5 py-2 text-sm font-semibold backdrop-blur-sm">
+        Launching soon — stay tuned
+      </div>
+    </div>
+  );
+}
+
+// Site-wide "Coming Soon" gate. While true, EVERY route (including
+// login/admin) renders this page instead — there is no bypass. Flip
+// back to false to restore normal access.
+const COMING_SOON = true;
+
 function NotFoundComponent() {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-background px-4">
@@ -119,6 +139,8 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 function RootComponent() {
+  if (COMING_SOON) return <ComingSoonPage />;
+
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
   useEffect(() => {
@@ -152,15 +174,6 @@ function RootComponent() {
       s?.subscription.unsubscribe();
     };
   }, [router, queryClient]);
-  useEffect(() => {
-    // Safety net: if index.tsx's own SplashScreen.hide() call never
-    // fires for some reason (e.g. user lands on a route other than
-    // "/"), this guarantees the native splash never stays stuck on
-    // screen forever — max 4 seconds. No-op in a normal browser tab.
-    import("@capacitor/splash-screen").then(({ SplashScreen }) => {
-      setTimeout(() => SplashScreen.hide(), 2200);
-    }).catch(() => {});
-  }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
