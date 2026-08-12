@@ -140,25 +140,37 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 function RootComponent() {
- if (COMING_SOON && !isNativeAppShell()) return <ComingSoonPage />;
-
+  const [showComingSoon, setShowComingSoon] = useState(COMING_SOON);
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+
   useEffect(() => {
-    // Apply the saved theme (or system preference) as soon as the app
-    // mounts, so dark mode persists across reloads/navigation instead of
-    // resetting to light every time — see src/lib/settings.ts.
+    // Splash safety-net: ALWAYS runs, no matter what else renders below,
+    // so the native app can never get stuck on the logo forever.
+    import("@capacitor/splash-screen").then(({ SplashScreen }) => {
+      setTimeout(() => SplashScreen.hide(), 2200);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    // Client-only check (SSR always renders the ComingSoon state first
+    // so server and client match on first paint — no hydration
+    // mismatch). If this is the native app, flip to the real app
+    // right after mount.
+    if (COMING_SOON && isNativeAppShell()) setShowComingSoon(false);
+  }, []);
+
+  useEffect(() => {
     import("@/lib/settings").then(({ applyTheme, getStoredTheme }) => applyTheme(getStoredTheme()));
   }, []);
+
   useEffect(() => {
-    // Registers the service worker required for Chrome's "Install app"
-    // prompt. Safe no-op on browsers without support (Safari desktop etc).
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
   }, []);
+
   useEffect(() => {
-    // Global auth listener: refresh router + query cache on identity changes.
     let mounted = true;
     import("@/integrations/supabase/client").then(({ supabase }) => {
       if (!mounted) return;
@@ -175,6 +187,9 @@ function RootComponent() {
       s?.subscription.unsubscribe();
     };
   }, [router, queryClient]);
+
+  if (showComingSoon) return <ComingSoonPage />;
+
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
