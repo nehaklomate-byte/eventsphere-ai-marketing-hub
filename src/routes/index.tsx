@@ -36,34 +36,26 @@ const fadeUp = {
 };
 
 function Home() {
-  // When the app is opened from the installed home-screen icon (PWA
-  // "standalone" mode) rather than a normal browser tab, a signed-in
-  // person should land straight on their dashboard, not the marketing
-  // homepage — that's what made the installed app feel like "just the
-  // website" instead of a real app. Regular browser visits to "/" are
-  // untouched, even when logged in.
   const navigate = useNavigate();
-  const [checkingStandaloneAuth, setCheckingStandaloneAuth] = useState(() => isNativeAppShell());
- useEffect(() => {
+
+  const [checkingStandaloneAuth] = useState(() => isNativeAppShell());
+
+  useEffect(() => {
     if (!isNativeAppShell()) return;
 
-   setCheckingStandaloneAuth(true);
     supabase.auth.getSession().then(async ({ data }) => {
       if (data.session) {
-  const path = await resolveDashboardPath(data.session.user.id);
-  navigate({ to: path, replace: true } as never);
-  return;
-}
-
-navigate({ to: "/login", replace: true } as never);
+        const path = await resolveDashboardPath(data.session.user.id);
+        navigate({ to: path, replace: true } as never);
+      } else {
+        navigate({ to: "/login", replace: true } as never);
+      }
     });
   }, [navigate]);
 
   if (checkingStandaloneAuth) {
     return (
-      <div className="grid min-h-dvh place-items-center bg-background">
-        <Loader2 className="h-6 w-6 animate-spin text-brand-violet" />
-      </div>
+      <div className="min-h-dvh bg-background" />
     );
   }
 
