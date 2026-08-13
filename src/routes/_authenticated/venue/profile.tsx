@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Building2, Upload, Loader2, X, Save, Eye, EyeOff, Wallet, FileCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchMyHalls, createHall, updateHall, type Hall } from "@/lib/venue";
+import { PublicProfileCard } from "@/components/PublicProfileCard";
 
 export const Route = createFileRoute("/_authenticated/venue/profile")({
   head: () => ({ meta: [{ title: "Venue Profile — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
@@ -347,6 +348,19 @@ function VenueProfilePage() {
 
       {/* Payout — private, separate from the customer-facing "payment_upi" above */}
       <PayoutSection />
+
+      {form.id && (
+        <PublicProfileCard
+          role="venue" entityId={form.id} variant={null} name={(form.name as string) ?? ""}
+          active={!!(form as unknown as Hall).public_profile_active} slug={(form.slug as string) ?? null}
+          verificationApproved={form.verification_status === "approved"}
+          trialEndsAt={(form as unknown as Hall).trial_ends_at ?? null}
+          subscriptionActive={(form as unknown as Hall).subscription_active ?? false}
+          subscriptionExpiresAt={(form as unknown as Hall).subscription_expires_at ?? null}
+          onActivated={(slug) => { set("public_profile_active", true); set("slug", slug); }}
+          onSubscribed={(expiresAt) => { set("subscription_active", true); set("subscription_expires_at", expiresAt); }}
+        />
+      )}
 
       {/* Sticky save bar */}
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 backdrop-blur md:pl-72">
