@@ -6,6 +6,7 @@ import { useSession } from "@/lib/session";
 import { fetchMyVendor, uploadVendorFile, computeVendorCompletion, VENDOR_CATEGORIES, fetchVendorPackages, saveVendorPackage, deleteVendorPackage, type VendorPackage } from "@/lib/vendor.ts";
 import { Loader2, Save, Upload, X, CheckCircle2, ShieldCheck, Store, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { PublicProfileCard } from "@/components/PublicProfileCard";
 
 // Mirrors src/routes/_authenticated/worker/profile.tsx exactly — same
 // section-tab structure, same helper components, same publish toggle
@@ -252,6 +253,21 @@ function ProfilePage() {
                   {submitForVerification.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                   Submit for verification
                 </button>
+              </div>
+            )}
+
+            {!!form.id && (
+              <div className="mt-6">
+                <PublicProfileCard
+                  role="vendor" entityId={form.id as string} variant={null} name={(form.business_name as string) ?? ""}
+                  active={!!form.public_profile_active} slug={(form.slug as string) ?? null}
+                  verificationApproved={form.verification_status === "approved"}
+                  trialEndsAt={(form.trial_ends_at as string) ?? null}
+                  subscriptionActive={!!form.subscription_active}
+                  subscriptionExpiresAt={(form.subscription_expires_at as string) ?? null}
+                  onActivated={(slug) => { set("public_profile_active", true); set("slug", slug); }}
+                  onSubscribed={(expiresAt) => { set("subscription_active", true); set("subscription_expires_at", expiresAt); }}
+                />
               </div>
             )}
           </div>
