@@ -57,6 +57,10 @@ export type Hall = {
   created_at: string;
   additional_info: Record<string, unknown>;
   documents: { name: string; url: string; uploaded_at?: string }[];
+  public_profile_active: boolean;
+  trial_ends_at: string | null;
+  subscription_active: boolean;
+  subscription_expires_at: string | null;
 };
 
 export type Enquiry = {
