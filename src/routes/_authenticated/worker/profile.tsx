@@ -6,6 +6,7 @@ import { useSession } from "@/lib/session";
 import { fetchMyWorker, computeCompletion, WORKER_CATEGORIES, AGENCY_SERVICES } from "@/lib/worker";
 import { Loader2, Save, Upload, X, CheckCircle2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
+import { PublicProfileCard } from "@/components/PublicProfileCard";
 
 export const Route = createFileRoute("/_authenticated/worker/profile")({
   component: ProfilePage,
@@ -406,6 +407,17 @@ function ProfilePage() {
                     {submitForVerification.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                     Submit for verification
                   </button>
+                </div>
+              )}
+
+              {!!form.id && (
+                <div className="mt-6">
+                  <PublicProfileCard
+                    role="worker" entityId={form.id as string} variant={form.worker_type === "agency" ? "agency" : "individual"} name={(form.full_name as string) ?? ""}
+                    active={!!form.public_profile_active} slug={(form.slug as string) ?? null}
+                    verificationApproved={form.verification_status === "approved"}
+                    onActivated={(slug) => { set("public_profile_active", true); set("slug", slug); }}
+                  />
                 </div>
               )}
             </div>
