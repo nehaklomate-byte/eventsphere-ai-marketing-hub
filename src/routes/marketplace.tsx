@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { SiteLayout } from "@/components/SiteLayout";
 import { PageHeader } from "@/components/PageHeader";
-import { MapPin, Star, BadgeCheck, Loader2, Search, Users, ArrowRight, Building2, Wrench, HardHat } from "lucide-react";
+import { MapPin, Star, BadgeCheck, Loader2, Search, Users, ArrowRight, Building2, Wrench, HardHat, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { WishlistButton } from "@/components/WishlistButton";
 
@@ -12,6 +12,8 @@ type Hall = {
   category: string | null; cover_url: string | null; gallery: string[];
   price_per_day: number | null; max_guests: number | null;
   verified: boolean; rating: number; review_count: number;
+  public_profile_active?: boolean; slug?: string | null;
+  trial_ends_at?: string | null; subscription_active?: boolean; subscription_expires_at?: string | null;
 };
 type Vendor = {
   kind: "vendor";
@@ -19,6 +21,8 @@ type Vendor = {
   category: string | null; cover_url: string | null; gallery: string[];
   price_per_day: null; max_guests: null;
   verified: boolean; rating: number; review_count: number;
+  public_profile_active?: boolean; slug?: string | null;
+  trial_ends_at?: string | null; subscription_active?: boolean; subscription_expires_at?: string | null;
 };
 type Worker = {
   kind: "worker";
@@ -26,6 +30,7 @@ type Worker = {
   category: string | null; cover_url: string | null; gallery: string[];
   price_per_day: number | null; max_guests: null;
   verified: boolean; rating: number; review_count: number;
+  public_profile_active?: boolean; slug?: string | null;
 };
 type Item = Hall | Vendor | Worker;
 type Tab = "venue" | "vendor" | "worker";
@@ -56,6 +61,25 @@ export const Route = createFileRoute("/marketplace")({
   component: Marketplace,
 });
 
+function hasTopTierVisibility(item: { public_profile_active?: boolean; trial_ends_at?: string | null; subscription_active?: boolean; subscription_expires_at?: string | null }): boolean {
+  if (!item.public_profile_active) return false;
+  const now = Date.now();
+  const onTrial = !!item.trial_ends_at && new Date(item.trial_ends_at).getTime() > now;
+  const subscribed = !!item.subscription_active && (!item.subscription_expires_at || new Date(item.subscription_expires_at).getTime() > now);
+  return onTrial || subscribed;
+}
+
+// Boosts activated + trial-or-subscribed listings to the top of search —
+// this is a RANKING boost only. Every verified listing still appears in
+// the free marketplace either way; nothing here filters or hides anyone.
+function sortByVisibility<T extends { public_profile_active?: boolean; trial_ends_at?: string | null; subscription_active?: boolean; subscription_expires_at?: string | null; rating: number }>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    const boost = Number(hasTopTierVisibility(b)) - Number(hasTopTierVisibility(a));
+    if (boost !== 0) return boost;
+    return (b.rating ?? 0) - (a.rating ?? 0);
+  });
+}
+
 function Marketplace() {
   const search = Route.useSearch();
   const [tab, setTab] = useState<Tab>(search.tab ?? "venue");
@@ -68,27 +92,27 @@ function Marketplace() {
     setCity("");
     if (tab === "venue") {
       supabase.from("halls")
-        .select("id,name,city,state,category,cover_url,gallery,price_per_day,max_guests,verified,rating,review_count")
+        .select("id,name,city,state,category,cover_url,gallery,price_per_day,max_guests,verified,rating,review_count,public_profile_active,slug,trial_ends_at,subscription_active,subscription_expires_at")
         .eq("status", "published").eq("verified", true).is("deleted_at", null)
         .order("verified", { ascending: false })
-        .then(({ data }) => setItems(((data ?? []) as unknown[]).map((h) => ({ ...(h as object), kind: "venue" })) as Item[]));
+        .then(({ data }) => setItems(sortByVisibility(((data ?? []) as unknown[]).map((h) => ({ ...(h as object), kind: "venue" })) as Item[])));
     } else if (tab === "vendor") {
       supabase.from("vendors")
-        .select("id,business_name,city,state,category,logo_url,portfolio,verified,rating,review_count")
+        .select("id,business_name,city,state,category,logo_url,portfolio,verified,rating,review_count,public_profile_active,slug,trial_ends_at,subscription_active,subscription_expires_at")
         .eq("status", "published").eq("verified", true).is("deleted_at", null)
         .order("verified", { ascending: false })
-        .then(({ data }) => setItems(((data ?? []) as unknown[]).map((v) => {
-          const vv = v as { id: string; business_name: string; city: string | null; state: string | null; category: string | null; logo_url: string | null; portfolio: string[]; verified: boolean; rating: number; review_count: number };
-          return { kind: "vendor", id: vv.id, name: vv.business_name, city: vv.city, state: vv.state, category: vv.category, cover_url: vv.logo_url, gallery: vv.portfolio ?? [], price_per_day: null, max_guests: null, verified: vv.verified, rating: vv.rating, review_count: vv.review_count } as Vendor;
-        })));
+        .then(({ data }) => setItems(sortByVisibility(((data ?? []) as unknown[]).map((v) => {
+          const vv = v as { id: string; business_name: string; city: string | null; state: string | null; category: string | null; logo_url: string | null; portfolio: string[]; verified: boolean; rating: number; review_count: number; public_profile_active: boolean; slug: string | null; trial_ends_at: string | null; subscription_active: boolean; subscription_expires_at: string | null };
+          return { kind: "vendor", id: vv.id, name: vv.business_name, city: vv.city, state: vv.state, category: vv.category, cover_url: vv.logo_url, gallery: vv.portfolio ?? [], price_per_day: null, max_guests: null, verified: vv.verified, rating: vv.rating, review_count: vv.review_count, public_profile_active: vv.public_profile_active, slug: vv.slug, trial_ends_at: vv.trial_ends_at, subscription_active: vv.subscription_active, subscription_expires_at: vv.subscription_expires_at } as Vendor;
+        }))));
     } else {
       supabase.from("workers")
-        .select("id,full_name,city,state,category,photo_url,work_images,daily_charges,verified,rating,review_count,marketplace_visible")
+        .select("id,full_name,city,state,category,photo_url,work_images,daily_charges,verified,rating,review_count,marketplace_visible,public_profile_active,slug")
         .eq("verified", true).eq("marketplace_visible", true).is("deleted_at", null)
         .order("verified", { ascending: false })
         .then(({ data }) => setItems(((data ?? []) as unknown[]).map((w) => {
-          const ww = w as { id: string; full_name: string; city: string | null; state: string | null; category: string | null; photo_url: string | null; work_images: string[]; daily_charges: number | null; verified: boolean; rating: number; review_count: number };
-          return { kind: "worker", id: ww.id, name: ww.full_name, city: ww.city, state: ww.state, category: ww.category, cover_url: ww.photo_url, gallery: ww.work_images ?? [], price_per_day: ww.daily_charges, max_guests: null, verified: ww.verified, rating: ww.rating, review_count: ww.review_count } as Worker;
+          const ww = w as { id: string; full_name: string; city: string | null; state: string | null; category: string | null; photo_url: string | null; work_images: string[]; daily_charges: number | null; verified: boolean; rating: number; review_count: number; public_profile_active: boolean; slug: string | null };
+          return { kind: "worker", id: ww.id, name: ww.full_name, city: ww.city, state: ww.state, category: ww.category, cover_url: ww.photo_url, gallery: ww.work_images ?? [], price_per_day: ww.daily_charges, max_guests: null, verified: ww.verified, rating: ww.rating, review_count: ww.review_count, public_profile_active: ww.public_profile_active, slug: ww.slug } as Worker;
         })));
     }
   }, [tab]);
@@ -163,6 +187,11 @@ function Marketplace() {
                   {h.verified && (
                     <span className={`absolute right-3 top-12 inline-flex items-center gap-1 rounded-full bg-brand-blue/90 text-white text-[10px] font-semibold px-2 py-1`}>
                       <BadgeCheck className="h-3 w-3" /> Verified
+                    </span>
+                  )}
+                  {h.public_profile_active && (
+                    <span className="absolute left-3 bottom-3 inline-flex items-center gap-1 rounded-full bg-brand-violet/90 text-white text-[10px] font-semibold px-2 py-1">
+                      <Sparkles className="h-3 w-3" /> Official Booking Profile
                     </span>
                   )}
                   <WishlistButton
