@@ -271,6 +271,7 @@ function HirePanel({ worker, bookings, userId, onClose }: {
         status: "pending",
         payment_amount: form.pay_amount ? Number(form.pay_amount) : null,
         advance_amount: form.advance_amount ? Number(form.advance_amount) : null,
+        booking_source: "direct_platform_booking",
       } as never).select().maybeSingle();
       if (error) throw error;
       if (!data) throw new Error("Request was blocked — please refresh and try again.");
