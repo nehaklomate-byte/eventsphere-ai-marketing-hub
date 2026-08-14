@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Menu, X, LogOut, LayoutGrid } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Logo } from "./Logo";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 import { useSession } from "@/lib/session";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveDashboardPath } from "@/lib/auth-redirect";
@@ -69,6 +70,7 @@ export function Navbar() {
           })}
         </nav>
         <div className="hidden md:flex items-center gap-2">
+          <LanguageSwitcher />
           {loading ? (
             <div className="h-9 w-24 rounded-full bg-accent/40 animate-pulse" />
           ) : user ? (
@@ -102,6 +104,7 @@ export function Navbar() {
       {open && (
         <div className="lg:hidden glass-strong border-t border-border">
           <div className="mx-auto max-w-7xl px-5 py-4 md:px-8 flex flex-col gap-1">
+            <div className="mb-2"><LanguageSwitcher /></div>
             {nav.map((n) => (
               <Link key={n.to} to={n.to} className="rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-accent">
                 {n.label}
