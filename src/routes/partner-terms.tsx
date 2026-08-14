@@ -2,7 +2,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/SiteLayout";
 import { PageHeader } from "@/components/PageHeader";
-import { BetaNotice } from "@/components/BetaNotice";
+
 
 export const Route = createFileRoute("/partner-terms")({
   head: () => ({
