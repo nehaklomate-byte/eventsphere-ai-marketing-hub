@@ -9,7 +9,7 @@ export const Route = createFileRoute("/_authenticated/receipt/$type/$id")({
   component: ReceiptPage,
 });
 
-type ReceiptType = "hall" | "worker" | "vendor";
+type ReceiptType = "hall" | "worker" | "vendor" | "profile";
 
 type ReceiptData = {
   receiptNo: string;
@@ -25,6 +25,46 @@ type ReceiptData = {
 };
 
 async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData | null> {
+  if (type === "profile") {
+    const { data, error } = await supabase.from("public_profile_payments" as never)
+      .select("id,role,entity_id,feature_type,amount,status,razorpay_payment_id,razorpay_order_id,created_at")
+      .eq("id" as never, id as never).maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    const d = data as unknown as Record<string, unknown>;
+    if (d.status !== "paid") {
+      return {
+        receiptNo: `PP-${id.slice(0, 8).toUpperCase()}`, itemLabel: "", counterpartyLabel: "",
+        eventName: null, eventDate: null, amount: 0, commission: 0, paidAt: null, razorpayPaymentId: null, razorpayOrderId: null,
+      };
+    }
+
+    const role = d.role as "venue" | "vendor" | "worker";
+    const table = role === "venue" ? "halls" : role === "vendor" ? "vendors" : "workers";
+    const nameCol = role === "venue" ? "name" : role === "vendor" ? "business_name" : "full_name";
+    const { data: entity } = await supabase.from(table as never).select(nameCol as never).eq("id" as never, d.entity_id as never).maybeSingle();
+    const counterparty = (entity as unknown as Record<string, unknown> | null)?.[nameCol] as string | undefined;
+
+    const featureLabels: Record<string, string> = {
+      profile_activation: "Public Booking Profile — one-time activation",
+      subscription_monthly: "Top-tier visibility subscription — monthly",
+      subscription_annual: "Top-tier visibility subscription — annual",
+    };
+
+    return {
+      receiptNo: `PP-${id.slice(0, 8).toUpperCase()}`,
+      itemLabel: featureLabels[d.feature_type as string] ?? "Public Booking Profile",
+      counterpartyLabel: counterparty ?? "EventOrbit Nova",
+      eventName: null,
+      eventDate: null,
+      amount: Number(d.amount ?? 0),
+      commission: 0,
+      paidAt: d.created_at as string | null,
+      razorpayPaymentId: d.razorpay_payment_id as string | null,
+      razorpayOrderId: d.razorpay_order_id as string | null,
+    };
+  }
+
   if (type === "hall") {
     const { data, error } = await supabase.from("customer_bookings" as never)
       .select("id,target_name,event_date,amount,commission_amount,paid_at,razorpay_payment_id,razorpay_order_id,details")
@@ -92,7 +132,7 @@ async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData 
 
 function ReceiptPage() {
   const { type, id } = Route.useParams();
-  const receiptType = (type === "worker" || type === "vendor" ? type : "hall") as ReceiptType;
+  const receiptType = (type === "worker" || type === "vendor" || type === "profile" ? type : "hall") as ReceiptType;
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["receipt", receiptType, id],
