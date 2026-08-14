@@ -2,7 +2,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/SiteLayout";
 import { PageHeader } from "@/components/PageHeader";
 
-
 export const Route = createFileRoute("/terms")({
   head: () => ({
     meta: [
@@ -137,7 +136,6 @@ function Terms() {
         title="Terms of Service"
         description="The rules that govern accounts, listings, bookings and payouts on EventOrbit Nova."
       />
-      <BetaNotice />
       <article className="mx-auto max-w-3xl px-5 md:px-8 py-12 md:py-16">
         <p className="text-sm text-muted-foreground">
           Last updated: 14 August 2026. Published by EventOrbit Nova, registered under the Maharashtra Shops
