@@ -446,7 +446,7 @@ function iconFor(label: string) {
   return FACILITY_ICONS.find(([re]) => re.test(label))?.[1] ?? CheckCircle2;
 }
 
-function facilityList(f: Record<string, boolean>, parkingSlots: number | null, numRooms: number | null) {
+export function facilityList(f: Record<string, boolean>, parkingSlots: number | null, numRooms: number | null) {
   const items = Object.entries(f ?? {})
     .filter(([, on]) => !!on)
     .map(([label]) => ({ key: label, label, icon: iconFor(label) }));
