@@ -68,15 +68,15 @@ function loadRazorpayScript(): Promise<void> {
 async function payAndVerify(opts: {
   role: ProfileRole; entityId: string; variant?: ProfileVariant; name: string; featureType: FeatureType;
   payerEmail?: string; payerPhone?: string;
-}): Promise<{ slug: string; subscription_expires_at?: string }> {
+}): Promise<{ slug: string; subscription_expires_at?: string; payment_id: string | null }> {
   const { data: fnResp, error: fnErr } = await supabase.functions.invoke("create-profile-payment-order", {
     body: { role: opts.role, entity_id: opts.entityId, entity_variant: opts.variant ?? null, feature_type: opts.featureType },
   });
   if (fnErr) throw new Error(fnErr.message || "Could not start the payment.");
   if (fnResp?.error) throw new Error(fnResp.error);
 
-  // Individual freelance worker — server activated it for free, no checkout needed.
-  if (fnResp?.free) return { slug: fnResp.slug as string };
+  // Individual freelance worker — server activated it for free, no checkout, no payment record.
+  if (fnResp?.free) return { slug: fnResp.slug as string, payment_id: null };
 
   const { order_id, amount, currency, key_id, payment_id } = fnResp as {
     order_id: string; amount: number; currency: string; key_id: string; payment_id: string;
@@ -107,7 +107,7 @@ async function payAndVerify(opts: {
           reject(new Error(verifyResp?.error || verifyErr?.message || "Payment could not be verified."));
           return;
         }
-        resolve({ slug: verifyResp.slug as string, subscription_expires_at: verifyResp.subscription_expires_at });
+        resolve({ slug: verifyResp.slug as string, subscription_expires_at: verifyResp.subscription_expires_at, payment_id });
       },
       modal: { ondismiss: () => reject(new Error("Payment cancelled.")) },
     });
@@ -119,18 +119,19 @@ async function payAndVerify(opts: {
  * activates it for free with no payment step). */
 export async function activatePublicProfile(opts: {
   role: ProfileRole; entityId: string; variant?: ProfileVariant; name: string; payerEmail?: string; payerPhone?: string;
-}): Promise<string> {
+}): Promise<{ slug: string; paymentId: string | null }> {
   const result = await payAndVerify({ ...opts, featureType: "profile_activation" });
-  return result.slug;
+  return { slug: result.slug, paymentId: result.payment_id };
 }
 
 /** Buys/renews the top-tier visibility subscription for a venue or
  * vendor whose free 180-day trial has ended (or is ending soon). */
 export async function purchaseSubscription(opts: {
   role: "venue" | "vendor"; entityId: string; name: string; plan: "monthly" | "annual"; payerEmail?: string; payerPhone?: string;
-}): Promise<{ subscription_expires_at?: string }> {
+}): Promise<{ subscription_expires_at?: string; paymentId: string | null }> {
   const featureType: FeatureType = opts.plan === "monthly" ? "subscription_monthly" : "subscription_annual";
-  return payAndVerify({ ...opts, featureType });
+  const result = await payAndVerify({ ...opts, featureType });
+  return { subscription_expires_at: result.subscription_expires_at, paymentId: result.payment_id };
 }
 
 function tableFor(role: ProfileRole) {
