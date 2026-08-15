@@ -6,6 +6,7 @@ import { Building2, Upload, Loader2, X, Save, Eye, EyeOff, Wallet, FileCheck } f
 import { supabase } from "@/integrations/supabase/client";
 import { fetchMyHalls, createHall, updateHall, type Hall } from "@/lib/venue";
 import { PublicProfileCard } from "@/components/PublicProfileCard";
+import { ProfileHistoryPanel } from "@/components/ProfileHistoryPanel";
 
 export const Route = createFileRoute("/_authenticated/venue/profile")({
   head: () => ({ meta: [{ title: "Venue Profile — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
@@ -361,6 +362,8 @@ function VenueProfilePage() {
           onSubscribed={(expiresAt) => { set("subscription_active", true); set("subscription_expires_at", expiresAt); }}
         />
       )}
+
+      <ProfileHistoryPanel entityType="halls" entityId={form.id} />
 
       {/* Sticky save bar */}
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 backdrop-blur md:pl-72">
