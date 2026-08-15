@@ -146,3 +146,26 @@ export async function fetchPublicProfileBySlug(slug: string) {
   if (error) throw error;
   return data ? { role, entity: data as Record<string, unknown> } : null;
 }
+
+const FEATURE_LABEL: Record<FeatureType, string> = {
+  profile_activation: "Public profile activation",
+  subscription_monthly: "Visibility subscription — monthly",
+  subscription_annual: "Visibility subscription — annual",
+};
+
+/** Every successful link-activation / subscription payment for this
+ * entity, most recent first — each with a receipt the owner can
+ * download. Without this, the "View receipt" link only ever appeared
+ * for a few seconds right after paying and then vanished for good. */
+export async function fetchProfilePaymentHistory(role: ProfileRole, entityId: string): Promise<{ id: string; label: string; amount: number; created_at: string }[]> {
+  const { data, error } = await supabase
+    .from("public_profile_payments" as never)
+    .select("id, feature_type, amount, created_at")
+    .eq("role" as never, role as never)
+    .eq("entity_id" as never, entityId as never)
+    .eq("status" as never, "paid" as never)
+    .order("created_at" as never, { ascending: false });
+  if (error) throw error;
+  return ((data as unknown as { id: string; feature_type: FeatureType; amount: number; created_at: string }[]) ?? [])
+    .map((r) => ({ id: r.id, label: FEATURE_LABEL[r.feature_type] ?? "Public profile payment", amount: Number(r.amount), created_at: r.created_at }));
+}
