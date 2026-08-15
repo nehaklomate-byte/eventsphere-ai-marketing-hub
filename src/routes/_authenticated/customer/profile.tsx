@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
 import { PageShell } from "./-ui";
+import { ProfileHistoryPanel } from "@/components/ProfileHistoryPanel";
 import { computeCompletion, type Customer } from "@/lib/customer";
 import { phoneSchema, pincodeSchema } from "@/lib/validation";
 import { z } from "zod";
@@ -114,6 +115,8 @@ function ProfilePage() {
           </button>
         </div>
       </div>
+
+      <ProfileHistoryPanel entityType="customers" entityId={data?.id} />
 
       <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-6">
         <h3 className="font-display text-base font-semibold text-rose-600">Danger zone</h3>
