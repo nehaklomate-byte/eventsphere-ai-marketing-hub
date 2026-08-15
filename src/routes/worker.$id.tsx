@@ -73,6 +73,7 @@ function useWorkerStats(workerId: string) {
 export const Route = createFileRoute("/worker/$id")({
   validateSearch: (search: Record<string, unknown>) => ({
     event_id: typeof search.event_id === "string" ? search.event_id : undefined,
+    ref: typeof search.ref === "string" ? search.ref : undefined,
   }),
   head: ({ params }) => ({
     meta: [
@@ -92,7 +93,7 @@ export const Route = createFileRoute("/worker/$id")({
 
 function WorkerDetail() {
   const { worker } = Route.useLoaderData();
-  const { event_id } = Route.useSearch();
+  const { event_id, ref } = Route.useSearch();
   const stats = useWorkerStats(worker.id);
 
   return (
@@ -213,9 +214,11 @@ function WorkerDetail() {
             {worker.work_images?.length > 0 && (
               <div className="mt-8">
                 <h2 className="font-display text-lg font-semibold mb-3">Work photos</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {(worker.work_images as string[]).map((url: string, i: number) => (
-                    <img key={i} src={url} alt={`Work ${i + 1}`} className="h-32 w-full rounded-xl object-cover border border-border" />
+                    <div key={i} className="aspect-[16/11] overflow-hidden rounded-xl border border-border">
+                      <img src={url} alt={`Work ${i + 1}`} loading="lazy" className="h-full w-full object-cover hover:scale-105 transition-transform duration-500" />
+                    </div>
                   ))}
                 </div>
               </div>
@@ -225,7 +228,7 @@ function WorkerDetail() {
           </div>
 
           <div>
-            <HireCard worker={worker} eventId={event_id} />
+            <HireCard worker={worker} eventId={event_id} sourceSlug={ref} />
           </div>
         </div>
       </div>
@@ -233,7 +236,7 @@ function WorkerDetail() {
   );
 }
 
-function HireCard({ worker, eventId }: { worker: WorkerProfile; eventId?: string }) {
+function HireCard({ worker, eventId, sourceSlug }: { worker: WorkerProfile; eventId?: string; sourceSlug?: string }) {
   const navigate = useNavigate();
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
   const [state, setState] = useState({ event_name: "", task_name: "", venue: "", venue_address: "", event_date: "", start_time: "", end_time: "", pay_amount: "" });
@@ -288,6 +291,8 @@ function HireCard({ worker, eventId }: { worker: WorkerProfile; eventId?: string
       status: "pending",
       payment_amount: state.pay_amount ? Number(state.pay_amount) : null,
       quantity: isAgency ? quantity : 1,
+      booking_source: sourceSlug ? "public_profile_link" : "marketplace",
+      source_slug: sourceSlug ?? null,
     } as never);
     setSubmitting(false);
     if (error) { setErr(error.message || "Could not send the request. Please try again."); return; }
