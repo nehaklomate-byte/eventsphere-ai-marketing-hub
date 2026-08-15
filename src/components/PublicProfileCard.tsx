@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link2, Copy, Share2, QrCode, ExternalLink, Loader2, Sparkles, Clock, Crown, Receipt, CheckCircle2, TrendingUp, Users, Search } from "lucide-react";
 import {
-  activatePublicProfile, purchaseSubscription, fetchPricing, priceForActivation,
+  activatePublicProfile, purchaseSubscription, fetchPricing, priceForActivation, fetchProfilePaymentHistory,
   type ProfileRole, type ProfileVariant,
 } from "@/lib/publicProfile";
 import { useSession } from "@/lib/session";
@@ -27,12 +28,18 @@ export function PublicProfileCard({
   onSubscribed?: (expiresAt: string) => void;
 }) {
   const { user } = useSession();
+  const qc = useQueryClient();
   const [busy, setBusy] = useState<"activate" | "monthly" | "annual" | null>(null);
   const [price, setPrice] = useState<number | null>(null);
-  const [lastReceiptId, setLastReceiptId] = useState<string | null>(null);
   const isFreeWorker = role === "worker" && variant !== "agency";
   const url = slug ? `${typeof window !== "undefined" ? window.location.origin : ""}/p/${slug}` : "";
   const roleWord = role === "venue" ? "venue" : role === "vendor" ? "business" : "profile";
+
+  const { data: paymentHistory = [] } = useQuery({
+    queryKey: ["profile-payment-history", role, entityId],
+    queryFn: () => fetchProfilePaymentHistory(role, entityId),
+    enabled: !!entityId,
+  });
 
   useEffect(() => {
     fetchPricing().then((p) => setPrice(priceForActivation(role, variant, p)));
@@ -41,13 +48,13 @@ export function PublicProfileCard({
   async function handleActivate() {
     setBusy("activate");
     try {
-      const { slug: newSlug, paymentId } = await activatePublicProfile({
+      const { slug: newSlug } = await activatePublicProfile({
         role, entityId, variant, name,
         payerEmail: user?.email ?? undefined,
         payerPhone: user?.phone ?? undefined,
       });
       toast.success(isFreeWorker ? "Public profile activated — free for individual workers!" : "Public profile activated!");
-      if (paymentId) setLastReceiptId(paymentId);
+      qc.invalidateQueries({ queryKey: ["profile-payment-history", role, entityId] });
       onActivated(newSlug);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not activate");
@@ -60,7 +67,7 @@ export function PublicProfileCard({
     try {
       const result = await purchaseSubscription({ role, entityId, name, plan, payerEmail: user?.email ?? undefined, payerPhone: user?.phone ?? undefined });
       toast.success("Subscription active — you're back to top-tier visibility!");
-      if (result.paymentId) setLastReceiptId(result.paymentId);
+      qc.invalidateQueries({ queryKey: ["profile-payment-history", role, entityId] });
       if (result.subscription_expires_at) onSubscribed?.(result.subscription_expires_at);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not subscribe");
@@ -102,13 +109,28 @@ export function PublicProfileCard({
             <button onClick={shareWhatsApp} className="inline-flex items-center gap-1.5 rounded-full border border-input px-3.5 py-2 text-xs font-semibold hover:bg-accent"><Share2 className="h-3.5 w-3.5" /> Share on WhatsApp</button>
             <a href={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full border border-input px-3.5 py-2 text-xs font-semibold hover:bg-accent"><QrCode className="h-3.5 w-3.5" /> QR code</a>
             <a href={`/p/${slug}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full border border-input px-3.5 py-2 text-xs font-semibold hover:bg-accent"><ExternalLink className="h-3.5 w-3.5" /> View public profile</a>
-            {lastReceiptId && (
-              <Link to="/receipt/$type/$id" params={{ type: "profile", id: lastReceiptId }} className="inline-flex items-center gap-1.5 rounded-full border border-input px-3.5 py-2 text-xs font-semibold hover:bg-accent">
-                <Receipt className="h-3.5 w-3.5" /> View receipt
-              </Link>
-            )}
           </div>
         </div>
+
+        {paymentHistory.length > 0 && (
+          <div className="rounded-2xl border border-border bg-card p-5">
+            <div className="flex items-center gap-2 text-sm font-semibold text-foreground"><Receipt className="h-4 w-4 text-brand-violet" /> Payment history</div>
+            <div className="mt-3 space-y-2">
+              {paymentHistory.map((p) => (
+                <div key={p.id} className="flex items-center justify-between gap-3 rounded-xl border border-border px-3.5 py-2.5 text-sm">
+                  <div className="min-w-0">
+                    <div className="font-medium truncate">{p.label}</div>
+                    <div className="text-xs text-muted-foreground">{new Date(p.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} · ₹{p.amount.toLocaleString("en-IN")}</div>
+                  </div>
+                  <Link to="/receipt/$type/$id" params={{ type: "profile", id: p.id }} target="_blank"
+                    className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-input px-3 py-1.5 text-xs font-semibold hover:bg-accent">
+                    <Receipt className="h-3.5 w-3.5" /> Receipt
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {showsVisibility && onTrial && (
           <div className="rounded-2xl border border-brand-violet/30 bg-brand-violet/5 p-4 flex items-center gap-2 text-sm">
