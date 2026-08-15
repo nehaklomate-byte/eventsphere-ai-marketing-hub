@@ -111,10 +111,7 @@ export const Route = createFileRoute("/privacy")({
           Platform or via email before they take effect.
         </p>
 
-        <p className="text-sm italic text-muted-foreground">
-          This is a structural draft prepared for planning purposes and must be reviewed and finalized by a lawyer
-          licensed in India before relying on it as your published policy.
-        </p>
+       
 
         <style>{`
           .legal-content h2 { font-family: var(--font-display, inherit); font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem; }
