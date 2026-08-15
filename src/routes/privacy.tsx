@@ -15,7 +15,7 @@ export const Route = createFileRoute("/privacy")({
   }),
   component: () => (
     <SiteLayout>
-      <PageHeader eyebrow="Legal" title="Privacy Policy" description="Draft — last updated [DATE]. Pending final legal review before publication." />
+      <PageHeader eyebrow="Legal" title="Privacy Policy" description={`Last updated ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}.`} />
       <section className="mx-auto max-w-3xl px-5 md:px-8 py-16 legal-content">
         <p>
           EventOrbit Nova ("we", "us", "our") — currently an early-stage/beta project, ahead of formal company
@@ -111,7 +111,10 @@ export const Route = createFileRoute("/privacy")({
           Platform or via email before they take effect.
         </p>
 
-       
+        <p className="text-sm italic text-muted-foreground">
+          This is a structural draft prepared for planning purposes and must be reviewed and finalized by a lawyer
+          licensed in India before relying on it as your published policy.
+        </p>
 
         <style>{`
           .legal-content h2 { font-family: var(--font-display, inherit); font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem; }
