@@ -1,8 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarCheck, Check, X, Loader2, IndianRupee, Eye, Download, Ban, Users, HardHat, Store } from "lucide-react";
+import { CalendarCheck, Check, X, Loader2, IndianRupee, Eye, Download, Ban, Users, HardHat, Store, Receipt } from "lucide-react";
 import { fetchMyHalls, fetchHallBookings, updateBookingStatus, type HallBooking } from "@/lib/venue";
 import { downloadCsv } from "@/lib/admin";
 import { supabase } from "@/integrations/supabase/client";
@@ -119,6 +119,13 @@ function BookingsPage() {
                   >
                     <Eye className="h-3.5 w-3.5" /> View full details
                   </button>
+                  {b.payment_status === "paid" && (
+                    <Link to="/receipt/$type/$id" params={{ type: "hall", id: b.id }} target="_blank"
+                      className="flex items-center gap-1.5 rounded-full border border-input px-3.5 py-2 text-xs font-semibold hover:bg-accent"
+                    >
+                      <Receipt className="h-3.5 w-3.5" /> View receipt
+                    </Link>
+                  )}
                   {b.status === "pending" && (
                     <>
                       <button
