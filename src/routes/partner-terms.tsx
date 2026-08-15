@@ -14,7 +14,7 @@ export const Route = createFileRoute("/partner-terms")({
   }),
   component: () => (
     <SiteLayout>
-      <PageHeader eyebrow="Legal" title="Partner Terms" description="Draft — key clauses for Vendors, Workers and Venue Owners. A full digitally-signed Partner Agreement covering these terms in detail is planned; this page is the interim acceptance record shown at verification submission." />
+      <PageHeader eyebrow="Legal" title="Partner Terms" description={`Last updated ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}.`} />
       <section className="mx-auto max-w-3xl px-5 md:px-8 py-16 legal-content">
         <p>
           By submitting your profile for verification as a Vendor, Worker, or Venue Owner on EventOrbit Nova, you agree
@@ -48,7 +48,10 @@ export const Route = createFileRoute("/partner-terms")({
         <h2>9. Indemnity</h2>
         <p>You agree to indemnify EventOrbit Nova (operating as an early-stage/beta project ahead of formal company registration) against claims arising from your own service delivery (e.g., issues with food safety, décor installation, or work performed).</p>
 
-        
+        <p className="text-sm italic text-muted-foreground">
+          This is a structural draft. A full, digitally-signed Partner Agreement covering these clauses in complete
+          legal detail is planned separately and will supersede this page once available.
+        </p>
 
         <style>{`
           .legal-content h2 { font-size: 1.15rem; font-weight: 600; margin-top: 1.75rem; margin-bottom: 0.5rem; }
