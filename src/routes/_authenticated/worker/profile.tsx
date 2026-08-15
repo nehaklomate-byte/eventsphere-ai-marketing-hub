@@ -7,6 +7,7 @@ import { fetchMyWorker, computeCompletion, WORKER_CATEGORIES, AGENCY_SERVICES } 
 import { Loader2, Save, Upload, X, CheckCircle2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { PublicProfileCard } from "@/components/PublicProfileCard";
+import { ProfileHistoryPanel } from "@/components/ProfileHistoryPanel";
 
 export const Route = createFileRoute("/_authenticated/worker/profile")({
   component: ProfilePage,
@@ -418,6 +419,12 @@ function ProfilePage() {
                     verificationApproved={form.verification_status === "approved"}
                     onActivated={(slug) => { set("public_profile_active", true); set("slug", slug); }}
                   />
+                </div>
+              )}
+
+              {!!form.id && (
+                <div className="mt-6">
+                  <ProfileHistoryPanel entityType="workers" entityId={form.id as string} />
                 </div>
               )}
             </div>
