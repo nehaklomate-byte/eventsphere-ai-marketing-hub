@@ -5,6 +5,7 @@ import { Save, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchMyOrganization, type Organization } from "@/lib/organization";
 import { AccountSettingsSection } from "@/components/AccountSettingsSections";
+import { ProfileHistoryPanel } from "@/components/ProfileHistoryPanel";
 
 export const Route = createFileRoute("/_authenticated/organization/settings")({
   head: () => ({ meta: [{ title: "Settings — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
@@ -153,6 +154,8 @@ function SettingsPage() {
           <Save className="h-4 w-4" /> {saving ? "Saving…" : "Save changes"}
         </button>
       </form>
+
+      <ProfileHistoryPanel entityType="organizations" entityId={org?.id} />
 
       <div>
         <h2 className="font-display text-xl font-semibold">Your account</h2>
