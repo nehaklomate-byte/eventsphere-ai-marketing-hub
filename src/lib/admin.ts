@@ -293,7 +293,7 @@ export function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
 // no matter what UI existed on top of it.
 // =============================================================
 
-export type IncomingPaymentSource = "hall" | "worker" | "vendor";
+export type IncomingPaymentSource = "hall" | "worker" | "vendor" | "profile";
 
 export type IncomingPayment = {
   id: string;
@@ -311,7 +311,7 @@ export type IncomingPayment = {
  * landed in the platform's account, whether or not it's been paid
  * out to the worker/vendor/venue owner yet. */
 export async function fetchIncomingPayments(): Promise<IncomingPayment[]> {
-  const [halls, workers, vendors] = await Promise.all([
+  const [halls, workers, vendors, profiles] = await Promise.all([
     supabase.from("customer_bookings" as never)
       .select("id, target_name, amount, commission_amount, razorpay_payment_id, paid_at, created_at" as never)
       .eq("kind" as never, "hall" as never).eq("payment_status" as never, "paid" as never)
@@ -324,13 +324,25 @@ export async function fetchIncomingPayments(): Promise<IncomingPayment[]> {
       .select("id, event_name, task_name, payment_amount, razorpay_payment_id, paid_at, updated_at" as never)
       .eq("payment_status" as never, "paid" as never)
       .order("updated_at" as never, { ascending: false }),
+    supabase.from("public_profile_payments" as never)
+      .select("id, role, feature_type, amount, razorpay_payment_id, created_at" as never)
+      .eq("status" as never, "paid" as never)
+      .order("created_at" as never, { ascending: false }),
   ]);
   if (halls.error) throw halls.error;
   if (workers.error) throw workers.error;
   if (vendors.error) throw vendors.error;
+  if (profiles.error) throw profiles.error;
 
   type HallRow = { id: string; target_name: string; amount: number; commission_amount: number; razorpay_payment_id: string | null; paid_at: string | null; created_at: string };
   type TaskRow = { id: string; event_name: string; task_name: string; payment_amount: number | null; razorpay_payment_id: string | null; paid_at?: string | null; updated_at: string };
+  type ProfilePaymentRow = { id: string; role: string; feature_type: string; amount: number; razorpay_payment_id: string | null; created_at: string };
+
+  const FEATURE_LABEL: Record<string, string> = {
+    profile_activation: "Public profile activation",
+    subscription_monthly: "Visibility subscription (monthly)",
+    subscription_annual: "Visibility subscription (annual)",
+  };
 
   const out: IncomingPayment[] = [];
   for (const r of (halls.data as unknown as HallRow[]) ?? []) {
@@ -341,6 +353,9 @@ export async function fetchIncomingPayments(): Promise<IncomingPayment[]> {
   }
   for (const r of (vendors.data as unknown as TaskRow[]) ?? []) {
     out.push({ id: r.id, source: "vendor", title: `${r.event_name} — ${r.task_name}`, amount: r.payment_amount ?? 0, commission_amount: 0, razorpay_payment_id: r.razorpay_payment_id, paid_at: r.paid_at ?? r.updated_at, created_at: r.updated_at });
+  }
+  for (const r of (profiles.data as unknown as ProfilePaymentRow[]) ?? []) {
+    out.push({ id: r.id, source: "profile", title: `${FEATURE_LABEL[r.feature_type] ?? "Public profile"} (${r.role})`, amount: r.amount, commission_amount: 0, razorpay_payment_id: r.razorpay_payment_id, paid_at: r.created_at, created_at: r.created_at });
   }
   return out.sort((a, b) => (b.paid_at ?? b.created_at).localeCompare(a.paid_at ?? a.created_at));
 }
