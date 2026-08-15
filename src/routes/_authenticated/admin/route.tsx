@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useRouterState, useNavigate, redirect } 
 import { useState } from "react";
 import {
   LayoutDashboard, ShieldCheck, Users, Briefcase,
-  Bell, Settings, LogOut, Menu, X, UserCheck, IndianRupee,
+  Bell, Settings, LogOut, Menu, X, UserCheck, IndianRupee, History,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,6 +53,7 @@ const NAV: NavItem[] = [
   { to: "/admin/jobs", label: "Job Board", icon: Briefcase },
   { to: "/admin/earnings", label: "Earnings", icon: IndianRupee },
   { to: "/admin/users", label: "Users", icon: Users },
+  { to: "/admin/activity", label: "Activity Log", icon: History },
   { to: "/admin/notifications", label: "Broadcast Center", icon: Bell },
   { to: "/admin/settings", label: "Settings", icon: Settings },
 ];
