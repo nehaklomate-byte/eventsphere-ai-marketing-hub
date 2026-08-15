@@ -65,6 +65,7 @@ type Vendor = {
 export const Route = createFileRoute("/vendor/$id")({
   validateSearch: (search: Record<string, unknown>) => ({
     event_id: typeof search.event_id === "string" ? search.event_id : undefined,
+    ref: typeof search.ref === "string" ? search.ref : undefined,
   }),
   head: ({ params }) => ({
     meta: [
@@ -84,7 +85,7 @@ export const Route = createFileRoute("/vendor/$id")({
 
 function VendorDetail() {
   const { vendor } = Route.useLoaderData();
-  const { event_id } = Route.useSearch();
+  const { event_id, ref } = Route.useSearch();
   const stats = useVendorStats(vendor.id);
 
   return (
@@ -153,9 +154,11 @@ function VendorDetail() {
             {vendor.portfolio?.length > 0 && (
               <div className="mt-8">
                 <h2 className="font-display text-lg font-semibold mb-3">Portfolio</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {(vendor.portfolio as string[]).map((url: string, i: number) => (
-                    <img key={i} src={url} alt={`Work ${i + 1}`} className="h-32 w-full rounded-xl object-cover border border-border" />
+                    <div key={i} className="aspect-[16/11] overflow-hidden rounded-xl border border-border">
+                      <img src={url} alt={`Work ${i + 1}`} loading="lazy" className="h-full w-full object-cover hover:scale-105 transition-transform duration-500" />
+                    </div>
                   ))}
                 </div>
               </div>
@@ -182,7 +185,7 @@ function VendorDetail() {
           </div>
 
           <div>
-            <BookOrEnquire vendor={vendor} eventId={event_id} />
+            <BookOrEnquire vendor={vendor} eventId={event_id} sourceSlug={ref} />
           </div>
         </div>
       </div>
@@ -194,15 +197,15 @@ function VendorDetail() {
  *  accepts/rejects from their dashboard, with in-app chat attached.
  *  The old "just send an enquiry" path is removed: it went nowhere
  *  trackable for the customer (see MessagesInbox/ChatPanel instead). */
-function BookOrEnquire({ vendor, eventId }: { vendor: Vendor; eventId?: string }) {
+function BookOrEnquire({ vendor, eventId, sourceSlug }: { vendor: Vendor; eventId?: string; sourceSlug?: string }) {
   return (
     <div className="sticky top-24 space-y-3">
-      <VendorHireCard vendor={vendor} eventId={eventId} />
+      <VendorHireCard vendor={vendor} eventId={eventId} sourceSlug={sourceSlug} />
     </div>
   );
 }
 
-function VendorHireCard({ vendor, eventId }: { vendor: Vendor; eventId?: string }) {
+function VendorHireCard({ vendor, eventId, sourceSlug }: { vendor: Vendor; eventId?: string; sourceSlug?: string }) {
   const navigate = useNavigate();
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
   const [packages, setPackages] = useState<{ id: string; name: string; price: number; description: string | null }[]>([]);
@@ -250,6 +253,8 @@ function VendorHireCard({ vendor, eventId }: { vendor: Vendor; eventId?: string 
       priority: "normal",
       status: "pending",
       payment_amount: state.pay_amount ? Number(state.pay_amount) : null,
+      booking_source: sourceSlug ? "public_profile_link" : "marketplace",
+      source_slug: sourceSlug ?? null,
     } as never);
     setSubmitting(false);
     if (error) { setErr(error.message || "Could not send the request. Please try again."); return; }
