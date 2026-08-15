@@ -15,7 +15,7 @@ export const Route = createFileRoute("/refund-policy")({
   }),
   component: () => (
     <SiteLayout>
-      <PageHeader eyebrow="Legal" title="Refund & Cancellation Policy" description="Draft — last updated [DATE]. Cancellation windows and refund percentages below are placeholders, pending finalization against our actual vendor/venue contracts." />
+      <PageHeader eyebrow="Legal" title="Refund & Cancellation Policy" description={`Last updated ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}.`} />
       <section className="mx-auto max-w-3xl px-5 md:px-8 py-16">
         <div className="legal-content">
           <p>
@@ -80,7 +80,10 @@ export const Route = createFileRoute("/refund-policy")({
             page within 48 hours of the scheduled completion time. Our Admin team reviews evidence (photos, check-in/
             check-out records, chat logs) from both sides before deciding on a refund.
           </p>
-         
+          <p className="text-sm italic text-muted-foreground">
+            This is a structural draft prepared for planning purposes — exact refund percentages and windows must be
+            finalized against our real vendor/venue contracts and reviewed by a lawyer before publication.
+          </p>
         </div>
 
         <style>{`
