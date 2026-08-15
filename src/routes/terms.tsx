@@ -105,11 +105,7 @@ export const Route = createFileRoute("/terms")({
         <h2>11. Governing Law</h2>
         <p>These Terms are governed by the laws of India.</p>
 
-        <p className="text-sm italic text-muted-foreground">
-          This is a structural draft prepared for planning purposes — the intermediary/facilitator liability
-          language, dispute resolution/arbitration clause, and governing law/jurisdiction clause must be finalized
-          by a lawyer licensed in India before relying on it as your published Terms.
-        </p>
+      
 
         <style>{`
           .legal-content h2 { font-family: var(--font-display, inherit); font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem; }
