@@ -15,6 +15,7 @@ import {
   type AccountProfile, type Preferences, type NotificationChannel, type NotificationEvent,
 } from "@/lib/settings";
 import { listFactors, enrollTotp, verifyEnrollment, unenroll } from "@/lib/mfa";
+import { ProfileHistoryPanel } from "@/components/ProfileHistoryPanel";
 
 const TABS = ["basic", "security", "privacy", "notifications"] as const;
 type Tab = (typeof TABS)[number];
@@ -129,6 +130,8 @@ function BasicInfoTab({ profile, userId, onSaved }: { profile: AccountProfile; u
       <button onClick={save} disabled={saving} className="inline-flex items-center gap-2 rounded-full btn-brand btn-brand-hover px-5 py-2.5 text-sm font-semibold disabled:opacity-70">
         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save changes
       </button>
+
+      <ProfileHistoryPanel entityType="profiles" entityId={userId} />
     </div>
   );
 }
