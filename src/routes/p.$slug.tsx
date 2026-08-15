@@ -3,7 +3,6 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { MapPin, Star, BadgeCheck, Loader2, Send, CheckCircle2, Sparkles, Users, ShieldCheck, ChevronRight, IndianRupee } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { SiteLayout } from "@/components/SiteLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchPublicProfileBySlug } from "@/lib/publicProfile";
@@ -27,7 +26,6 @@ function nameOf(d: { role: string; entity: Record<string, unknown> }): string {
 }
 
 function PublicProfilePage() {
-  const { t } = useTranslation();
   const data = Route.useLoaderData();
   const { slug } = Route.useParams();
   const { role, entity } = data;
@@ -65,14 +63,14 @@ function PublicProfilePage() {
         <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
           <div className="mx-auto max-w-5xl">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-white/80">
-              <Sparkles className="h-3.5 w-3.5" /> {t("publicProfile.bookOnEventOrbit")}
+              <Sparkles className="h-3.5 w-3.5" /> Book on EventOrbit Nova
             </div>
             <h1 className="mt-1 font-display text-3xl md:text-4xl font-bold">{name}</h1>
             <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-white/90">
               {category && <span className="rounded-full bg-white/15 px-3 py-1">{category}</span>}
               {(city || state) && <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {[city, state].filter(Boolean).join(", ")}</span>}
               {rating > 0 && <span className="flex items-center gap-1"><Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" /> {rating.toFixed(1)} ({reviewCount})</span>}
-              {entity.verified ? <span className="flex items-center gap-1 text-emerald-300"><BadgeCheck className="h-3.5 w-3.5" /> {t("publicProfile.verified")}</span> : null}
+              {entity.verified ? <span className="flex items-center gap-1 text-emerald-300"><BadgeCheck className="h-3.5 w-3.5" /> Verified</span> : null}
             </div>
           </div>
         </div>
@@ -81,13 +79,13 @@ function PublicProfilePage() {
       <section className="mx-auto max-w-5xl px-5 md:px-8 py-10 grid gap-8 lg:grid-cols-[1fr_360px]">
         <div className="space-y-6">
           {(entity.description || entity.bio) ? (
-            <Card title={t("publicProfile.about")}>
+            <Card title="About">
               <p className="text-sm text-muted-foreground whitespace-pre-wrap">{(entity.description as string) || (entity.bio as string)}</p>
             </Card>
           ) : null}
 
           {role === "venue" && (entity.min_guests || entity.max_guests || entity.dining_capacity) ? (
-            <Card title={t("publicProfile.capacityAtAGlance")} icon={Users}>
+            <Card title="Capacity at a glance" icon={Users}>
               <div className="grid gap-4 sm:grid-cols-3">
                 <Stat label="Min guests" value={entity.min_guests as number | null} />
                 <Stat label="Max guests" value={entity.max_guests as number | null} />
@@ -99,7 +97,7 @@ function PublicProfilePage() {
           ) : null}
 
           {gallery.length > 0 && (
-            <Card title={t("publicProfile.photos")}>
+            <Card title="Photos">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {gallery.slice(0, 10).map((src, i) => (
                   <div key={i} className="aspect-[16/11] overflow-hidden rounded-xl border border-border">
@@ -111,7 +109,7 @@ function PublicProfilePage() {
           )}
 
           {role === "venue" && facilities.length > 0 && (
-            <Card title={t("publicProfile.facilitiesAndAmenities")} icon={ShieldCheck}>
+            <Card title="Facilities & amenities" icon={ShieldCheck}>
               <div className="grid gap-3 sm:grid-cols-2">
                 {facilities.map((f) => (
                   <div key={f.key} className="flex items-center gap-2 rounded-xl border border-brand-violet/30 bg-accent/40 px-3 py-2 text-sm">
@@ -123,7 +121,7 @@ function PublicProfilePage() {
           )}
 
           {role === "vendor" && packages.length > 0 && (
-            <Card title={t("publicProfile.packages")} icon={IndianRupee}>
+            <Card title="Packages" icon={IndianRupee}>
               <div className="space-y-3">
                 {packages.map((p) => (
                   <div key={p.id} className="flex items-center justify-between rounded-xl border border-border p-3">
@@ -139,13 +137,13 @@ function PublicProfilePage() {
           )}
 
           {role === "worker" && entity.daily_charges != null && (
-            <Card title={t("publicProfile.charges")} icon={IndianRupee}>
-              <div className="text-lg font-bold">₹{Number(entity.daily_charges).toLocaleString("en-IN")} <span className="text-sm font-normal text-muted-foreground">{t("publicProfile.perDay")}</span></div>
+            <Card title="Charges" icon={IndianRupee}>
+              <div className="text-lg font-bold">₹{Number(entity.daily_charges).toLocaleString("en-IN")} <span className="text-sm font-normal text-muted-foreground">/ day</span></div>
             </Card>
           )}
 
           {serviceAreas.length > 0 && (
-            <Card title={t("publicProfile.serviceAreas")}>
+            <Card title="Service areas">
               <div className="flex flex-wrap gap-2">
                 {serviceAreas.map((a) => <span key={a} className="rounded-full bg-accent px-3 py-1 text-xs font-medium">{a}</span>)}
               </div>
@@ -153,7 +151,7 @@ function PublicProfilePage() {
           )}
 
           {role === "venue" && (entity.price_per_day || entity.price_per_hour) ? (
-            <Card title={t("publicProfile.pricing")}>
+            <Card title="Pricing">
               <div className="flex flex-wrap gap-4 text-sm">
                 {entity.price_per_day ? <div><div className="text-muted-foreground">Per day</div><div className="text-lg font-bold">₹{Number(entity.price_per_day).toLocaleString("en-IN")}</div></div> : null}
                 {entity.price_per_hour ? <div><div className="text-muted-foreground">Per hour</div><div className="text-lg font-bold">₹{Number(entity.price_per_hour).toLocaleString("en-IN")}</div></div> : null}
@@ -162,21 +160,21 @@ function PublicProfilePage() {
           ) : null}
 
           {role === "venue" && (entity.address || entity.google_maps_url) ? (
-            <Card title={t("publicProfile.location")} icon={MapPin}>
+            <Card title="Location" icon={MapPin}>
               {entity.address ? <p className="text-sm text-muted-foreground">{entity.address as string}</p> : null}
               {typeof extra.nearby_landmark === "string" && extra.nearby_landmark ? (
                 <p className="mt-2 text-sm"><span className="font-semibold">Landmark:</span> <span className="text-muted-foreground">{extra.nearby_landmark}</span></p>
               ) : null}
               {entity.google_maps_url ? (
                 <a href={entity.google_maps_url as string} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 rounded-full border border-input px-4 py-2 text-sm font-semibold hover:bg-accent">
-                  {t("publicProfile.openInMaps")} <ChevronRight className="h-4 w-4" />
+                  Open in Google Maps <ChevronRight className="h-4 w-4" />
                 </a>
               ) : null}
             </Card>
           ) : null}
 
           {(entity.cancellation_policy || entity.payment_terms) ? (
-            <Card title={t("publicProfile.bookingPolicy")}>
+            <Card title="Booking policy">
               <p className="text-sm text-muted-foreground whitespace-pre-wrap">{(entity.cancellation_policy as string) || (entity.payment_terms as string)}</p>
             </Card>
           ) : null}
@@ -212,7 +210,6 @@ function Stat({ label, value }: { label: string; value: number | null }) {
 }
 
 function EnquiryCard({ role, entityId, slug, name }: { role: string; entityId: string; slug: string; name: string }) {
-  const { t } = useTranslation();
   const [form, setForm] = useState({ contact_name: "", contact_email: "", contact_phone: "", event_date: "", message: "" });
   const [sent, setSent] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -248,31 +245,31 @@ function EnquiryCard({ role, entityId, slug, name }: { role: string; entityId: s
     return (
       <div className="sticky top-24 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-6 text-center">
         <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-600" />
-        <p className="mt-2 text-sm font-semibold">{t("publicProfile.enquirySent")}</p>
-        <p className="mt-1 text-xs text-muted-foreground">{t("publicProfile.enquirySentDetail", { name })}</p>
+        <p className="mt-2 text-sm font-semibold">Enquiry sent!</p>
+        <p className="mt-1 text-xs text-muted-foreground">{name} will get back to you soon via EventOrbit Nova.</p>
       </div>
     );
   }
 
   return (
     <div className="sticky top-24 rounded-2xl border border-border bg-card p-6 shadow-soft">
-      <h3 className="font-display text-lg font-semibold">{t("publicProfile.checkAvailability")}</h3>
-      <p className="mt-1 text-xs text-muted-foreground">{t("publicProfile.enquiryHelp")}</p>
+      <h3 className="font-display text-lg font-semibold">Check availability</h3>
+      <p className="mt-1 text-xs text-muted-foreground">Send an enquiry — stays inside EventOrbit Nova so your booking, payment and confirmation are all protected.</p>
       <div className="mt-4 space-y-3">
-        <input value={form.contact_name} onChange={(e) => setForm((f) => ({ ...f, contact_name: e.target.value }))} placeholder={t("publicProfile.yourName")}
+        <input value={form.contact_name} onChange={(e) => setForm((f) => ({ ...f, contact_name: e.target.value }))} placeholder="Your name"
           className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
-        <input value={form.contact_email} onChange={(e) => setForm((f) => ({ ...f, contact_email: e.target.value }))} placeholder={t("publicProfile.email")} type="email"
+        <input value={form.contact_email} onChange={(e) => setForm((f) => ({ ...f, contact_email: e.target.value }))} placeholder="Email" type="email"
           className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
-        <input value={form.contact_phone} onChange={(e) => setForm((f) => ({ ...f, contact_phone: e.target.value }))} placeholder={t("publicProfile.phoneOptional")}
+        <input value={form.contact_phone} onChange={(e) => setForm((f) => ({ ...f, contact_phone: e.target.value }))} placeholder="Phone (optional)"
           className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
         <input value={form.event_date} onChange={(e) => setForm((f) => ({ ...f, event_date: e.target.value }))} type="date"
           className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
-        <textarea value={form.message} onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))} placeholder={t("publicProfile.whatAreYouPlanning")} rows={3}
+        <textarea value={form.message} onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))} placeholder="What are you planning?" rows={3}
           className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet resize-none" />
         {err && <p className="text-xs text-rose-600">{err}</p>}
         <button onClick={() => { setErr(null); submit.mutate(); }} disabled={submit.isPending}
           className="w-full inline-flex items-center justify-center gap-1.5 rounded-full btn-brand btn-brand-hover px-4 py-2.5 text-sm font-semibold disabled:opacity-60">
-          {submit.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} {t("publicProfile.sendEnquiry")}
+          {submit.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Send enquiry
         </button>
       </div>
     </div>
