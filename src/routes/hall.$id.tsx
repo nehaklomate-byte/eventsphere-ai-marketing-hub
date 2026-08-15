@@ -50,6 +50,7 @@ type Hall = {
 export const Route = createFileRoute("/hall/$id")({
   validateSearch: (search: Record<string, unknown>) => ({
     event_id: typeof search.event_id === "string" ? search.event_id : undefined,
+    ref: typeof search.ref === "string" ? search.ref : undefined,
   }),
   head: ({ params }) => ({
     meta: [
@@ -115,7 +116,7 @@ function normalize(d: Record<string, unknown>): Hall {
 
 function HallDetail() {
   const { hall } = Route.useLoaderData();
-  const { event_id } = Route.useSearch();
+  const { event_id, ref } = Route.useSearch();
   const [reviews, setReviews] = useState<Array<{ id: string; rating: number; comment: string | null; created_at: string; author: string | null }>>([]);
 
   // Reviews come from two places: legacy hall_reviews and the customer
@@ -374,7 +375,7 @@ function HallDetail() {
               )}
             </div>
             <div className="mt-6">
-              <BookingAndEnquiry hallId={hall.id} hallName={hall.name} pricePerDay={hall.price_per_day} advanceAmount={hall.advance_amount} eventId={event_id} />
+              <BookingAndEnquiry hallId={hall.id} hallName={hall.name} pricePerDay={hall.price_per_day} advanceAmount={hall.advance_amount} eventId={event_id} sourceSlug={ref} />
             </div>
           </div>
         </aside>
@@ -481,8 +482,8 @@ const EVENT_TYPES = [
 ];
 
 function BookingAndEnquiry({
-  hallId, hallName, pricePerDay, advanceAmount, eventId,
-}: { hallId: string; hallName: string; pricePerDay: number | null; advanceAmount: number | null; eventId?: string }) {
+  hallId, hallName, pricePerDay, advanceAmount, eventId, sourceSlug,
+}: { hallId: string; hallName: string; pricePerDay: number | null; advanceAmount: number | null; eventId?: string; sourceSlug?: string }) {
   const [mode, setMode] = useState<"booking" | "enquiry">("booking");
   return (
     <div>
@@ -503,8 +504,8 @@ function BookingAndEnquiry({
         </button>
       </div>
       {mode === "booking"
-        ? <BookingForm hallId={hallId} hallName={hallName} pricePerDay={pricePerDay} advanceAmount={advanceAmount} eventId={eventId} />
-        : <EnquiryForm hallId={hallId} />}
+        ? <BookingForm hallId={hallId} hallName={hallName} pricePerDay={pricePerDay} advanceAmount={advanceAmount} eventId={eventId} sourceSlug={sourceSlug} />
+        : <EnquiryForm hallId={hallId} sourceSlug={sourceSlug} />}
     </div>
   );
 }
@@ -526,8 +527,8 @@ const bookingSchema = z.object({
 });
 
 function BookingForm({
-  hallId, hallName, pricePerDay, advanceAmount, eventId,
-}: { hallId: string; hallName: string; pricePerDay: number | null; advanceAmount: number | null; eventId?: string }) {
+  hallId, hallName, pricePerDay, advanceAmount, eventId, sourceSlug,
+}: { hallId: string; hallName: string; pricePerDay: number | null; advanceAmount: number | null; eventId?: string; sourceSlug?: string }) {
   const [state, setState] = useState({
     event_name: "", organizer_type: "", organizer_type_other: "", event_type: "", event_type_other: "",
     contact_person: "", contact_phone: "", contact_email: "", event_date: "", start_time: "", end_time: "",
@@ -567,6 +568,8 @@ function BookingForm({
       event_date: d.event_date,
       amount: pricePerDay ?? 0,
       advance_amount: advanceAmount ?? null,
+      booking_source: sourceSlug ? "public_profile_link" : "marketplace",
+      source_slug: sourceSlug ?? null,
       status: "pending",
       payment_status: "pending",
       notes: d.special_instructions || null,
@@ -695,7 +698,7 @@ const enquirySchema = z.object({
   message: z.string().max(1000).optional(),
 });
 
-function EnquiryForm({ hallId }: { hallId: string }) {
+function EnquiryForm({ hallId, sourceSlug }: { hallId: string; sourceSlug?: string }) {
   const [state, setState] = useState({ contact_name: "", contact_email: "", contact_phone: "", event_date: "", guest_count: "", message: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -722,7 +725,9 @@ function EnquiryForm({ hallId }: { hallId: string }) {
       event_date: parsed.data.event_date,
       guest_count: Number(parsed.data.guest_count),
       message: parsed.data.message || null,
-    });
+      booking_source: sourceSlug ? "public_profile_link" : "marketplace",
+      source_slug: sourceSlug ?? null,
+    } as never);
     setSubmitting(false);
     if (error) { setErr("Could not send enquiry. Please try again."); return; }
     setSent(true);
