@@ -14,12 +14,13 @@ export const Route = createFileRoute("/_authenticated/admin/earnings")({
   component: EarningsPage,
 });
 
-const SOURCE_LABEL: Record<string, string> = { hall: "Hall booking", worker: "Worker task", vendor: "Vendor task", venue: "Hall booking" };
+const SOURCE_LABEL: Record<string, string> = { hall: "Hall booking", worker: "Worker task", vendor: "Vendor task", venue: "Hall booking", profile: "Public profile" };
 const SOURCE_STYLE: Record<string, string> = {
   hall: "bg-purple-100 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300",
   worker: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300",
   vendor: "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300",
   venue: "bg-purple-100 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300",
+  profile: "bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300",
 };
 
 function money(n: number) { return `₹${Number(n || 0).toLocaleString("en-IN")}`; }
