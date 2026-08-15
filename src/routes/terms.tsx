@@ -15,7 +15,7 @@ export const Route = createFileRoute("/terms")({
   }),
   component: () => (
     <SiteLayout>
-      <PageHeader eyebrow="Legal" title="Terms & Conditions" description= Last updated [!5 Aug.2026]. " />
+      <PageHeader eyebrow="Legal" title="Terms & Conditions" description="Last updated: 15 Aug 2026." />
       <section className="mx-auto max-w-3xl px-5 md:px-8 py-16 legal-content">
         <p>
           These Terms & Conditions ("Terms") govern your access to and use of the EventOrbit Nova platform, currently
