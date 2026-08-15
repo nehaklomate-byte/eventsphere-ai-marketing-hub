@@ -5,160 +5,121 @@ import { PageHeader } from "@/components/PageHeader";
 export const Route = createFileRoute("/terms")({
   head: () => ({
     meta: [
-      { title: "Terms of Service — EventOrbit Nova" },
-      { name: "description", content: "The terms that govern your use of EventOrbit Nova — accounts, listings, bookings, fees and payouts, and the rules everyone on the platform agrees to." },
-      { property: "og:title", content: "Terms of Service — EventOrbit Nova" },
-      { property: "og:description", content: "How accounts, listings, bookings and payouts work on EventOrbit." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      { title: "Terms & Conditions — EventOrbit Nova" },
+      { name: "description", content: "The terms that govern using the EventOrbit Nova marketplace." },
+      { property: "og:title", content: "Terms & Conditions — EventOrbit Nova" },
+      { property: "og:description", content: "Our terms of service." },
       { property: "og:url", content: "/terms" },
-      { name: "robots", content: "noindex" },
     ],
     links: [{ rel: "canonical", href: "/terms" }],
   }),
-  component: Terms,
-});
-
-type Section = { title: string; body: string[] };
-
-const sections: Section[] = [
-  {
-    title: "1. Who these terms are between",
-    body: [
-      "These Terms of Service (\"Terms\") are an agreement between you and EventOrbit Nova (\"EventOrbit\", \"we\", \"us\"), registered under the Maharashtra Shops and Establishments Act, 2017 and operating from Maharashtra, India.",
-      "By creating an account or using the EventOrbit website or app, you agree to these Terms and to our Privacy Policy. If you don't agree, please don't use the platform.",
-    ],
-  },
-  {
-    title: "2. Who can use EventOrbit",
-    body: [
-      "You must be at least 18 years old and able to enter into a legally binding contract under Indian law to create an account.",
-      "You're responsible for the accuracy of the information on your profile and for keeping your login credentials confidential. Let us know immediately at hello@eventorbitnova.com if you think your account has been accessed without your permission.",
-    ],
-  },
-  {
-    title: "3. Accounts and verification",
-    body: [
-      "EventOrbit supports several account types — Customer, Venue Owner, Vendor, Worker/Agency and Organization — each with its own dashboard and permissions.",
-      "Venue, Vendor and Worker accounts go through a verification step: our team reviews the documents and details you submit (for example ID proof, a selfie, or business/property information) before your profile becomes publicly visible, and may approve, reject, or ask for more information. A \"Verified\" badge means our team reviewed the documents you submitted — it is not a guarantee of the quality, safety or outcome of any booking.",
-    ],
-  },
-  {
-    title: "4. What EventOrbit is — and isn't",
-    body: [
-      "EventOrbit is a marketplace that helps venues, vendors, workers, organizations and customers find each other, exchange enquiries, and keep a shared record of jobs, status and payment. We are not a party to the booking or hiring agreement that forms between a customer and a venue, vendor or worker, and we don't own the venues or employ the vendors or workers listed on the platform.",
-      "Rates, capacity, availability, facilities and cancellation terms shown on a listing are entered by the venue owner, vendor or worker themselves. We don't independently verify every detail on a listing, and you should confirm anything important directly with the other party before relying on it.",
-    ],
-  },
-  {
-    title: "5. Enquiries, bookings and jobs",
-    body: [
-      "When you send an enquiry or make a booking, the details (event date, guest count, contact information, and similar) are shared with the venue, vendor or worker you're contacting so they can respond.",
-      "Jobs assigned through the platform carry a status (for example accepted, in progress, completed) that updates as work happens. Workers may be asked for a photo — and, where they choose to share it, their location — at check-in and check-out, and photos of completed work, as a record of the job.",
-    ],
-  },
-  {
-    title: "6. Fees and commission",
-    body: [
-      "EventOrbit may charge Venue Owners, Vendors and Workers a commission, set as a percentage by role, on payments processed through a job or booking. Where a commission applies, it's deducted from the partner's payout, not charged separately to the customer.",
-      "There are no paid subscription plans at this time. If that changes, we'll give clear notice before any new fee applies to you.",
-    ],
-  },
-  {
-    title: "7. Payments and payouts",
-    body: [
-      "Where a booking or job is paid for online through EventOrbit, payment is collected through a single, platform-wide payment gateway, not through a separate arrangement with each individual venue, vendor or worker. Card, UPI and other payment details you enter are handled directly by our payment gateway provider — EventOrbit does not see or store your full card or bank details, only a payment reference and the amount and status of the transaction.",
-      "A venue, vendor or worker may also list other payment method(s) they accept directly on their profile; where payment for a booking is arranged directly between you and that partner rather than through our gateway, EventOrbit is not a party to that payment and this section does not apply to it.",
-      "Payouts to Venue Owners, Vendors and Workers are currently reconciled manually by our team and sent to the UPI ID the partner has provided in their dashboard, after our commission (if any) is deducted. You're responsible for keeping that UPI ID correct and up to date; we aren't liable for a payout sent to an incorrect ID you supplied.",
-    ],
-  },
-  {
-    title: "8. Cancellations and refunds",
-    body: [
-      "Cancellation and refund terms for a specific booking are set out on the individual venue, vendor or worker listing, and by our Refund & Cancellation Policy. Please review both before booking.",
-    ],
-  },
-  {
-    title: "9. Acceptable use",
-    body: [
-      "Don't post false or misleading listing information, impersonate another person or business, circumvent our verification process, or use the platform for anything illegal.",
-      "Don't harass, threaten or discriminate against another user. Employing anyone under the legal working age is not permitted on or off the platform.",
-      "We may remove content, suspend or terminate an account that we reasonably believe violates these Terms.",
-    ],
-  },
-  {
-    title: "10. Reviews and messaging",
-    body: [
-      "Reviews should reflect a genuine experience with the listing you're reviewing. We may remove a review that is fraudulent, abusive, or unrelated to an actual booking.",
-      "In-app messaging is provided to coordinate bookings and jobs. We don't routinely monitor message content, but may review a conversation if it's reported to us or needed to resolve a dispute or safety concern.",
-    ],
-  },
-  {
-    title: "11. Content and intellectual property",
-    body: [
-      "You keep ownership of the photos, descriptions and other content you upload. By posting it, you give EventOrbit a licence to display it on the platform for the purpose of running your listing.",
-      "The EventOrbit name, logo and the platform's own design and code belong to us and may not be copied or reused without permission.",
-    ],
-  },
-  {
-    title: "12. Disclaimers and limitation of liability",
-    body: [
-      "EventOrbit is provided \"as is\" during this early-access period. We don't guarantee uninterrupted availability, and features described as still in progress on our Features page aren't yet complete.",
-      "To the maximum extent permitted by law, EventOrbit is not liable for losses arising from a booking, job, or interaction between users, since we are not a party to that agreement. Nothing in these Terms limits liability that cannot be limited under Indian law.",
-    ],
-  },
-  {
-    title: "13. Suspension and termination",
-    body: [
-      "You may stop using EventOrbit and request account deletion at any time from your account settings or by writing to us. We may suspend or terminate an account for a breach of these Terms, a failed or fraudulent verification, or repeated complaints from other users.",
-    ],
-  },
-  {
-    title: "14. Changes to these Terms",
-    body: [
-      "We may update these Terms as the platform develops. We'll change the \"last updated\" date below, and for material changes we'll make a reasonable effort to notify active users.",
-    ],
-  },
-  {
-    title: "15. Governing law and contact",
-    body: [
-      "These Terms are governed by the laws of India, and any dispute will be subject to the jurisdiction of the courts of Maharashtra, India.",
-      "For any question or concern about these Terms or your use of EventOrbit, write to hello@eventorbitnova.com. We aim to respond promptly.",
-    ],
-  },
-];
-
-function Terms() {
-  return (
+  component: () => (
     <SiteLayout>
-      <PageHeader
-        eyebrow="Legal"
-        title="Terms of Service"
-        description="The rules that govern accounts, listings, bookings and payouts on EventOrbit Nova."
-      />
-      <article className="mx-auto max-w-3xl px-5 md:px-8 py-12 md:py-16">
-        <p className="text-sm text-muted-foreground">
-          Last updated: 14 August 2026. Published by EventOrbit Nova, registered under the Maharashtra Shops
-          and Establishments Act, 2017, operating from Maharashtra, India.
+      <PageHeader eyebrow="Legal" title="Terms & Conditions" description="Draft — last updated [DATE]. Pending final legal review before publication." />
+      <section className="mx-auto max-w-3xl px-5 md:px-8 py-16 legal-content">
+        <p>
+          These Terms & Conditions ("Terms") govern your access to and use of the EventOrbit Nova platform, currently
+          operated as an early-stage/beta project by its founder(s) ("Company", "we", "us"). Formal company
+          registration (CIN), a registered office address, and a signed legal review are in progress — this section
+          will be updated with those details, replacing the [CIN NUMBER]/[ADDRESS] placeholders below, before public
+          launch. By registering on the Platform, you agree to these Terms.
         </p>
-        <div className="mt-10 space-y-10">
-          {sections.map((s) => (
-            <section key={s.title}>
-              <h2 className="font-display text-xl md:text-2xl font-semibold">{s.title}</h2>
-              <div className="mt-3 space-y-3">
-                {s.body.map((p, i) => (
-                  <p key={i} className="leading-relaxed text-muted-foreground">{p}</p>
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-        <p className="mt-14 text-sm text-muted-foreground">
-          Also see our <Link to="/privacy" className="font-semibold text-brand-violet underline">Privacy Policy</Link>,{" "}
-          <Link to="/refund-policy" className="font-semibold text-brand-violet underline">Refund & Cancellation Policy</Link> and{" "}
-          <Link to="/partner-terms" className="font-semibold text-brand-violet underline">Partner Terms</Link>.
+
+        <h2>1. Role of the Platform</h2>
+        <p>
+          EventOrbit Nova is an intermediary marketplace platform that connects Customers, Organizations, Venue
+          Owners, Vendors and Workers. We facilitate discovery, booking, task assignment and payment routing between
+          these parties. We are not the provider of catering, decoration, venue, or any other event service — the
+          actual service is provided directly by the respective Venue Owner, Vendor, or Worker, who is solely
+          responsible for the quality, safety, legality and timely delivery of their service.
         </p>
-      </article>
+
+        <h2>2. Eligibility &amp; Account Registration</h2>
+        <ul>
+          <li>You must be 18 years or older and capable of entering into a binding contract under the Indian Contract Act, 1872 to register.</li>
+          <li>You must provide accurate, current and complete information during registration and verification.</li>
+          <li>Venue Owners, Vendors, Workers and Organizations must complete document-based verification before their profile becomes visible/bookable. The Company reserves the right to approve, reject, suspend, or revoke verified status at its sole discretion, with reasons communicated to the user.</li>
+          <li>You are responsible for maintaining the confidentiality of your account credentials.</li>
+        </ul>
+
+        <h2>3. Bookings, Orders &amp; Task Assignments</h2>
+        <ul>
+          <li>A booking/order is confirmed only when accepted by the relevant Venue Owner/Vendor and, where applicable, payment (advance or full) is made through the Platform.</li>
+          <li>Task assignments between Vendors/Venue Owners/Organizations and Workers are agreements between those parties; the Platform provides the tool for assignment and tracking but is not a party to the underlying service contract.</li>
+          <li>Cancellation and rescheduling are governed by our <Link to="/refund-policy">Refund & Cancellation Policy</Link>.</li>
+        </ul>
+
+        <h2>4. Payments</h2>
+        <ul>
+          <li>All payments on the Platform are processed through our authorized payment gateway/aggregator partner(s). The Company does not store your full card/bank credentials.</li>
+          <li>The Company charges a commission/service fee on successful bookings/orders, as disclosed at the time of transaction.</li>
+          <li>Payouts to Venue Owners, Vendors and Workers are made as per the payout schedule disclosed on the Platform, subject to successful completion/verification of the relevant task or booking.</li>
+        </ul>
+
+        <h2>5. User Conduct</h2>
+        <ul>
+          <li>Do not circumvent the Platform to avoid fees by taking a discovered connection off-platform for the same transaction.</li>
+          <li>Do not upload false, fraudulent, or misleading documents during verification.</li>
+          <li>Do not post content that is unlawful, defamatory, obscene, or infringes any third party's rights.</li>
+          <li>Do not use the Platform for any purpose other than genuine event-related discovery, booking, and execution.</li>
+        </ul>
+
+        <h2>6. Ratings, Reviews &amp; Content</h2>
+        <p>
+          Users may submit ratings and reviews after a completed booking/task. Reviews must reflect genuine
+          experience. The Company may remove reviews that are fraudulent, abusive, or violate these Terms, and
+          reserves rights over user-generated content solely to the extent needed to operate and promote the
+          Platform.
+        </p>
+
+        <h2>7. Intellectual Property</h2>
+        <p>
+          The EventOrbit Nova name, logo, and platform technology are the property of the Company. Users retain
+          ownership of content they upload (photos, portfolios, descriptions) but grant the Company a license to
+          display this content on the Platform for the purpose of operating the marketplace.
+        </p>
+
+        <h2>8. Limitation of Liability</h2>
+        <p>
+          To the maximum extent permitted by law, the Company's liability is limited to the commission/fee received
+          for the specific transaction in question. The Company is not liable for the acts, omissions, quality of
+          service, or conduct of any Venue Owner, Vendor, Worker, Organization or Customer. Disputes regarding the
+          quality or delivery of the underlying event service are primarily between the transacting parties, with
+          the Company providing a grievance/dispute-resolution mechanism as described in Section 9.
+        </p>
+
+        <h2>9. Grievance Redressal &amp; Dispute Resolution</h2>
+        <p>
+          Complaints can be raised through the in-app support/dispute center or with our Grievance Officer at
+          [Email]. We aim to acknowledge within 24 hours and resolve within 15 days. Unresolved disputes shall be
+          referred to arbitration under the Arbitration and Conciliation Act, 1996, seated at [City], with the
+          courts at [City] having exclusive jurisdiction, subject to final legal review.
+        </p>
+
+        <h2>10. Termination</h2>
+        <p>
+          The Company may suspend or terminate any account for violation of these Terms, fraudulent activity, or
+          repeated user complaints, with notice and reason wherever practicable.
+        </p>
+
+        <h2>11. Governing Law</h2>
+        <p>These Terms are governed by the laws of India.</p>
+
+        <p className="text-sm italic text-muted-foreground">
+          This is a structural draft prepared for planning purposes — the intermediary/facilitator liability
+          language, dispute resolution/arbitration clause, and governing law/jurisdiction clause must be finalized
+          by a lawyer licensed in India before relying on it as your published Terms.
+        </p>
+
+        <style>{`
+          .legal-content h2 { font-family: var(--font-display, inherit); font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem; }
+          .legal-content h2:first-child { margin-top: 0; }
+          .legal-content p { margin-bottom: 1rem; line-height: 1.7; color: var(--foreground); }
+          .legal-content ul { list-style: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
+          .legal-content li { margin-bottom: 0.5rem; line-height: 1.7; }
+          .legal-content a { color: var(--brand-violet); text-decoration: underline; }
+        `}</style>
+      </section>
     </SiteLayout>
-  );
-}
+  ),
+});
