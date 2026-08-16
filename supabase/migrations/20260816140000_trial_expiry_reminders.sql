@@ -99,10 +99,10 @@ do $$ begin
 exception when insufficient_privilege then null;
 end $$;
 
-do $$ begin
+do $outer$ begin
   if exists (select 1 from pg_extension where extname = 'pg_cron') then
     perform cron.unschedule(jobid) from cron.job where jobname = 'trial-expiry-reminders-daily';
-    perform cron.schedule('trial-expiry-reminders-daily', '0 3 * * *', $$select public.send_trial_expiry_reminders();$$);
+    perform cron.schedule('trial-expiry-reminders-daily', '0 3 * * *', $cron$select public.send_trial_expiry_reminders();$cron$);
   end if;
 exception when undefined_table or insufficient_privilege then null;
-end $$;
+end $outer$;
