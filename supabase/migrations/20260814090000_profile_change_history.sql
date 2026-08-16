@@ -49,9 +49,13 @@ $$;
 revoke execute on function public.profile_change_log_is_owner(text, uuid) from public, anon;
 grant execute on function public.profile_change_log_is_owner(text, uuid) to authenticated;
 
-create policy "owner or admin reads own profile change history"
-  on public.profile_change_log for select to authenticated
-  using (public.profile_change_log_is_owner(entity_type, entity_id) or public.has_role(auth.uid(), 'admin'));
+do $$ begin
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'profile_change_log' and policyname = 'owner or admin reads own profile change history') then
+    create policy "owner or admin reads own profile change history"
+      on public.profile_change_log for select to authenticated
+      using (public.profile_change_log_is_owner(entity_type, entity_id) or public.has_role(auth.uid(), 'admin'));
+  end if;
+end $$;
 
 -- inserts only ever happen via the trigger below (security definer) —
 -- no client-facing insert/update/delete policy on purpose.
