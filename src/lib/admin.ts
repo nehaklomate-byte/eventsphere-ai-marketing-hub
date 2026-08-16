@@ -409,59 +409,66 @@ export async function markPayoutPaid(source: PayoutSource, id: string, payoutRef
 }
 
 // =============================================================
-// Broadcast Center — send a platform_notifications row to many users
-// at once. Reuses the same table the "account approved/rejected"
-// notify() helper already writes to (see above), just fanned out to
-// an audience instead of one user_id.
+// Broadcast Center — admin announcements with a real deadline and
+// per-user "seen it" tracking (see migration
+// 20260816090000_broadcast_messages.sql). Separate from
+// platform_notifications, which stays as-is for per-user things like
+// approval/rejection notices.
 // =============================================================
 
 export type BroadcastAudience = "all" | "customer" | "hall_owner" | "vendor" | "worker" | "organization";
 
-/** Resolves an audience to concrete user_ids via profiles.primary_role,
- * then bulk-inserts one platform_notifications row per recipient.
- * Returns the recipient count so the UI can confirm "sent to N users". */
-export async function sendBroadcast(audience: BroadcastAudience, title: string, body: string, type: "info" | "success" | "warning" | "error" = "info"): Promise<number> {
-  let query = supabase.from("profiles").select("id");
-  if (audience !== "all") query = query.eq("primary_role", audience);
-  const { data: profiles, error: profilesErr } = await query.limit(5000);
-  if (profilesErr) throw profilesErr;
-  const ids = (profiles as { id: string }[] | null)?.map((p) => p.id) ?? [];
-  if (ids.length === 0) return 0;
+export type BroadcastMessage = {
+  id: string;
+  title: string;
+  body: string | null;
+  type: "info" | "success" | "warning" | "error";
+  audience: BroadcastAudience;
+  deadline: string | null;
+  created_by: string | null;
+  created_by_name: string;
+  created_at: string;
+  read_count: number;
+};
 
-  const rows = ids.map((user_id) => ({ user_id, title, body, type }));
-  // Insert in chunks so one broadcast to a large audience doesn't hit
-  // a request-size limit.
-  const CHUNK = 500;
-  for (let i = 0; i < rows.length; i += CHUNK) {
-    const { error } = await supabase.from("platform_notifications" as never).insert(rows.slice(i, i + CHUNK) as never);
-    if (error) throw error;
-  }
-  await writeAudit("send_broadcast", "platform_notifications", null, null, { audience, title, recipient_count: ids.length });
-  return ids.length;
+export async function createBroadcastMessage(opts: {
+  title: string; body: string; type: BroadcastMessage["type"]; audience: BroadcastAudience; deadline: string | null; adminUserId: string;
+}): Promise<void> {
+  const { error } = await supabase.from("broadcast_messages" as never).insert({
+    title: opts.title, body: opts.body || null, type: opts.type, audience: opts.audience,
+    deadline: opts.deadline, created_by: opts.adminUserId,
+  } as never);
+  if (error) throw error;
+  await writeAudit("send_broadcast", "broadcast_messages", null, null, { audience: opts.audience, title: opts.title, deadline: opts.deadline });
 }
 
-/** Recent broadcasts, reconstructed by grouping platform_notifications
- * rows that share the same title+body+created minute — there's no
- * separate "broadcasts" table, so this is a best-effort history view
- * rather than a source of truth. */
-export async function fetchRecentBroadcasts(): Promise<{ title: string; body: string; type: string; created_at: string; recipient_count: number }[]> {
+/** Every broadcast ever sent, newest first — with who sent it and how
+ * many recipients have actually seen it (a real count now, not a
+ * guess from grouping notification rows). */
+export async function fetchAllBroadcastMessages(): Promise<BroadcastMessage[]> {
   const { data, error } = await supabase
-    .from("platform_notifications" as never)
-    .select("title, body, type, created_at" as never)
+    .from("broadcast_messages" as never)
+    .select("id,title,body,type,audience,deadline,created_by,created_at" as never)
     .order("created_at" as never, { ascending: false })
-    .limit(2000);
+    .limit(200);
   if (error) throw error;
-  type Row = { title: string; body: string; type: string; created_at: string };
-  const rows = (data as unknown as Row[]) ?? [];
-  const groups = new Map<string, { title: string; body: string; type: string; created_at: string; recipient_count: number }>();
-  for (const r of rows) {
-    const minuteKey = r.created_at.slice(0, 16); // group by same minute
-    const key = `${r.title}|${r.body}|${minuteKey}`;
-    const existing = groups.get(key);
-    if (existing) existing.recipient_count += 1;
-    else groups.set(key, { title: r.title, body: r.body, type: r.type, created_at: r.created_at, recipient_count: 1 });
+  type Raw = Omit<BroadcastMessage, "created_by_name" | "read_count">;
+  const rows = (data as unknown as Raw[]) ?? [];
+  if (rows.length === 0) return [];
+
+  const ids = Array.from(new Set(rows.map((r) => r.created_by).filter(Boolean))) as string[];
+  const names: Record<string, string> = {};
+  if (ids.length) {
+    const { data: profs } = await supabase.from("profiles").select("id,full_name").in("id", ids);
+    (profs ?? []).forEach((p: { id: string; full_name: string | null }) => { names[p.id] = p.full_name ?? "Admin"; });
   }
-  return Array.from(groups.values()).filter((g) => g.recipient_count > 1).slice(0, 30);
+
+  const messageIds = rows.map((r) => r.id);
+  const { data: reads } = await supabase.from("broadcast_message_reads" as never).select("message_id" as never).in("message_id" as never, messageIds as never);
+  const readCounts = new Map<string, number>();
+  ((reads as unknown as { message_id: string }[]) ?? []).forEach((r) => readCounts.set(r.message_id, (readCounts.get(r.message_id) ?? 0) + 1));
+
+  return rows.map((r) => ({ ...r, created_by_name: r.created_by ? names[r.created_by] ?? "Admin" : "Admin", read_count: readCounts.get(r.id) ?? 0 }));
 }
 
 // ============================================================
