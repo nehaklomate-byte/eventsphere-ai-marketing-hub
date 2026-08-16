@@ -25,7 +25,8 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization") ?? "";
     // Client-scoped supabase client — RLS makes sure the caller can only
-    // touch worker_tasks rows they themselves created (assigned_by = them).
+    // touch rows they themselves own (worker/vendor task, or their own
+    // customer_bookings row).
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -34,8 +35,72 @@ serve(async (req) => {
     if (!worker_task_id) {
       return new Response(JSON.stringify({ error: "worker_task_id is required" }), { status: 400, headers: corsHeaders });
     }
-    // "worker" (default, backward compatible) or "vendor" — same flow, different table.
-    const table = entity_type === "vendor" ? "vendor_tasks" : "worker_tasks";
+
+    // "worker" (default, backward compatible), "vendor", or "hall" — same
+    // flow, different table. "hall" was previously never handled here at
+    // all, so a venue-booking payment silently fell through to the
+    // worker_tasks branch, found no matching row, and errored out — the
+    // platform never actually collected a booking payment or commission
+    // through Razorpay for hall bookings.
+    const table = entity_type === "vendor" ? "vendor_tasks" : entity_type === "hall" ? "customer_bookings" : "worker_tasks";
+
+    if (entity_type === "hall") {
+      const { data: booking, error: bookingErr } = await supabase
+        .from("customer_bookings")
+        .select("id, amount, payment_status, status, target_name, kind")
+        .eq("id", worker_task_id)
+        .maybeSingle();
+
+      if (bookingErr || !booking || booking.kind !== "hall") {
+        return new Response(JSON.stringify({ error: "Booking not found or you don't have access to it" }), { status: 404, headers: corsHeaders });
+      }
+      if (!["confirmed", "in_progress", "completed"].includes(booking.status)) {
+        return new Response(JSON.stringify({ error: "This booking hasn't been confirmed by the venue yet — you can only pay after confirmation." }), { status: 400, headers: corsHeaders });
+      }
+      if (booking.payment_status === "paid") {
+        return new Response(JSON.stringify({ error: "This booking is already paid." }), { status: 400, headers: corsHeaders });
+      }
+      if (!booking.amount || booking.amount <= 0) {
+        return new Response(JSON.stringify({ error: "No payable amount was set for this booking." }), { status: 400, headers: corsHeaders });
+      }
+
+      const amountPaise = Math.round(booking.amount * 100);
+
+      const orderRes = await fetch("https://api.razorpay.com/v1/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Basic " + btoa(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`),
+        },
+        body: JSON.stringify({
+          amount: amountPaise,
+          currency: "INR",
+          receipt: worker_task_id,
+          notes: { customer_booking_id: worker_task_id, target_name: booking.target_name },
+        }),
+      });
+
+      if (!orderRes.ok) {
+        const err = await orderRes.text();
+        return new Response(JSON.stringify({ error: `Razorpay error: ${err}` }), { status: 502, headers: corsHeaders });
+      }
+      const order = await orderRes.json();
+
+      const { error: updateErr } = await supabase
+        .from("customer_bookings")
+        .update({ razorpay_order_id: order.id })
+        .eq("id", worker_task_id);
+      if (updateErr) {
+        return new Response(JSON.stringify({ error: updateErr.message }), { status: 500, headers: corsHeaders });
+      }
+
+      return new Response(JSON.stringify({
+        order_id: order.id,
+        amount: amountPaise,
+        currency: "INR",
+        key_id: RAZORPAY_KEY_ID,
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     const { data: task, error: taskErr } = await supabase
       .from(table)
