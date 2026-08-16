@@ -3,6 +3,9 @@
 -- went OUT (not just in), and issues customers/vendors/workers/venues
 -- raise. Neither existed before: 'refunded' was only a payment_status
 -- value with no record of who asked, how much, why, or who actioned it.
+--
+-- Safe to run more than once (every create is guarded), in case a
+-- previous run partially applied before failing.
 -- ============================================================
 
 -- 1) Refunds — one row per refund, whatever it's against (a hall
@@ -32,17 +35,6 @@ alter table public.refunds enable row level security;
 create index if not exists refunds_requested_by_idx on public.refunds (requested_by);
 create index if not exists refunds_source_idx on public.refunds (source_type, source_id);
 
-create policy "requester reads own refund requests" on public.refunds
-  for select to authenticated using (auth.uid() = requested_by);
-create policy "requester creates own refund request" on public.refunds
-  for insert to authenticated with check (auth.uid() = requested_by);
-create policy "admin reads all refunds" on public.refunds
-  for select to authenticated using (public.has_role(auth.uid(), 'admin'));
-create policy "admin updates all refunds" on public.refunds
-  for update to authenticated using (public.has_role(auth.uid(), 'admin'));
-create policy "admin creates any refund" on public.refunds
-  for insert to authenticated with check (public.has_role(auth.uid(), 'admin'));
-
 -- 2) Complaints — a simple support-ticket table any role can raise
 --    against the platform, a booking, or another party.
 create table if not exists public.complaints (
@@ -62,11 +54,51 @@ create table if not exists public.complaints (
 alter table public.complaints enable row level security;
 create index if not exists complaints_raised_by_idx on public.complaints (raised_by);
 
-create policy "raiser reads own complaints" on public.complaints
-  for select to authenticated using (auth.uid() = raised_by);
-create policy "raiser creates own complaint" on public.complaints
-  for insert to authenticated with check (auth.uid() = raised_by);
-create policy "admin reads all complaints" on public.complaints
-  for select to authenticated using (public.has_role(auth.uid(), 'admin'));
-create policy "admin updates all complaints" on public.complaints
-  for update to authenticated using (public.has_role(auth.uid(), 'admin'));
+-- 3) Policies — Postgres has no "create policy if not exists", so each
+--    one is wrapped in an existence check against pg_policies.
+do $$ begin
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'refunds' and policyname = 'requester reads own refund requests') then
+    create policy "requester reads own refund requests" on public.refunds
+      for select to authenticated using (auth.uid() = requested_by);
+  end if;
+
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'refunds' and policyname = 'requester creates own refund request') then
+    create policy "requester creates own refund request" on public.refunds
+      for insert to authenticated with check (auth.uid() = requested_by);
+  end if;
+
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'refunds' and policyname = 'admin reads all refunds') then
+    create policy "admin reads all refunds" on public.refunds
+      for select to authenticated using (public.has_role(auth.uid(), 'admin'));
+  end if;
+
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'refunds' and policyname = 'admin updates all refunds') then
+    create policy "admin updates all refunds" on public.refunds
+      for update to authenticated using (public.has_role(auth.uid(), 'admin'));
+  end if;
+
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'refunds' and policyname = 'admin creates any refund') then
+    create policy "admin creates any refund" on public.refunds
+      for insert to authenticated with check (public.has_role(auth.uid(), 'admin'));
+  end if;
+
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'complaints' and policyname = 'raiser reads own complaints') then
+    create policy "raiser reads own complaints" on public.complaints
+      for select to authenticated using (auth.uid() = raised_by);
+  end if;
+
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'complaints' and policyname = 'raiser creates own complaint') then
+    create policy "raiser creates own complaint" on public.complaints
+      for insert to authenticated with check (auth.uid() = raised_by);
+  end if;
+
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'complaints' and policyname = 'admin reads all complaints') then
+    create policy "admin reads all complaints" on public.complaints
+      for select to authenticated using (public.has_role(auth.uid(), 'admin'));
+  end if;
+
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'complaints' and policyname = 'admin updates all complaints') then
+    create policy "admin updates all complaints" on public.complaints
+      for update to authenticated using (public.has_role(auth.uid(), 'admin'));
+  end if;
+end $$;
