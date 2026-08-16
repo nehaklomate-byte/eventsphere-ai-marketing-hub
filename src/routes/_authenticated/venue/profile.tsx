@@ -188,29 +188,6 @@ function VenueProfilePage() {
           <Field label="Extra-hour charges (₹ per hour, beyond max duration)"><NumberInput value={extra.extra_hour_charge as number | undefined} onChange={(v) => setExtra("extra_hour_charge", v as never)} /></Field>
         </div>
         <Field label="Cancellation policy"><Textarea value={form.cancellation_policy ?? ""} onChange={(v) => set("cancellation_policy", v as never)} /></Field>
-        <Field label="Accepted payment methods (shown to customers)">
-          <div className="flex flex-wrap gap-2">
-            {["Online (Razorpay)", "Bank transfer", "UPI", "Card", "Cash", "Cheque"].map((m) => {
-              const current = (extra.payment_methods as string[]) ?? [];
-              const active = current.includes(m);
-              return (
-                <button key={m} type="button"
-                  onClick={() => setExtra("payment_methods", active ? current.filter((x) => x !== m) : [...current, m])}
-                  className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition ${active ? "border-brand-violet bg-brand-violet text-white" : "border-border bg-background text-muted-foreground hover:bg-accent"}`}>
-                  {m}
-                </button>
-              );
-            })}
-          </div>
-        </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Booking / payment terms (shown to customers)">
-            <Textarea value={extra.payment_terms as string ?? ""} onChange={(v) => setExtra("payment_terms", v)} placeholder="e.g. 30% advance to block the date, balance on the event day. Bank transfer or UPI accepted." />
-          </Field>
-          <Field label="UPI ID for advance payment (optional, shown to customers)">
-            <Input value={extra.payment_upi as string ?? ""} onChange={(v) => setExtra("payment_upi", v)} placeholder="venue@upi" />
-          </Field>
-        </div>
       </Section>
 
       {/* Amenities */}
@@ -347,7 +324,7 @@ function VenueProfilePage() {
         <MediaGrid label="Guest rooms photos" bucket="hall-media" prefix="room" values={(form.room_photos as string[]) ?? []} onChange={(v) => set("room_photos", v as never)} upload={upload} uploading={uploading} />
       </Section>
 
-      {/* Payout — private, separate from the customer-facing "payment_upi" above */}
+      {/* Payout — private bank/UPI details the platform uses to pay the venue owner. Never shown to customers (customer-facing payment fields were removed — see commit notes). */}
       <PayoutSection />
 
       {form.id && (
