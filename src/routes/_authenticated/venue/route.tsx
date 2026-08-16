@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useRouterState, useNavigate, redirect } 
 import { useEffect, useState, type ComponentType } from "react";
 import {
   LayoutDashboard, Inbox, CalendarCheck, Building2, Settings, LogOut, Menu, X, Clock, ShieldAlert, MailWarning, HardHat, Bell, Store,
-  MessageCircle, Briefcase,
+  MessageCircle, Briefcase, Wallet,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
@@ -60,6 +60,7 @@ const NAV: { to: string; label: string; icon: ComponentType<{ className?: string
   { to: "/venue", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/venue/enquiries", label: "Enquiries", icon: Inbox },
   { to: "/venue/bookings", label: "Bookings", icon: CalendarCheck },
+  { to: "/venue/earnings", label: "Earnings", icon: Wallet },
   { to: "/venue/hire-workers", label: "Hire Workers", icon: HardHat },
   { to: "/venue/hire-vendors", label: "Hire Vendors", icon: Store },
   { to: "/venue/jobs", label: "Job Board", icon: Briefcase },
