@@ -287,37 +287,12 @@ function HallDetail() {
             </Card>
           )}
 
-          {/* POLICIES & PAYMENT */}
+          {/* POLICIES */}
           {(() => {
-            const methods = Array.isArray(hall.extra.payment_methods) ? (hall.extra.payment_methods as string[]) : [];
-            const terms = typeof hall.extra.payment_terms === "string" ? hall.extra.payment_terms : "";
-            const upi = typeof hall.extra.payment_upi === "string" ? hall.extra.payment_upi : "";
-            if (!hall.cancellation_policy && !hall.working_hours && methods.length === 0 && !terms && !upi) return null;
+            if (!hall.cancellation_policy && !hall.working_hours) return null;
             return (
-              <Card title="Payment & policies" icon={ShieldCheck}>
+              <Card title="Policies" icon={ShieldCheck}>
                 {hall.working_hours && <p className="text-sm"><span className="font-semibold">Working hours:</span> <span className="text-muted-foreground">{hall.working_hours}</span></p>}
-                {methods.length > 0 && (
-                  <div className="mt-3">
-                    <div className="text-sm font-semibold">Payment methods accepted</div>
-                    <div className="mt-1.5 flex flex-wrap gap-2">
-                      {methods.map((m: string) => (
-                        <span key={m} className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">{m}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {terms && (
-                  <div className="mt-3">
-                    <div className="text-sm font-semibold">Booking & payment terms</div>
-                    <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{terms}</p>
-                  </div>
-                )}
-                {upi && (
-                  <div className="mt-3">
-                    <div className="text-sm font-semibold">UPI ID for advance</div>
-                    <p className="mt-1 font-mono text-sm text-muted-foreground">{upi}</p>
-                  </div>
-                )}
                 {hall.cancellation_policy && (
                   <div className="mt-3">
                     <div className="text-sm font-semibold">Cancellation policy</div>
