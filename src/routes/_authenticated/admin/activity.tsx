@@ -158,6 +158,23 @@ function ActivityPage() {
     });
   }, [rows, names, q]);
 
+  // Group flat field-level rows into one "update event" per save — every
+  // field changed by the same UPDATE statement gets the exact same
+  // changed_at timestamp (they're all inserted by one trigger firing),
+  // so grouping on entity+changed_by+changed_at reliably reconstructs
+  // "on this save, these N fields changed together" instead of showing
+  // each field as an unrelated, scattered line.
+  type Group = { key: string; entity_type: string; entity_id: string; changed_by: string | null; changed_at: string; fields: LogRow[] };
+  const grouped = useMemo(() => {
+    const map = new Map<string, Group>();
+    for (const r of filtered) {
+      const key = `${r.entity_type}:${r.entity_id}:${r.changed_by ?? "system"}:${r.changed_at}`;
+      if (!map.has(key)) map.set(key, { key, entity_type: r.entity_type, entity_id: r.entity_id, changed_by: r.changed_by, changed_at: r.changed_at, fields: [] });
+      map.get(key)!.fields.push(r);
+    }
+    return Array.from(map.values()).sort((a, b) => b.changed_at.localeCompare(a.changed_at));
+  }, [filtered]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -166,8 +183,8 @@ function ActivityPage() {
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {mode === "profile"
-            ? "Every profile field any role has changed — who changed it, from what, to what, and when. Useful for disputes: e.g. filter the field to \"cancellation_policy\" to see exactly what a venue/vendor/worker's cancellation policy said at any point in time."
-            : "Every change to a booking or task's status, payment status, amount, or commission — who changed it, from what, to what, and when. This is the money-side audit trail, separate from profile-field changes."}
+            ? "Every profile save any role has made — every field that changed in that save, its old value and its new value, who did it, and when. Useful for disputes: e.g. filter the field to \"cancellation_policy\" to see exactly what a venue/vendor/worker's cancellation policy said at any point in time."
+            : "Every save that changed a booking or task's status, payment status, amount, or commission — old value, new value, who, when. This is the money-side audit trail, separate from profile-field changes."}
         </p>
       </div>
 
@@ -207,28 +224,35 @@ function ActivityPage() {
 
       <div className="rounded-2xl border border-border bg-card">
         {isLoading && <div className="flex items-center gap-2 p-8 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
-        {!isLoading && filtered.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">No changes found for these filters.</p>}
-        {!isLoading && filtered.length > 0 && (
+        {!isLoading && grouped.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">No changes found for these filters.</p>}
+        {!isLoading && grouped.length > 0 && (
           <ol className="divide-y divide-border">
-            {filtered.map((r) => {
-              const entityName = names?.[`${r.entity_type}:${r.entity_id}`] ?? "…";
-              const who = r.changed_by ? names?.[`who:${r.changed_by}`] ?? "…" : "System";
-              const isMoney = MONEY_FIELDS.has(r.field_name);
+            {grouped.map((g) => {
+              const entityName = names?.[`${g.entity_type}:${g.entity_id}`] ?? "…";
+              const who = g.changed_by ? names?.[`who:${g.changed_by}`] ?? "…" : "System";
               return (
-                <li key={r.id} className="p-4 text-sm">
+                <li key={g.key} className="p-4 text-sm">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">{entityLabelMap[r.entity_type] ?? r.entity_type}</span>
+                    <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">{entityLabelMap[g.entity_type] ?? g.entity_type}</span>
                     <span className="font-semibold text-foreground">{entityName}</span>
                     <span className="text-muted-foreground">·</span>
-                    <span className="text-muted-foreground">{humanizeField(r.field_name)} updated</span>
+                    <span className="text-muted-foreground">{g.fields.length === 1 ? "1 field updated" : `${g.fields.length} fields updated`}</span>
                   </div>
-                  <div className="mt-1.5 text-xs text-muted-foreground">
-                    <span className="line-through">{displayValue(r.old_value, isMoney)}</span>
-                    {" → "}
-                    <span className="font-medium text-foreground">{displayValue(r.new_value, isMoney)}</span>
-                  </div>
-                  <div className="mt-1 text-[11px] text-muted-foreground">
-                    by {who} · {new Date(r.changed_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+                  <ul className="mt-2 space-y-1.5 border-l-2 border-border pl-3">
+                    {g.fields.map((f) => {
+                      const isMoney = MONEY_FIELDS.has(f.field_name);
+                      return (
+                        <li key={f.id} className="text-xs">
+                          <span className="font-semibold text-foreground">{humanizeField(f.field_name)}: </span>
+                          <span className="line-through text-muted-foreground">{displayValue(f.old_value, isMoney)}</span>
+                          {" → "}
+                          <span className="font-medium text-emerald-700 dark:text-emerald-400">{displayValue(f.new_value, isMoney)}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <div className="mt-2 text-[11px] text-muted-foreground">
+                    by {who} · {new Date(g.changed_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
                   </div>
                 </li>
               );
