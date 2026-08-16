@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Bell, Loader2, Send, Users } from "lucide-react";
-import { sendBroadcast, fetchRecentBroadcasts, type BroadcastAudience } from "@/lib/admin";
+import { Bell, Loader2, Send, Users, Clock, CheckCircle2 } from "lucide-react";
+import { useSession } from "@/lib/session";
+import { createBroadcastMessage, fetchAllBroadcastMessages, type BroadcastAudience, type BroadcastMessage } from "@/lib/admin";
 
 export const Route = createFileRoute("/_authenticated/admin/notifications")({
   head: () => ({ meta: [{ title: "Broadcast Center — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
@@ -26,24 +27,39 @@ const TYPE_STYLE: Record<string, string> = {
   error: "bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300",
 };
 
+function isExpired(m: BroadcastMessage) { return !!m.deadline && new Date(m.deadline).getTime() < Date.now(); }
+
+// datetime-local gives "2026-08-20T18:30" (local time, no seconds/zone) — turn that into a real ISO instant for storage.
+function localToIso(local: string): string | null {
+  if (!local) return null;
+  const d = new Date(local);
+  return isNaN(d.getTime()) ? null : d.toISOString();
+}
+
 function BroadcastPage() {
+  const { user } = useSession();
+  const qc = useQueryClient();
   const [audience, setAudience] = useState<BroadcastAudience>("all");
   const [type, setType] = useState<"info" | "success" | "warning" | "error">("info");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [deadlineLocal, setDeadlineLocal] = useState("");
   const [sending, setSending] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
-  const history = useQuery({ queryKey: ["admin-broadcast-history"], queryFn: fetchRecentBroadcasts });
+  const history = useQuery({ queryKey: ["admin-broadcast-history"], queryFn: fetchAllBroadcastMessages });
 
   async function send() {
     if (!title.trim()) { toast.error("Title is required."); return; }
     setSending(true);
     try {
-      const count = await sendBroadcast(audience, title.trim(), body.trim(), type);
-      toast.success(count > 0 ? `Sent to ${count} user${count === 1 ? "" : "s"}` : "No matching users found for that audience.");
-      setTitle(""); setBody(""); setConfirming(false);
-      history.refetch();
+      await createBroadcastMessage({
+        title: title.trim(), body: body.trim(), type, audience,
+        deadline: localToIso(deadlineLocal), adminUserId: user!.id,
+      });
+      toast.success("Broadcast sent");
+      setTitle(""); setBody(""); setDeadlineLocal(""); setConfirming(false);
+      qc.invalidateQueries({ queryKey: ["admin-broadcast-history"] });
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -57,7 +73,7 @@ function BroadcastPage() {
         <h1 className="flex items-center gap-2 text-2xl md:text-3xl font-bold tracking-tight">
           <Bell className="h-7 w-7 text-brand-violet" /> Broadcast Center
         </h1>
-        <p className="mt-1 text-muted-foreground">Send an announcement to every user on a role, or the whole platform. It lands in their notifications.</p>
+        <p className="mt-1 text-muted-foreground">Send an announcement to every user on a role, or the whole platform. Each user sees it once, as a popup, the first time they open the app after it's sent.</p>
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-6 space-y-4 max-w-2xl">
@@ -97,6 +113,13 @@ function BroadcastPage() {
             className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
         </label>
 
+        <label className="block max-w-xs">
+          <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Deadline (optional)</span>
+          <input type="datetime-local" value={deadlineLocal} onChange={(e) => setDeadlineLocal(e.target.value)}
+            className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
+          <span className="mt-1 block text-[11px] text-muted-foreground">After this time, the popup stops showing to anyone who hasn't seen it yet. Leave blank for no expiry.</span>
+        </label>
+
         {!confirming ? (
           <button onClick={() => setConfirming(true)} disabled={!title.trim()}
             className="inline-flex items-center gap-2 rounded-full btn-brand btn-brand-hover px-5 py-2.5 text-sm font-semibold disabled:opacity-50">
@@ -117,23 +140,35 @@ function BroadcastPage() {
       </div>
 
       <div>
-        <h2 className="mb-3 text-lg font-semibold">Recent broadcasts</h2>
+        <h2 className="mb-3 text-lg font-semibold">Previous messages</h2>
         {history.isLoading ? (
           <div className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground"><Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" /> Loading…</div>
         ) : (history.data ?? []).length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border bg-card/40 p-8 text-center text-sm text-muted-foreground">No broadcasts sent yet.</div>
         ) : (
           <div className="space-y-2">
-            {history.data!.map((b, i) => (
-              <div key={i} className="rounded-xl border border-border bg-card p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${TYPE_STYLE[b.type] ?? TYPE_STYLE.info}`}>{b.type}</span>
-                  <span className="text-xs text-muted-foreground">{new Date(b.created_at).toLocaleString("en-IN")} · {b.recipient_count} recipients</span>
+            {history.data!.map((b) => {
+              const expired = isExpired(b);
+              return (
+                <div key={b.id} className="rounded-xl border border-border bg-card p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${TYPE_STYLE[b.type] ?? TYPE_STYLE.info}`}>{b.type}</span>
+                      <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-muted-foreground capitalize">{AUDIENCES.find((a) => a.value === b.audience)?.label ?? b.audience}</span>
+                      {expired ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground"><Clock className="h-3 w-3" /> Expired</span>
+                      ) : b.deadline ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-950/40 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400"><CheckCircle2 className="h-3 w-3" /> Active</span>
+                      ) : null}
+                    </div>
+                    <span className="text-xs text-muted-foreground">{new Date(b.created_at).toLocaleString("en-IN")} · by {b.created_by_name} · {b.read_count} seen</span>
+                  </div>
+                  <div className="mt-1.5 text-sm font-semibold">{b.title}</div>
+                  {b.body && <div className="text-xs text-muted-foreground">{b.body}</div>}
+                  {b.deadline && <div className="mt-1 text-[11px] text-muted-foreground">Deadline: {new Date(b.deadline).toLocaleString("en-IN")}</div>}
                 </div>
-                <div className="mt-1.5 text-sm font-semibold">{b.title}</div>
-                {b.body && <div className="text-xs text-muted-foreground">{b.body}</div>}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
