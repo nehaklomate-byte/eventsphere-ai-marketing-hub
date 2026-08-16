@@ -31,7 +31,16 @@ function ReviewsPage() {
   const { data: bookings, isLoading: bookingsLoading } = useQuery({
     queryKey: ["c-bookings-for-review", user?.id],
     enabled: !!user?.id,
-    queryFn: async () => (await supabase.from("customer_bookings").select("kind,target_id,target_name,status").eq("user_id", user!.id).in("status", ["completed", "confirmed"])).data ?? [],
+    // A review can only be written once the event itself is marked
+    // completed AND the payment actually cleared through the platform
+    // (payment_status = 'paid'). Earlier this also allowed status
+    // 'confirmed', which let a customer review before the event even
+    // happened, and it never checked payment_status at all — so a
+    // booking whose payment never went through the platform could
+    // still be reviewed. Both gaps are closed here.
+    queryFn: async () =>
+      (await supabase.from("customer_bookings").select("kind,target_id,target_name,status,payment_status")
+        .eq("user_id", user!.id).eq("status", "completed").eq("payment_status", "paid")).data ?? [],
   });
 
   const pending: PendingItem[] = (() => {
