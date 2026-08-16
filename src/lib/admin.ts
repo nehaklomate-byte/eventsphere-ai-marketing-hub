@@ -293,7 +293,7 @@ export function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
 // no matter what UI existed on top of it.
 // =============================================================
 
-export type IncomingPaymentSource = "hall" | "worker" | "vendor" | "profile";
+export type IncomingPaymentSource = "hall" | "worker" | "vendor";
 
 export type IncomingPayment = {
   id: string;
@@ -311,7 +311,7 @@ export type IncomingPayment = {
  * landed in the platform's account, whether or not it's been paid
  * out to the worker/vendor/venue owner yet. */
 export async function fetchIncomingPayments(): Promise<IncomingPayment[]> {
-  const [halls, workers, vendors, profiles] = await Promise.all([
+  const [halls, workers, vendors] = await Promise.all([
     supabase.from("customer_bookings" as never)
       .select("id, target_name, amount, commission_amount, razorpay_payment_id, paid_at, created_at" as never)
       .eq("kind" as never, "hall" as never).eq("payment_status" as never, "paid" as never)
@@ -324,25 +324,13 @@ export async function fetchIncomingPayments(): Promise<IncomingPayment[]> {
       .select("id, event_name, task_name, payment_amount, razorpay_payment_id, paid_at, updated_at" as never)
       .eq("payment_status" as never, "paid" as never)
       .order("updated_at" as never, { ascending: false }),
-    supabase.from("public_profile_payments" as never)
-      .select("id, role, feature_type, amount, razorpay_payment_id, created_at" as never)
-      .eq("status" as never, "paid" as never)
-      .order("created_at" as never, { ascending: false }),
   ]);
   if (halls.error) throw halls.error;
   if (workers.error) throw workers.error;
   if (vendors.error) throw vendors.error;
-  if (profiles.error) throw profiles.error;
 
   type HallRow = { id: string; target_name: string; amount: number; commission_amount: number; razorpay_payment_id: string | null; paid_at: string | null; created_at: string };
   type TaskRow = { id: string; event_name: string; task_name: string; payment_amount: number | null; razorpay_payment_id: string | null; paid_at?: string | null; updated_at: string };
-  type ProfilePaymentRow = { id: string; role: string; feature_type: string; amount: number; razorpay_payment_id: string | null; created_at: string };
-
-  const FEATURE_LABEL: Record<string, string> = {
-    profile_activation: "Public profile activation",
-    subscription_monthly: "Visibility subscription (monthly)",
-    subscription_annual: "Visibility subscription (annual)",
-  };
 
   const out: IncomingPayment[] = [];
   for (const r of (halls.data as unknown as HallRow[]) ?? []) {
@@ -353,9 +341,6 @@ export async function fetchIncomingPayments(): Promise<IncomingPayment[]> {
   }
   for (const r of (vendors.data as unknown as TaskRow[]) ?? []) {
     out.push({ id: r.id, source: "vendor", title: `${r.event_name} — ${r.task_name}`, amount: r.payment_amount ?? 0, commission_amount: 0, razorpay_payment_id: r.razorpay_payment_id, paid_at: r.paid_at ?? r.updated_at, created_at: r.updated_at });
-  }
-  for (const r of (profiles.data as unknown as ProfilePaymentRow[]) ?? []) {
-    out.push({ id: r.id, source: "profile", title: `${FEATURE_LABEL[r.feature_type] ?? "Public profile"} (${r.role})`, amount: r.amount, commission_amount: 0, razorpay_payment_id: r.razorpay_payment_id, paid_at: r.created_at, created_at: r.created_at });
   }
   return out.sort((a, b) => (b.paid_at ?? b.created_at).localeCompare(a.paid_at ?? a.created_at));
 }
@@ -539,4 +524,157 @@ export async function fetchPlatformAnalytics(): Promise<PlatformAnalytics> {
     totalCommission,
     activeJobPostings: postingsRes.count ?? 0,
   };
+}
+
+// =============================================================
+// Profile-activation & subscription revenue — the OTHER half of
+// platform money, separate from booking commission. Every row here
+// is 100% platform revenue (no payout owed to anyone), unlike the
+// commission split on bookings above.
+// =============================================================
+
+export type ProfileRevenueRow = {
+  id: string;
+  role: "venue" | "vendor" | "worker";
+  entity_id: string;
+  entity_name: string;
+  feature_type: "profile_activation" | "subscription_monthly" | "subscription_annual";
+  amount: number;
+  status: "created" | "paid" | "failed";
+  razorpay_payment_id: string | null;
+  created_at: string;
+};
+
+const ENTITY_TABLE_FOR_ROLE: Record<"venue" | "vendor" | "worker", { table: string; nameCol: string }> = {
+  venue: { table: "halls", nameCol: "name" },
+  vendor: { table: "vendors", nameCol: "business_name" },
+  worker: { table: "workers", nameCol: "full_name" },
+};
+
+export async function fetchProfileRevenue(): Promise<ProfileRevenueRow[]> {
+  const { data, error } = await supabase
+    .from("public_profile_payments" as never)
+    .select("id,role,entity_id,feature_type,amount,status,razorpay_payment_id,created_at" as never)
+    .order("created_at" as never, { ascending: false })
+    .limit(500);
+  if (error) throw error;
+  type Raw = { id: string; role: "venue" | "vendor" | "worker"; entity_id: string; feature_type: ProfileRevenueRow["feature_type"]; amount: number; status: ProfileRevenueRow["status"]; razorpay_payment_id: string | null; created_at: string };
+  const rows = (data as unknown as Raw[]) ?? [];
+
+  const byRole = new Map<"venue" | "vendor" | "worker", Set<string>>();
+  for (const r of rows) { if (!byRole.has(r.role)) byRole.set(r.role, new Set()); byRole.get(r.role)!.add(r.entity_id); }
+  const names: Record<string, string> = {};
+  await Promise.all(Array.from(byRole.entries()).map(async ([role, ids]) => {
+    const { table, nameCol } = ENTITY_TABLE_FOR_ROLE[role];
+    const { data: ents } = await supabase.from(table as never).select(`id,${nameCol}` as never).in("id" as never, Array.from(ids) as never);
+    (ents as unknown as Record<string, string>[] ?? []).forEach((e) => { names[`${role}:${e.id}`] = (e[nameCol] as unknown as string) || "Untitled"; });
+  }));
+
+  return rows.map((r) => ({ ...r, entity_name: names[`${r.role}:${r.entity_id}`] ?? "Untitled" }));
+}
+
+// =============================================================
+// Refunds — requested by any role (against a booking/task/profile
+// payment), visible to admin, actioned (approve/reject/mark
+// processed) by admin. See migration 20260815090000_refunds_and_complaints.sql.
+// =============================================================
+
+export type RefundRow = {
+  id: string;
+  source_type: "booking" | "worker_task" | "vendor_task" | "profile_payment";
+  source_id: string;
+  entity_name: string | null;
+  amount: number;
+  reason: string | null;
+  requested_by: string | null;
+  requested_by_name: string;
+  status: "requested" | "approved" | "rejected" | "processed";
+  admin_notes: string | null;
+  razorpay_refund_id: string | null;
+  processed_at: string | null;
+  created_at: string;
+};
+
+export async function fetchRefunds(): Promise<RefundRow[]> {
+  const { data, error } = await supabase
+    .from("refunds" as never)
+    .select("id,source_type,source_id,entity_name,amount,reason,requested_by,status,admin_notes,razorpay_refund_id,processed_at,created_at" as never)
+    .order("created_at" as never, { ascending: false })
+    .limit(500);
+  if (error) throw error;
+  type Raw = Omit<RefundRow, "requested_by_name">;
+  const rows = (data as unknown as Raw[]) ?? [];
+  const ids = Array.from(new Set(rows.map((r) => r.requested_by).filter(Boolean))) as string[];
+  const names: Record<string, string> = {};
+  if (ids.length) {
+    const { data: profs } = await supabase.from("profiles").select("id,full_name").in("id", ids);
+    (profs ?? []).forEach((p: { id: string; full_name: string | null }) => { names[p.id] = p.full_name ?? "Someone"; });
+  }
+  return rows.map((r) => ({ ...r, requested_by_name: r.requested_by ? names[r.requested_by] ?? "Someone" : "Admin" }));
+}
+
+/** Admin approves/rejects a refund request, or logs one directly. */
+export async function updateRefundStatus(id: string, status: "approved" | "rejected" | "processed", opts: { adminNotes?: string; razorpayRefundId?: string; adminUserId: string }): Promise<void> {
+  const patch: Record<string, unknown> = { status, admin_notes: opts.adminNotes || null, processed_by: opts.adminUserId };
+  if (status === "processed") { patch.processed_at = new Date().toISOString(); patch.razorpay_refund_id = opts.razorpayRefundId || null; }
+  const { error } = await supabase.from("refunds" as never).update(patch as never).eq("id" as never, id as never);
+  if (error) throw error;
+}
+
+/** Admin logs a refund that wasn't requested through the app (e.g. a
+ * goodwill refund decided over a call) — goes straight to 'processed'. */
+export async function logManualRefund(opts: {
+  sourceType: RefundRow["source_type"]; sourceId: string; entityName: string; amount: number; reason: string;
+  razorpayRefundId?: string; adminUserId: string;
+}): Promise<void> {
+  const { error } = await supabase.from("refunds" as never).insert({
+    source_type: opts.sourceType, source_id: opts.sourceId, entity_name: opts.entityName, amount: opts.amount,
+    reason: opts.reason, requested_by: opts.adminUserId, status: "processed",
+    razorpay_refund_id: opts.razorpayRefundId || null, processed_by: opts.adminUserId, processed_at: new Date().toISOString(),
+  } as never);
+  if (error) throw error;
+}
+
+// =============================================================
+// Complaints — a simple support-ticket table any role can raise.
+// =============================================================
+
+export type ComplaintRow = {
+  id: string;
+  raised_by: string;
+  raised_by_name: string;
+  raised_by_role: string | null;
+  subject: string;
+  description: string;
+  related_source_type: string | null;
+  related_source_id: string | null;
+  status: "open" | "in_progress" | "resolved" | "closed";
+  admin_notes: string | null;
+  created_at: string;
+  resolved_at: string | null;
+};
+
+export async function fetchComplaints(): Promise<ComplaintRow[]> {
+  const { data, error } = await supabase
+    .from("complaints" as never)
+    .select("id,raised_by,raised_by_role,subject,description,related_source_type,related_source_id,status,admin_notes,created_at,resolved_at" as never)
+    .order("created_at" as never, { ascending: false })
+    .limit(500);
+  if (error) throw error;
+  type Raw = Omit<ComplaintRow, "raised_by_name">;
+  const rows = (data as unknown as Raw[]) ?? [];
+  const ids = Array.from(new Set(rows.map((r) => r.raised_by).filter(Boolean)));
+  const names: Record<string, string> = {};
+  if (ids.length) {
+    const { data: profs } = await supabase.from("profiles").select("id,full_name").in("id", ids);
+    (profs ?? []).forEach((p: { id: string; full_name: string | null }) => { names[p.id] = p.full_name ?? "Someone"; });
+  }
+  return rows.map((r) => ({ ...r, raised_by_name: names[r.raised_by] ?? "Someone" }));
+}
+
+export async function updateComplaintStatus(id: string, status: ComplaintRow["status"], adminNotes?: string): Promise<void> {
+  const patch: Record<string, unknown> = { status, admin_notes: adminNotes || null };
+  if (status === "resolved" || status === "closed") patch.resolved_at = new Date().toISOString();
+  const { error } = await supabase.from("complaints" as never).update(patch as never).eq("id" as never, id as never);
+  if (error) throw error;
 }
