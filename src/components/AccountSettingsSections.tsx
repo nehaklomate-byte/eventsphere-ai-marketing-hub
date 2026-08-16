@@ -16,11 +16,12 @@ import {
 } from "@/lib/settings";
 import { listFactors, enrollTotp, verifyEnrollment, unenroll } from "@/lib/mfa";
 import { ProfileHistoryPanel } from "@/components/ProfileHistoryPanel";
+import { submitComplaint } from "@/lib/support";
 
-const TABS = ["basic", "security", "privacy", "notifications"] as const;
+const TABS = ["basic", "security", "privacy", "notifications", "support"] as const;
 type Tab = (typeof TABS)[number];
-const TAB_LABEL: Record<Tab, string> = { basic: "Basic Info", security: "Login & Security", privacy: "Privacy", notifications: "Notifications" };
-const TAB_ICON: Record<Tab, typeof User> = { basic: User, security: Lock, privacy: Eye, notifications: Bell };
+const TAB_LABEL: Record<Tab, string> = { basic: "Basic Info", security: "Login & Security", privacy: "Privacy", notifications: "Notifications", support: "Support" };
+const TAB_ICON: Record<Tab, typeof User> = { basic: User, security: Lock, privacy: Eye, notifications: Bell, support: AlertTriangle };
 
 /**
  * Drop this into any role's settings.tsx:
@@ -61,6 +62,7 @@ export function AccountSettingsSection() {
         {tab === "security" && <SecurityTab userId={user!.id} />}
         {tab === "privacy" && <PrivacyTab profile={profile} userId={user!.id} onSaved={refresh} />}
         {tab === "notifications" && <NotificationsTab profile={profile} userId={user!.id} onSaved={refresh} />}
+        {tab === "support" && <SupportTab userId={user!.id} />}
       </div>
 
       <style>{`
@@ -406,6 +408,42 @@ function PrivacyTab({ profile, userId, onSaved }: { profile: AccountProfile; use
       {(Object.keys(PRIVACY_LABEL) as (keyof Preferences["privacy"])[]).map((key) => (
         <ToggleRow key={key} label={PRIVACY_LABEL[key]} checked={profile.preferences.privacy[key]} busy={busyKey === key} onChange={(v) => toggle(key, v)} />
       ))}
+    </div>
+  );
+}
+
+/* ---------------- Support (raise a complaint) ---------------- */
+function SupportTab({ userId }: { userId: string }) {
+  const [subject, setSubject] = useState("");
+  const [description, setDescription] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  async function submit() {
+    if (!subject.trim() || !description.trim()) return toast.error("Please fill in both subject and description");
+    setBusy(true);
+    try {
+      const { data: prof } = await supabase.from("profiles").select("primary_role").eq("id", userId).maybeSingle();
+      await submitComplaint({ userId, role: (prof as { primary_role?: string } | null)?.primary_role ?? "", subject: subject.trim(), description: description.trim() });
+      setSent(true); setSubject(""); setDescription("");
+      toast.success("Complaint submitted — our team will follow up.");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Could not submit"); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">Have an issue with a booking, a payment, or someone on the platform? Raise it here — the admin team reviews every complaint.</p>
+      <F label="Subject">
+        <input className="input" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Short summary" />
+      </F>
+      <F label="Description">
+        <textarea className="input min-h-[120px]" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What happened? Include names/dates if relevant." />
+      </F>
+      <button onClick={submit} disabled={busy} className="inline-flex items-center gap-2 rounded-full btn-brand btn-brand-hover px-5 py-2.5 text-sm font-semibold disabled:opacity-70">
+        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <AlertTriangle className="h-4 w-4" />} Submit complaint
+      </button>
+      {sent && <p className="text-xs text-emerald-600">Submitted. You can raise another one anytime.</p>}
     </div>
   );
 }
