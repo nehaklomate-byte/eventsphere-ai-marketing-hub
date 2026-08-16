@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ReceiptText, Store, IndianRupee, Loader2, CheckCircle2, CalendarClock, X, MessageCircle } from "lucide-react";
+import { ReceiptText, Store, IndianRupee, Loader2, CheckCircle2, CalendarClock, X, MessageCircle, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
 import { payForWorkerTask } from "@/lib/razorpay";
+import { requestRefund } from "@/lib/support";
 import { PageShell, EmptyState, LoadingRows } from "./-ui";
 
 export const Route = createFileRoute("/_authenticated/customer/bookings")({
@@ -98,6 +99,16 @@ function BookingsPage() {
     } finally { setPayingId(null); }
   }
 
+  async function handleRefundRequest(row: Row) {
+    const reason = window.prompt("Why are you requesting a refund? (this goes to our team)");
+    if (reason === null) return;
+    if (!reason.trim()) return toast.error("Please add a reason");
+    try {
+      await requestRefund({ sourceType: row.source, sourceId: row.id, entityName: row.name, amount: row.amount, reason: reason.trim(), userId: user!.id });
+      toast.success("Refund requested — our team will review it.");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Could not submit refund request"); }
+  }
+
   const canPay = (r: Row) =>
     r.payment_status !== "paid" && r.amount > 0 &&
     (r.source === "booking"
@@ -146,6 +157,10 @@ function BookingsPage() {
                           <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" /> Paid</span>
                           <Link to="/receipt/$type/$id" params={{ type: b.kind, id: b.id }} target="_blank"
                             className="rounded-lg border border-input px-2 py-1 text-xs font-semibold hover:bg-accent">Receipt</Link>
+                          <button onClick={() => handleRefundRequest(b)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-input px-2 py-1 text-xs font-semibold hover:bg-accent">
+                            <RotateCcw className="h-3.5 w-3.5" /> Refund
+                          </button>
                         </span>
                       ) : canPay(b) ? (
                         <button onClick={() => handlePay(b)} disabled={payingId === b.id}
