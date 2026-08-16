@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { useTranslation } from "react-i18next";
 import { Link2, Copy, Share2, QrCode, ExternalLink, Loader2, Sparkles, Clock, Crown, Receipt, CheckCircle2, TrendingUp, Users, Search } from "lucide-react";
 import {
   activatePublicProfile, purchaseSubscription, fetchPricing, priceForActivation,
@@ -29,7 +28,6 @@ export function PublicProfileCard({
   onSubscribed?: (expiresAt: string) => void;
 }) {
   const { user } = useSession();
-  const { t } = useTranslation();
   const [busy, setBusy] = useState<"activate" | "monthly" | "annual" | null>(null);
   const [price, setPrice] = useState<number | null>(null);
   const [lastReceiptId, setLastReceiptId] = useState<string | null>(null);
@@ -106,8 +104,8 @@ export function PublicProfileCard({
   if (!verificationApproved && !active) {
     return (
       <div className="rounded-2xl border border-border bg-muted/30 p-6">
-        <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground"><Link2 className="h-4 w-4" /> {t("publicProfileCard.title")}</div>
-        <p className="mt-1 text-xs text-muted-foreground">{t("publicProfileCard.needsVerification")}</p>
+        <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground"><Link2 className="h-4 w-4" /> Your Public Profile Link</div>
+        <p className="mt-1 text-xs text-muted-foreground">Get verified to unlock your public profile link.</p>
       </div>
     );
   }
@@ -117,21 +115,21 @@ export function PublicProfileCard({
       <div className="space-y-3">
         <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-6">
           <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-            <Sparkles className="h-4 w-4" /> {t("publicProfileCard.active")}
+            <Sparkles className="h-4 w-4" /> Public Profile Active
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">{t("publicProfileCard.shareHelp")}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Share this link to get direct bookings — verified and protected.</p>
           <div className="mt-3 flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm">
             <Link2 className="h-4 w-4 shrink-0 text-muted-foreground" />
             <span className="truncate">{url}</span>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
-            <button onClick={copyLink} className="inline-flex items-center gap-1.5 rounded-full border border-input px-3.5 py-2 text-xs font-semibold hover:bg-accent"><Copy className="h-3.5 w-3.5" /> {t("publicProfileCard.copyLink")}</button>
-            <button onClick={shareWhatsApp} className="inline-flex items-center gap-1.5 rounded-full border border-input px-3.5 py-2 text-xs font-semibold hover:bg-accent"><Share2 className="h-3.5 w-3.5" /> {t("publicProfileCard.shareWhatsApp")}</button>
-            <a href={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full border border-input px-3.5 py-2 text-xs font-semibold hover:bg-accent"><QrCode className="h-3.5 w-3.5" /> {t("publicProfileCard.qrCode")}</a>
-            <a href={`/p/${slug}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full border border-input px-3.5 py-2 text-xs font-semibold hover:bg-accent"><ExternalLink className="h-3.5 w-3.5" /> {t("publicProfileCard.viewPublicProfile")}</a>
+            <button onClick={copyLink} className="inline-flex items-center gap-1.5 rounded-full border border-input px-3.5 py-2 text-xs font-semibold hover:bg-accent"><Copy className="h-3.5 w-3.5" /> Copy Link</button>
+            <button onClick={shareWhatsApp} className="inline-flex items-center gap-1.5 rounded-full border border-input px-3.5 py-2 text-xs font-semibold hover:bg-accent"><Share2 className="h-3.5 w-3.5" /> Share on WhatsApp</button>
+            <a href={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full border border-input px-3.5 py-2 text-xs font-semibold hover:bg-accent"><QrCode className="h-3.5 w-3.5" /> QR Code</a>
+            <a href={`/p/${slug}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full border border-input px-3.5 py-2 text-xs font-semibold hover:bg-accent"><ExternalLink className="h-3.5 w-3.5" /> View Public Profile</a>
             {lastReceiptId && (
               <Link to="/receipt/$type/$id" params={{ type: "profile", id: lastReceiptId }} className="inline-flex items-center gap-1.5 rounded-full border border-input px-3.5 py-2 text-xs font-semibold hover:bg-accent">
-                <Receipt className="h-3.5 w-3.5" /> {t("publicProfileCard.viewReceipt")}
+                <Receipt className="h-3.5 w-3.5" /> View Receipt
               </Link>
             )}
           </div>
@@ -140,34 +138,34 @@ export function PublicProfileCard({
         {showsVisibility && onTrial && (
           <div className="rounded-2xl border border-brand-violet/30 bg-brand-violet/5 p-4 flex items-center gap-2 text-sm">
             <Clock className="h-4 w-4 text-brand-violet shrink-0" />
-            <span>{t("publicProfileCard.trialDaysLeft", { days: trialDaysLeft })}</span>
+            <span>{trialDaysLeft} day{trialDaysLeft === 1 ? "" : "s"} left in your free trial</span>
           </div>
         )}
 
         {showsVisibility && subActive && !onTrial && (
           <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 flex items-center gap-2 text-sm">
             <Crown className="h-4 w-4 text-amber-600 shrink-0" />
-            <span>{t("publicProfileCard.subscriptionActiveUntil", { date: new Date(subscriptionExpiresAt!).toLocaleDateString("en-IN") })}</span>
+            <span>Pro plan active until {new Date(subscriptionExpiresAt!).toLocaleDateString("en-IN")}</span>
           </div>
         )}
 
         {needsSubscription && (
           <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-6">
-            <div className="flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-400"><Crown className="h-4 w-4" /> {t("publicProfileCard.trialEndedTitle")}</div>
-            <p className="mt-1 text-xs text-muted-foreground">{t("publicProfileCard.trialEndedBody")}</p>
+            <div className="flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-400"><Crown className="h-4 w-4" /> Your free trial has ended</div>
+            <p className="mt-1 text-xs text-muted-foreground">Subscribe to stay visible and keep getting bookings.</p>
             <ul className="mt-3 space-y-1.5 text-xs text-muted-foreground">
-              <li className="flex items-center gap-2"><TrendingUp className="h-3.5 w-3.5 text-amber-600 shrink-0" /> {t("publicProfileCard.benefitRanked")}</li>
-              <li className="flex items-center gap-2"><Search className="h-3.5 w-3.5 text-amber-600 shrink-0" /> {t("publicProfileCard.benefitShownFirst")}</li>
-              <li className="flex items-center gap-2"><Users className="h-3.5 w-3.5 text-amber-600 shrink-0" /> {t("publicProfileCard.benefitMoreViews")}</li>
+              <li className="flex items-center gap-2"><TrendingUp className="h-3.5 w-3.5 text-amber-600 shrink-0" /> Ranked higher in search</li>
+              <li className="flex items-center gap-2"><Search className="h-3.5 w-3.5 text-amber-600 shrink-0" /> Shown first to customers</li>
+              <li className="flex items-center gap-2"><Users className="h-3.5 w-3.5 text-amber-600 shrink-0" /> Significantly more profile views</li>
             </ul>
             <div className="mt-3 flex flex-wrap gap-2">
               <button onClick={() => handleSubscribe("monthly")} disabled={busy !== null}
                 className="inline-flex items-center gap-1.5 rounded-full btn-brand btn-brand-hover px-4 py-2 text-xs font-semibold disabled:opacity-60">
-                {busy === "monthly" && <Loader2 className="h-3.5 w-3.5 animate-spin" />} {t("publicProfileCard.monthlyPlan")}
+                {busy === "monthly" && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Monthly Plan
               </button>
               <button onClick={() => handleSubscribe("annual")} disabled={busy !== null}
                 className="inline-flex items-center gap-1.5 rounded-full border border-input px-4 py-2 text-xs font-semibold hover:bg-accent disabled:opacity-60">
-                {busy === "annual" && <Loader2 className="h-3.5 w-3.5 animate-spin" />} {t("publicProfileCard.annualPlan")}
+                {busy === "annual" && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Annual Plan
               </button>
             </div>
           </div>
@@ -178,25 +176,25 @@ export function PublicProfileCard({
 
   return (
     <div className="rounded-2xl border border-border bg-card p-6">
-      <div className="flex items-center gap-2 text-sm font-semibold text-foreground"><Link2 className="h-4 w-4 text-brand-violet" /> {t("publicProfileCard.title")}</div>
+      <div className="flex items-center gap-2 text-sm font-semibold text-foreground"><Link2 className="h-4 w-4 text-brand-violet" /> Your Public Profile Link</div>
       <p className="mt-1 text-xs text-muted-foreground">
-        {t("publicProfileCard.pitchIntro", { roleWord })}
+        Activate your public {roleWord} link to get direct bookings — verified and commission-protected.
       </p>
       <ul className="mt-3 space-y-1.5 text-xs text-muted-foreground">
-        <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> {t("publicProfileCard.benefitOwnLink")}</li>
-        <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> {t("publicProfileCard.benefitProtectedBooking")}</li>
+        <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> Your own shareable link</li>
+        <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> Bookings protected from external cancellation</li>
         {showsVisibility && (
-          <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> {t("publicProfileCard.benefitFreeTrial")}</li>
+          <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> Free trial included</li>
         )}
-        <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> {t("publicProfileCard.benefitOneTimeFee")}</li>
+        <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> One-time activation fee</li>
       </ul>
       <div className="mt-3 flex items-center justify-between rounded-xl border border-dashed border-input px-4 py-3">
-        <span className="text-sm text-muted-foreground">{isFreeWorker ? t("publicProfileCard.individualWorkers") : t("publicProfileCard.oneTimeFee")}</span>
-        <span className="text-lg font-bold text-foreground">{isFreeWorker ? t("publicProfileCard.free") : price !== null ? `₹${price}` : "…"}</span>
+        <span className="text-sm text-muted-foreground">{isFreeWorker ? "Free for individual workers" : "One-time activation fee"}</span>
+        <span className="text-lg font-bold text-foreground">{isFreeWorker ? "Free" : price !== null ? `₹${price}` : "…"}</span>
       </div>
       <button onClick={handleActivate} disabled={busy !== null}
         className="mt-3 inline-flex items-center gap-1.5 rounded-full btn-brand btn-brand-hover px-4 py-2.5 text-sm font-semibold disabled:opacity-60">
-        {busy === "activate" && <Loader2 className="h-3.5 w-3.5 animate-spin" />} {t("publicProfileCard.activate")}
+        {busy === "activate" && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Activate Public Profile
       </button>
     </div>
   );
