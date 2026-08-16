@@ -34,7 +34,12 @@ serve(async (req) => {
     if (!worker_task_id || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return new Response(JSON.stringify({ error: "Missing fields" }), { status: 400, headers: corsHeaders });
     }
-    const table = entity_type === "vendor" ? "vendor_tasks" : "worker_tasks";
+    // "hall" was previously never handled here either — booking payment
+    // verification silently looked in worker_tasks and failed, so
+    // customer_bookings.payment_status never actually flipped to 'paid'
+    // through this path, and the commission-calculating trigger on
+    // customer_bookings never fired for a real Razorpay payment.
+    const table = entity_type === "vendor" ? "vendor_tasks" : entity_type === "hall" ? "customer_bookings" : "worker_tasks";
 
     const expected = await hmacHex(RAZORPAY_KEY_SECRET, `${razorpay_order_id}|${razorpay_payment_id}`);
     if (expected !== razorpay_signature) {
