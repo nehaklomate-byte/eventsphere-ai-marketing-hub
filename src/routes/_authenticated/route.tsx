@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { NotificationPermissionPrompt } from "@/components/NotificationPermissionPrompt";
-import { PlatformAnnouncements } from "@/components/PlatformAnnouncements";
+import { BroadcastMessagePopup } from "@/components/BroadcastMessagePopup";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -14,9 +14,7 @@ export const Route = createFileRoute("/_authenticated")({
   },
   component: () => (
     <>
-      <div className="mx-auto max-w-5xl px-4 pt-3">
-        <PlatformAnnouncements />
-      </div>
+      <BroadcastMessagePopup />
       <Outlet />
       <NotificationPermissionPrompt />
     </>
