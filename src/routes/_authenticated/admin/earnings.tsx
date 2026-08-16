@@ -39,10 +39,23 @@ function EarningsPage() {
 
   const totalIncoming = (incoming.data ?? []).reduce((s, p) => s + Number(p.amount || 0), 0);
   const totalCommission = (incoming.data ?? []).reduce((s, p) => s + Number(p.commission_amount || 0), 0);
-  const totalProfileRevenue = (profileRevenue.data ?? []).filter((p) => p.status === "paid").reduce((s, p) => s + Number(p.amount || 0), 0);
+  const paidProfileRows = (profileRevenue.data ?? []).filter((p) => p.status === "paid");
+  // Link-activation (one-time) and Pro-plan (monthly/annual subscription)
+  // are two different products with two different totals — kept separate
+  // here instead of one merged "profile revenue" number.
+  const totalLinkActivation = paidProfileRows.filter((p) => p.feature_type === "profile_activation").reduce((s, p) => s + Number(p.amount || 0), 0);
+  const totalProPlan = paidProfileRows.filter((p) => p.feature_type !== "profile_activation").reduce((s, p) => s + Number(p.amount || 0), 0);
+  const totalProfileRevenue = totalLinkActivation + totalProPlan;
   const totalPlatformRevenue = totalCommission + totalProfileRevenue;
   const pendingPayouts = (payouts.data ?? []).filter((p) => p.status === "pending");
   const totalPendingPayoutAmount = pendingPayouts.reduce((s, p) => s + Number(p.amount || 0), 0);
+  // How much has actually gone out to each role, split by role, so
+  // admin can see "worker la kiti dile, vendor la kiti dile" etc,
+  // not just one lump "pending payouts" figure.
+  const paidByRole = (payouts.data ?? []).filter((p) => p.status === "paid").reduce((acc, p) => {
+    acc[p.source] = (acc[p.source] ?? 0) + Number(p.amount || 0);
+    return acc;
+  }, {} as Record<string, number>);
 
   return (
     <div className="space-y-6">
@@ -53,15 +66,27 @@ function EarningsPage() {
         <p className="mt-1 text-muted-foreground">Every payment that's actually cleared through Razorpay — booking commission, profile-link activations, Pro-plan subscriptions — and what the platform still owes out to workers, vendors and venue owners.</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard icon={ArrowDownCircle} label="Total collected" value={money(totalIncoming)} tone="text-emerald-600" />
         <StatCard icon={IndianRupee} label="Booking commission" value={money(totalCommission)} tone="text-brand-violet" />
-        <StatCard icon={Sparkles} label="Profile & Pro-plan revenue" value={money(totalProfileRevenue)} tone="text-amber-600" />
         <StatCard icon={ArrowUpCircle} label="Pending payouts" value={money(totalPendingPayoutAmount)} sub={`${pendingPayouts.length} unpaid`} tone="text-rose-600" />
+        <StatCard icon={Sparkles} label="Link activation revenue" value={money(totalLinkActivation)} tone="text-amber-600" />
+        <StatCard icon={Sparkles} label="Pro plan revenue" value={money(totalProPlan)} tone="text-amber-600" />
+        <StatCard icon={IndianRupee} label="Overall platform revenue" value={money(totalPlatformRevenue)} tone="text-brand-violet" />
       </div>
-      <div className="rounded-2xl border border-brand-violet/30 bg-brand-violet/5 p-4 text-sm">
-        <span className="font-semibold text-foreground">Total platform revenue: {money(totalPlatformRevenue)}</span>
-        <span className="text-muted-foreground"> — booking commission ({money(totalCommission)}) is the platform's cut of booking payments (rest is owed out); profile & Pro-plan revenue ({money(totalProfileRevenue)}) is 100% the platform's, nothing owed out.</span>
+      <div className="rounded-2xl border border-brand-violet/30 bg-brand-violet/5 p-4 text-sm space-y-1.5">
+        <div>
+          <span className="font-semibold text-foreground">Overall earning: {money(totalPlatformRevenue)}</span>
+          <span className="text-muted-foreground"> = booking commission ({money(totalCommission)}) + link activation ({money(totalLinkActivation)}) + Pro plan ({money(totalProPlan)}).</span>
+        </div>
+        <div className="text-muted-foreground">Booking commission is the platform's cut of a booking payment — the rest ({money(totalIncoming - totalCommission)}) is owed out to the venue/vendor/worker. Link activation and Pro-plan revenue are 100% the platform's, nothing owed out.</div>
+        {Object.keys(paidByRole).length > 0 && (
+          <div className="text-muted-foreground">
+            Paid out so far — {Object.entries(paidByRole).map(([role, amt], i) => (
+              <span key={role}>{i > 0 && ", "}<span className="capitalize font-medium text-foreground">{role}</span>: {money(amt)}</span>
+            ))}.
+          </div>
+        )}
       </div>
 
       <div className="flex gap-1.5 rounded-full border border-border bg-card p-1 text-sm w-fit">
