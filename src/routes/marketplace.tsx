@@ -14,6 +14,7 @@ type Hall = {
   verified: boolean; rating: number; review_count: number;
   public_profile_active?: boolean; slug?: string | null;
   trial_ends_at?: string | null; subscription_active?: boolean; subscription_expires_at?: string | null;
+  latitude?: number | null; longitude?: number | null;
 };
 type Vendor = {
   kind: "vendor";
@@ -85,19 +86,43 @@ function sortByVisibility<T extends { public_profile_active?: boolean; trial_end
   });
 }
 
+// Straight-line distance in km between two lat/lng points — plenty
+// accurate for "which venues are roughly closest to me" sorting; no
+// external routing API needed for that.
+function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 function Marketplace() {
   const search = Route.useSearch();
   const [tab, setTab] = useState<Tab>(search.tab ?? "venue");
   const [items, setItems] = useState<Item[] | null>(null);
   const [q, setQ] = useState(search.q ?? "");
   const [city, setCity] = useState<string>("");
+  const [myLocation, setMyLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locating, setLocating] = useState(false);
+
+  function useNearMe() {
+    if (!navigator.geolocation) { alert("Location isn't available on this device/browser."); return; }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => { setMyLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setLocating(false); },
+      () => { setLocating(false); alert("Couldn't get your location — check location permission and try again."); },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
 
   useEffect(() => {
     setItems(null);
     setCity("");
+    setMyLocation(null); // distance data only exists for venues right now — reset so switching tabs doesn't silently filter everything out
     if (tab === "venue") {
       supabase.from("halls")
-        .select("id,name,city,state,category,cover_url,gallery,price_per_day,max_guests,verified,rating,review_count,public_profile_active,slug,trial_ends_at,subscription_active,subscription_expires_at")
+        .select("id,name,city,state,category,cover_url,gallery,price_per_day,max_guests,verified,rating,review_count,public_profile_active,slug,trial_ends_at,subscription_active,subscription_expires_at,latitude,longitude")
         .eq("status", "published").eq("verified", true).is("deleted_at", null)
         .order("verified", { ascending: false })
         .then(({ data }) => setItems(sortByVisibility(((data ?? []) as unknown[]).map((h) => ({ ...(h as object), kind: "venue" })) as Item[])));
@@ -122,11 +147,17 @@ function Marketplace() {
     }
   }, [tab]);
 
-  const filtered = (items ?? []).filter((h) => {
+  const withDistance = (items ?? []).map((h) => {
+    const lat = (h as Hall).latitude, lng = (h as Hall).longitude;
+    const km = myLocation && lat != null && lng != null ? distanceKm(myLocation.lat, myLocation.lng, lat, lng) : null;
+    return { ...h, _km: km };
+  });
+  const filtered = withDistance.filter((h) => {
     const okQ = !q || h.name.toLowerCase().includes(q.toLowerCase()) || (h.city ?? "").toLowerCase().includes(q.toLowerCase()) || (h.category ?? "").toLowerCase().includes(q.toLowerCase());
     const okCity = !city || h.city === city;
-    return okQ && okCity;
-  });
+    const okNear = !myLocation || h._km != null; // "Near me" active → only show items with known coordinates
+    return okQ && okCity && okNear;
+  }).sort((a, b) => (myLocation ? (a._km ?? Infinity) - (b._km ?? Infinity) : 0));
   const cities = Array.from(new Set((items ?? []).map((h) => h.city).filter(Boolean))) as string[];
   const meta = TAB_META[tab];
 
@@ -169,6 +200,18 @@ function Marketplace() {
             {meta.listBtn} <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
+        {tab === "venue" && (
+          <div className="mt-3 flex items-center gap-2">
+            <button type="button" onClick={myLocation ? () => setMyLocation(null) : useNearMe} disabled={locating}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition disabled:opacity-60 ${
+                myLocation ? "border-brand-violet bg-brand-violet text-white" : "border-input bg-card text-muted-foreground hover:bg-accent"
+              }`}>
+              {locating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MapPin className="h-3.5 w-3.5" />}
+              {myLocation ? "Near me: on" : "Near me"}
+            </button>
+            {myLocation && <span className="text-xs text-muted-foreground">Showing venues with a saved location, closest first.</span>}
+          </div>
+        )}
       </PageHeader>
 
       <section className="mx-auto max-w-7xl px-5 md:px-8 py-16">
@@ -220,6 +263,7 @@ function Marketplace() {
                   <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
                     <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{[h.city, h.state].filter(Boolean).join(", ")}</span>
                     {h.max_guests && <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" />{h.max_guests}</span>}
+                    {h._km != null && <span className="font-semibold text-brand-violet">{h._km < 1 ? "<1 km away" : `${h._km.toFixed(1)} km away`}</span>}
                   </div>
                   <div className="mt-3 flex items-center justify-between">
                     <div className="text-sm font-semibold">
