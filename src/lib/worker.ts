@@ -27,6 +27,7 @@ export type WorkerRow = {
   per_event_charges: number | null;
   min_booking_price: number | null;
   payment_type: string | null;
+  pricing_options: { id: string; name: string; price: number; per_guest: boolean }[];
   pincode: string | null;
   address: string | null;
   district: string | null;
