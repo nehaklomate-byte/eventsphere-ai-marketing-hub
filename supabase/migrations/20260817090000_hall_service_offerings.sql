@@ -1,0 +1,22 @@
+-- ============================================================
+-- Venue owner: "I provide this facility in-house / I don't" toggle,
+-- per vendor category (Caterer, Decorator, DJ, ...), with an
+-- in-house price when offered. Mirrors the existing `facilities`
+-- jsonb column pattern on halls (same table, same shape idea) so no
+-- new table/RLS is needed — public read of published halls and
+-- owner read/write already cover this column.
+--
+-- Shape: { "Caterer": { "in_house": true, "price": 25000 },
+--          "Decorator": { "in_house": false } , ... }
+-- Categories match public.VENDOR_CATEGORIES in src/lib/vendor.ts so
+-- a category the venue does NOT offer in-house links straight to
+-- that same category in the vendor marketplace.
+--
+-- Nothing else changes: when a customer books a hall and includes
+-- selected in-house services, their price is added into the hall
+-- booking's existing `amount` — commission/payout math already in
+-- place (per_role_commission, hall_payment) needs no changes, since
+-- it works off the total `amount`, not its composition.
+-- ============================================================
+
+alter table public.halls add column if not exists service_offerings jsonb not null default '{}'::jsonb;
