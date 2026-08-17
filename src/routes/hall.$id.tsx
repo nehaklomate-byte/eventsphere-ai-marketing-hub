@@ -783,7 +783,7 @@ function BookingForm({
             </div>
           ))}
           {inHouseServices.some(([, v]) => (v.options ?? []).some((o) => o.per_guest)) && (
-            <p className="text-[11px] text-muted-foreground">Per-guest items scale with the guest count you enter below.</p>
+            <p className="text-[11px] text-muted-foreground">Per-guest items scale with the guest count entered above.</p>
           )}
         </div>
       )}
