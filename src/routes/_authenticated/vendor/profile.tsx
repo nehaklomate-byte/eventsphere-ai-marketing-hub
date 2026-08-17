@@ -8,6 +8,7 @@ import { Loader2, Save, Upload, X, CheckCircle2, ShieldCheck, Store, Plus, Trash
 import { toast } from "sonner";
 import { PublicProfileCard } from "@/components/PublicProfileCard";
 import { ProfileHistoryPanel } from "@/components/ProfileHistoryPanel";
+import { PricingOptionsEditor, type PricingOption } from "@/components/PricingOptionsEditor";
 
 // Mirrors src/routes/_authenticated/worker/profile.tsx exactly — same
 // section-tab structure, same helper components, same publish toggle
@@ -199,11 +200,23 @@ function ProfilePage() {
         )}
 
         {active === "packages" && (
-          vendor?.id ? (
-            <PackagesEditor vendorId={vendor.id} packages={packages ?? []} onChanged={refetchPackages} />
-          ) : (
-            <p className="text-sm text-muted-foreground">Save your basic profile first (so we have a vendor ID), then come back to add packages.</p>
-          )
+          <>
+            {vendor?.id ? (
+              <PackagesEditor vendorId={vendor.id} packages={packages ?? []} onChanged={refetchPackages} />
+            ) : (
+              <p className="text-sm text-muted-foreground">Save your basic profile first (so we have a vendor ID), then come back to add packages.</p>
+            )}
+            <div className="mt-8 border-t border-border pt-6">
+              <h3 className="text-sm font-semibold">Pricing add-ons</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Beyond a package, list the specific things a customer can add — e.g. "Extra hour — ₹2,000", "Fog machine — ₹1,500", "Buffet upgrade — ₹80/guest". They tick whichever they need when booking, and the price is calculated for them automatically instead of them having to guess an offer amount.
+              </p>
+              <PricingOptionsEditor
+                options={(form.pricing_options as PricingOption[]) ?? []}
+                onChange={(opts) => set("pricing_options", opts)}
+              />
+            </div>
+          </>
         )}
 
         {active === "review" && (
