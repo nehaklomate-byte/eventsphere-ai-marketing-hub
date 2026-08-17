@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Building2, Upload, Loader2, X, Save, Eye, EyeOff, Wallet, FileCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchMyHalls, createHall, updateHall, type Hall } from "@/lib/venue";
+import { VENDOR_CATEGORIES } from "@/lib/vendor";
 import { PublicProfileCard } from "@/components/PublicProfileCard";
 import { ProfileHistoryPanel } from "@/components/ProfileHistoryPanel";
 
@@ -39,6 +40,35 @@ function VenueProfilePage() {
   function toggleFacility(name: string) {
     const current = (form.facilities as Record<string, boolean>) ?? {};
     set("facilities", { ...current, [name]: !current[name] } as never);
+  }
+
+  function toggleService(category: string) {
+    const current = (form.service_offerings as Hall["service_offerings"]) ?? {};
+    const existing = current[category] ?? { in_house: false, price: null, options: [] };
+    set("service_offerings", { ...current, [category]: { ...existing, in_house: !existing.in_house } } as never);
+  }
+
+  function setServicePrice(category: string, price: number | null) {
+    const current = (form.service_offerings as Hall["service_offerings"]) ?? {};
+    const existing = current[category] ?? { in_house: true, price: null, options: [] };
+    set("service_offerings", { ...current, [category]: { ...existing, price } } as never);
+  }
+
+  // Options are how a customer builds their own decoration/menu instead
+  // of getting one fixed price — e.g. Caterer: "Paneer Butter Masala —
+  // ₹180/plate", Decorator: "Floral stage — ₹15,000". per_guest ones
+  // multiply by the guest count the customer enters at booking time.
+  function addServiceOption(category: string, name: string, price: number, perGuest: boolean) {
+    const current = (form.service_offerings as Hall["service_offerings"]) ?? {};
+    const existing = current[category] ?? { in_house: true, price: null, options: [] };
+    const option = { id: crypto.randomUUID(), name, price, per_guest: perGuest };
+    set("service_offerings", { ...current, [category]: { ...existing, in_house: true, options: [...existing.options, option] } } as never);
+  }
+
+  function removeServiceOption(category: string, optionId: string) {
+    const current = (form.service_offerings as Hall["service_offerings"]) ?? {};
+    const existing = current[category] ?? { in_house: true, price: null, options: [] };
+    set("service_offerings", { ...current, [category]: { ...existing, options: existing.options.filter((o) => o.id !== optionId) } } as never);
   }
 
   function setExtra(key: string, value: unknown) {
@@ -117,6 +147,7 @@ function VenueProfilePage() {
   }
 
   const facilities = (form.facilities as Record<string, boolean>) ?? {};
+  const serviceOfferings = (form.service_offerings as Hall["service_offerings"]) ?? {};
   const extra = (form.additional_info as Record<string, unknown>) ?? {};
 
   return (
@@ -215,6 +246,63 @@ function VenueProfilePage() {
             set("facilities", { ...current, [name]: true } as never);
           }}
         />
+      </Section>
+
+      {/* Services — in-house vs "book separately" per vendor category */}
+      <Section title="Services">
+        <p className="-mt-2 text-xs text-muted-foreground">
+          For each service you provide in-house, add the actual choices — menu items for Caterer, decoration packages for Decorator, and so on — so the customer picks exactly what they want instead of one fixed price. Leave a category OFF if you don't provide it — customers get a "book separately" link to hire a vendor for it instead.
+        </p>
+        <div className="space-y-3">
+          {VENDOR_CATEGORIES.map((cat) => {
+            const svc = serviceOfferings[cat] ?? { in_house: false, price: null, options: [] };
+            return (
+              <div key={cat} className="rounded-xl border border-border bg-muted/20 px-3.5 py-2.5 space-y-2.5">
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleService(cat)}
+                    className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition shrink-0 ${
+                      svc.in_house ? "border-brand-violet bg-brand-violet text-white" : "border-border bg-background text-muted-foreground hover:bg-accent"
+                    }`}
+                  >
+                    {svc.in_house ? "Provided in-house" : "Not provided"}
+                  </button>
+                  <span className="text-sm font-medium flex-1 min-w-[120px]">{cat}</span>
+                  {svc.in_house && (svc.options ?? []).length === 0 && (
+                    <div className="w-40">
+                      <NumberInput value={svc.price} onChange={(v) => setServicePrice(cat, v)} />
+                    </div>
+                  )}
+                </div>
+
+                {svc.in_house && (
+                  <div className="pl-1 space-y-2">
+                    {(svc.options ?? []).length > 0 && (
+                      <div className="space-y-1">
+                        {svc.options.map((o) => (
+                          <div key={o.id} className="flex items-center justify-between gap-2 rounded-lg bg-background px-3 py-1.5 text-xs">
+                            <span>{o.name}</span>
+                            <span className="flex items-center gap-2">
+                              <span className="font-semibold">₹{o.price.toLocaleString("en-IN")}{o.per_guest ? " / guest" : ""}</span>
+                              <button type="button" onClick={() => removeServiceOption(cat, o.id)} className="text-muted-foreground hover:text-destructive"><X className="h-3.5 w-3.5" /></button>
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <ServiceOptionInput onAdd={(name, price, perGuest) => addServiceOption(cat, name, price, perGuest)} />
+                    <p className="text-[11px] text-muted-foreground">
+                      {(svc.options ?? []).length > 0
+                        ? "Customer picks and combines whichever of the above they want — total updates live."
+                        : "No specific choices added yet — customer sees the flat price above instead."}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </Section>
 
       {/* Additional details */}
@@ -492,6 +580,42 @@ function NumberInput({ value, onChange }: { value?: number | null; onChange: (v:
       onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))}
       className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet"
     />
+  );
+}
+
+function ServiceOptionInput({ onAdd }: { onAdd: (name: string, price: number, perGuest: boolean) => void }) {
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
+  const [perGuest, setPerGuest] = useState(false);
+
+  function add() {
+    const n = name.trim();
+    const p = Number(price);
+    if (!n || !price || Number.isNaN(p) || p <= 0) return;
+    onAdd(n, p, perGuest);
+    setName(""); setPrice(""); setPerGuest(false);
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="e.g. Paneer Butter Masala, Floral stage decor"
+        className="min-w-[14rem] flex-1 rounded-lg border border-input bg-background px-3 py-1.5 text-xs outline-none focus:border-brand-violet"
+      />
+      <input
+        value={price}
+        onChange={(e) => setPrice(e.target.value.replace(/[^0-9]/g, ""))}
+        placeholder="Price ₹"
+        inputMode="numeric"
+        className="w-24 rounded-lg border border-input bg-background px-3 py-1.5 text-xs outline-none focus:border-brand-violet"
+      />
+      <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        <input type="checkbox" checked={perGuest} onChange={(e) => setPerGuest(e.target.checked)} /> per guest
+      </label>
+      <button type="button" onClick={add} className="rounded-full border border-input px-3 py-1.5 text-[11px] font-semibold hover:bg-accent">Add</button>
+    </div>
   );
 }
 
