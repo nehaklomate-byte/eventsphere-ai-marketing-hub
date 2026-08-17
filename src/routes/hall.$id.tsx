@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 import { emailSchema, phoneSchema } from "@/lib/validation";
 import { WishlistButton } from "@/components/WishlistButton";
+import { VENDOR_CATEGORIES } from "@/lib/vendor";
 
 type Hall = {
   id: string;
@@ -35,6 +36,7 @@ type Hall = {
   parking_slots: number | null;
   num_rooms: number | null;
   facilities: Record<string, boolean>;
+  service_offerings: ServiceOfferingMap;
   price_per_day: number | null;
   price_per_hour: number | null;
   advance_amount: number | null;
@@ -101,6 +103,7 @@ function normalize(d: Record<string, unknown>): Hall {
     parking_slots: (d.parking_slots as number) ?? null,
     num_rooms: (d.num_rooms as number) ?? null,
     facilities: (d.facilities as Record<string, boolean>) ?? {},
+    service_offerings: (d.service_offerings as ServiceOfferingMap) ?? {},
     price_per_day: (d.price_per_day as number) ?? null,
     price_per_hour: (d.price_per_hour as number) ?? null,
     advance_amount: (d.advance_amount as number) ?? null,
@@ -349,8 +352,9 @@ function HallDetail() {
                 <p className="mt-3 text-xs text-muted-foreground">Advance to confirm: ₹{hall.advance_amount.toLocaleString("en-IN")}</p>
               )}
             </div>
+            <ServiceOfferings serviceOfferings={hall.service_offerings} eventId={event_id} />
             <div className="mt-6">
-              <BookingAndEnquiry hallId={hall.id} hallName={hall.name} pricePerDay={hall.price_per_day} advanceAmount={hall.advance_amount} eventId={event_id} sourceSlug={ref} />
+              <BookingAndEnquiry hallId={hall.id} hallName={hall.name} pricePerDay={hall.price_per_day} advanceAmount={hall.advance_amount} serviceOfferings={hall.service_offerings} eventId={event_id} sourceSlug={ref} />
             </div>
           </div>
         </aside>
@@ -456,9 +460,73 @@ const EVENT_TYPES = [
   "Religious Function", "Music Show", "Fashion Show", "Other",
 ];
 
+/* ============================================================
+ * What this venue offers in-house vs what a customer books
+ * separately (from the vendor marketplace) — see venue's "Services"
+ * profile section for the in_house/price/options setup per category.
+ * ============================================================ */
+type ServiceOfferingMap = Record<string, {
+  in_house: boolean;
+  price: number | null;
+  options: { id: string; name: string; price: number; per_guest: boolean }[];
+}>;
+
+function ServiceOfferings({ serviceOfferings, eventId }: { serviceOfferings: ServiceOfferingMap; eventId?: string }) {
+  const inHouse = Object.entries(serviceOfferings).filter(([, v]) => v.in_house);
+  const notOffered = VENDOR_CATEGORIES.filter((c) => !serviceOfferings[c]?.in_house);
+  if (inHouse.length === 0 && notOffered.length === 0) return null;
+
+  return (
+    <div className="mt-5 border-t border-border pt-4 space-y-3 text-sm">
+      {inHouse.length > 0 && (
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">This venue also provides</div>
+          <div className="space-y-2">
+            {inHouse.map(([cat, v]) => (
+              <div key={cat}>
+                {(v.options ?? []).length > 0 ? (
+                  <>
+                    <div className="font-medium">{cat} — choose what you like</div>
+                    <div className="mt-0.5 space-y-0.5 text-xs text-muted-foreground">
+                      {v.options.map((o) => (
+                        <div key={o.id} className="flex items-center justify-between">
+                          <span>{o.name}</span>
+                          <span className="font-semibold text-foreground">₹{o.price.toLocaleString("en-IN")}{o.per_guest ? "/guest" : ""}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <span>{cat}</span>
+                    <span className="font-semibold">{v.price ? `₹${v.price.toLocaleString("en-IN")}` : "Included"}</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {notOffered.length > 0 && (
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Book separately</div>
+          <div className="flex flex-wrap gap-1.5">
+            {notOffered.map((cat) => (
+              <Link key={cat} to="/marketplace" search={{ tab: "vendor", q: cat, event_id: eventId } as never}
+                className="rounded-full border border-input px-2.5 py-1 text-xs font-semibold text-brand-violet hover:bg-accent">
+                {cat}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function BookingAndEnquiry({
-  hallId, hallName, pricePerDay, advanceAmount, eventId, sourceSlug,
-}: { hallId: string; hallName: string; pricePerDay: number | null; advanceAmount: number | null; eventId?: string; sourceSlug?: string }) {
+  hallId, hallName, pricePerDay, advanceAmount, serviceOfferings, eventId, sourceSlug,
+}: { hallId: string; hallName: string; pricePerDay: number | null; advanceAmount: number | null; serviceOfferings: ServiceOfferingMap; eventId?: string; sourceSlug?: string }) {
   const [mode, setMode] = useState<"booking" | "enquiry">("booking");
   return (
     <div>
@@ -479,7 +547,7 @@ function BookingAndEnquiry({
         </button>
       </div>
       {mode === "booking"
-        ? <BookingForm hallId={hallId} hallName={hallName} pricePerDay={pricePerDay} advanceAmount={advanceAmount} eventId={eventId} sourceSlug={sourceSlug} />
+        ? <BookingForm hallId={hallId} hallName={hallName} pricePerDay={pricePerDay} advanceAmount={advanceAmount} serviceOfferings={serviceOfferings} eventId={eventId} sourceSlug={sourceSlug} />
         : <EnquiryForm hallId={hallId} sourceSlug={sourceSlug} />}
     </div>
   );
@@ -502,8 +570,8 @@ const bookingSchema = z.object({
 });
 
 function BookingForm({
-  hallId, hallName, pricePerDay, advanceAmount, eventId, sourceSlug,
-}: { hallId: string; hallName: string; pricePerDay: number | null; advanceAmount: number | null; eventId?: string; sourceSlug?: string }) {
+  hallId, hallName, pricePerDay, advanceAmount, serviceOfferings, eventId, sourceSlug,
+}: { hallId: string; hallName: string; pricePerDay: number | null; advanceAmount: number | null; serviceOfferings: ServiceOfferingMap; eventId?: string; sourceSlug?: string }) {
   const [state, setState] = useState({
     event_name: "", organizer_type: "", organizer_type_other: "", event_type: "", event_type_other: "",
     contact_person: "", contact_phone: "", contact_email: "", event_date: "", start_time: "", end_time: "",
@@ -514,6 +582,30 @@ function BookingForm({
   const [done, setDone] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [needsLogin, setNeedsLogin] = useState(false);
+
+  // In-house services the customer can build themselves — a category
+  // with specific options (menu items, decoration packages) lets them
+  // tick individual options; a category with just a flat price is one
+  // on/off checkbox. All selected by default; per_guest options scale
+  // with the guest count entered below. Keyed by category for flat
+  // ones, by option.id for option-based ones (both are unique).
+  const inHouseServices = Object.entries(serviceOfferings).filter(([, v]) => v.in_house);
+  const [selected, setSelected] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {};
+    for (const [cat, v] of inHouseServices) {
+      if ((v.options ?? []).length > 0) for (const o of v.options) init[o.id] = true;
+      else init[cat] = true;
+    }
+    return init;
+  });
+  const guestCount = Number(state.guest_count) || 0;
+  const servicesTotal = inHouseServices.reduce((sum, [cat, v]) => {
+    if ((v.options ?? []).length > 0) {
+      return sum + v.options.reduce((s, o) => s + (selected[o.id] ? (o.per_guest ? o.price * guestCount : o.price) : 0), 0);
+    }
+    return sum + (selected[cat] ? (v.price ?? 0) : 0);
+  }, 0);
+  const totalAmount = (pricePerDay ?? 0) + servicesTotal;
 
   const set = (k: string, v: string) => setState((s) => ({ ...s, [k]: v }));
 
@@ -541,7 +633,7 @@ function BookingForm({
       target_name: hallName,
       customer_event_id: eventId ?? null,
       event_date: d.event_date,
-      amount: pricePerDay ?? 0,
+      amount: totalAmount,
       advance_amount: advanceAmount ?? null,
       booking_source: sourceSlug ? "public_profile_link" : "marketplace",
       source_slug: sourceSlug ?? null,
@@ -558,6 +650,15 @@ function BookingForm({
         start_time: d.start_time,
         end_time: d.end_time,
         guest_count: Number(d.guest_count),
+        selected_services: inHouseServices.flatMap(([cat, v]) => {
+          if ((v.options ?? []).length > 0) {
+            return v.options.filter((o) => selected[o.id]).map((o) => ({
+              category: cat, name: o.name, per_guest: o.per_guest,
+              unit_price: o.price, line_amount: o.per_guest ? o.price * guestCount : o.price,
+            }));
+          }
+          return selected[cat] ? [{ category: cat, name: cat, per_guest: false, unit_price: v.price ?? 0, line_amount: v.price ?? 0 }] : [];
+        }),
       },
     } as never);
     setSubmitting(false);
@@ -649,6 +750,48 @@ function BookingForm({
       <Row label="Special instructions (optional)" error={errors.special_instructions}>
         <textarea rows={3} className="input" value={state.special_instructions} onChange={(e) => set("special_instructions", e.target.value)} placeholder="Anything the venue should know" />
       </Row>
+
+      {inHouseServices.length > 0 && (
+        <div className="rounded-xl border border-border bg-muted/20 p-3 space-y-3">
+          <div className="text-xs font-semibold text-muted-foreground">Build your own — pick what this venue provides in-house</div>
+          {inHouseServices.map(([cat, v]) => (
+            <div key={cat} className="space-y-1">
+              {(v.options ?? []).length > 0 ? (
+                <>
+                  <div className="text-xs font-semibold">{cat}</div>
+                  {v.options.map((o) => (
+                    <label key={o.id} className="flex items-center justify-between gap-2 pl-2 text-sm">
+                      <span className="flex items-center gap-2">
+                        <input type="checkbox" checked={!!selected[o.id]} onChange={(e) => setSelected((s) => ({ ...s, [o.id]: e.target.checked }))} />
+                        {o.name}
+                      </span>
+                      <span className="font-semibold">
+                        +₹{o.price.toLocaleString("en-IN")}{o.per_guest ? "/guest" : ""}
+                      </span>
+                    </label>
+                  ))}
+                </>
+              ) : (
+                <label className="flex items-center justify-between gap-2 text-sm">
+                  <span className="flex items-center gap-2">
+                    <input type="checkbox" checked={!!selected[cat]} onChange={(e) => setSelected((s) => ({ ...s, [cat]: e.target.checked }))} />
+                    {cat}
+                  </span>
+                  <span className="font-semibold">{v.price ? `+₹${v.price.toLocaleString("en-IN")}` : "Included"}</span>
+                </label>
+              )}
+            </div>
+          ))}
+          {inHouseServices.some(([, v]) => (v.options ?? []).some((o) => o.per_guest)) && (
+            <p className="text-[11px] text-muted-foreground">Per-guest items scale with the guest count you enter below.</p>
+          )}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between rounded-xl bg-accent/40 px-3.5 py-2.5 text-sm font-semibold">
+        <span>Total</span>
+        <span>₹{totalAmount.toLocaleString("en-IN")}</span>
+      </div>
 
       {advanceAmount != null && advanceAmount > 0 && (
         <p className="text-xs text-muted-foreground">An advance of ₹{advanceAmount.toLocaleString("en-IN")} will be requested once the venue confirms.</p>
