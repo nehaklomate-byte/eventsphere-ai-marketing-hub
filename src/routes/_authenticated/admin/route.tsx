@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useRouterState, useNavigate, redirect } 
 import { useState } from "react";
 import {
   LayoutDashboard, ShieldCheck, Users, Briefcase,
-  Bell, Settings, LogOut, Menu, X, UserCheck, IndianRupee, History, RotateCcw, AlertTriangle,
+  Bell, Settings, LogOut, Menu, X, UserCheck, IndianRupee, History, RotateCcw, AlertTriangle, PartyPopper,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
@@ -52,6 +52,7 @@ const NAV: NavItem[] = [
   { to: "/admin/verification", label: "Verification Center", icon: ShieldCheck },
   { to: "/admin/jobs", label: "Job Board", icon: Briefcase },
   { to: "/admin/earnings", label: "Earnings", icon: IndianRupee },
+  { to: "/admin/events", label: "Event Payments", icon: PartyPopper },
   { to: "/admin/refunds", label: "Refunds", icon: RotateCcw },
   { to: "/admin/complaints", label: "Complaints", icon: AlertTriangle },
   { to: "/admin/users", label: "Users", icon: Users },
