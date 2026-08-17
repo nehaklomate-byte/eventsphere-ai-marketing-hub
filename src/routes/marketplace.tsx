@@ -41,12 +41,17 @@ const TAB_META: Record<Tab, { label: string; icon: typeof Building2; empty: stri
   worker: { label: "Workers", icon: HardHat, empty: "skilled worker profile", detailBase: "/worker", listBtn: "List your worker profile" },
 };
 
-type MarketplaceSearch = { event_id?: string; tab?: Tab };
+type MarketplaceSearch = { event_id?: string; tab?: Tab; q?: string };
 
 export const Route = createFileRoute("/marketplace")({
   validateSearch: (search: Record<string, unknown>): MarketplaceSearch => ({
     event_id: typeof search.event_id === "string" ? search.event_id : undefined,
     tab: (search.tab === "vendor" || search.tab === "worker" || search.tab === "venue") ? search.tab : undefined,
+    // Lets a link pre-fill the search box — e.g. a venue's "book this
+    // service separately" link jumping straight to that category
+    // (see hall.$id.tsx "Not included" section), instead of landing on
+    // an unfiltered list the customer has to search again themselves.
+    q: typeof search.q === "string" ? search.q : undefined,
   }),
   head: () => ({
     meta: [
@@ -84,7 +89,7 @@ function Marketplace() {
   const search = Route.useSearch();
   const [tab, setTab] = useState<Tab>(search.tab ?? "venue");
   const [items, setItems] = useState<Item[] | null>(null);
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(search.q ?? "");
   const [city, setCity] = useState<string>("");
 
   useEffect(() => {
