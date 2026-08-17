@@ -8,6 +8,7 @@ import { Loader2, Save, Upload, X, CheckCircle2, ShieldCheck } from "lucide-reac
 import { toast } from "sonner";
 import { PublicProfileCard } from "@/components/PublicProfileCard";
 import { ProfileHistoryPanel } from "@/components/ProfileHistoryPanel";
+import { PricingOptionsEditor, type PricingOption } from "@/components/PricingOptionsEditor";
 
 export const Route = createFileRoute("/_authenticated/worker/profile")({
   component: ProfilePage,
@@ -314,6 +315,13 @@ function ProfilePage() {
               <FieldGrid>
                 <Field label="UPI ID"><Input value={(form.payout_upi_id as string) ?? ""} onChange={(v) => set("payout_upi_id", v)} placeholder="yourname@okhdfcbank" /></Field>
               </FieldGrid>
+            </div>
+            <div className="mt-6 border-t border-border pt-6">
+              <h3 className="font-semibold">Pricing add-ons</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Extras a customer can add on top of your rate above — e.g. "Overtime hour — ₹300", "Own equipment — ₹500". They tick whichever they need when booking and the total is calculated for them automatically.
+              </p>
+              <PricingOptionsEditor options={(form.pricing_options as PricingOption[]) ?? []} onChange={(opts) => set("pricing_options", opts)} />
             </div>
             </>
           )}
