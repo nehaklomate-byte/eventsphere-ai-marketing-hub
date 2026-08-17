@@ -20,7 +20,7 @@ type Vendor = {
   kind: "vendor";
   id: string; name: string; city: string | null; state: string | null;
   category: string | null; cover_url: string | null; gallery: string[];
-  price_per_day: null; max_guests: null;
+  price_per_day: number | null; max_guests: null;
   verified: boolean; rating: number; review_count: number;
   public_profile_active?: boolean; slug?: string | null;
   trial_ends_at?: string | null; subscription_active?: boolean; subscription_expires_at?: string | null;
@@ -128,12 +128,12 @@ function Marketplace() {
         .then(({ data }) => setItems(sortByVisibility(((data ?? []) as unknown[]).map((h) => ({ ...(h as object), kind: "venue" })) as Item[])));
     } else if (tab === "vendor") {
       supabase.from("vendors")
-        .select("id,business_name,city,state,category,logo_url,portfolio,verified,rating,review_count,public_profile_active,slug,trial_ends_at,subscription_active,subscription_expires_at")
+        .select("id,business_name,city,state,category,logo_url,portfolio,base_price,verified,rating,review_count,public_profile_active,slug,trial_ends_at,subscription_active,subscription_expires_at")
         .eq("status", "published").eq("verified", true).is("deleted_at", null)
         .order("verified", { ascending: false })
         .then(({ data }) => setItems(sortByVisibility(((data ?? []) as unknown[]).map((v) => {
-          const vv = v as { id: string; business_name: string; city: string | null; state: string | null; category: string | null; logo_url: string | null; portfolio: string[]; verified: boolean; rating: number; review_count: number; public_profile_active: boolean; slug: string | null; trial_ends_at: string | null; subscription_active: boolean; subscription_expires_at: string | null };
-          return { kind: "vendor", id: vv.id, name: vv.business_name, city: vv.city, state: vv.state, category: vv.category, cover_url: vv.logo_url, gallery: vv.portfolio ?? [], price_per_day: null, max_guests: null, verified: vv.verified, rating: vv.rating, review_count: vv.review_count, public_profile_active: vv.public_profile_active, slug: vv.slug, trial_ends_at: vv.trial_ends_at, subscription_active: vv.subscription_active, subscription_expires_at: vv.subscription_expires_at } as Vendor;
+          const vv = v as { id: string; business_name: string; city: string | null; state: string | null; category: string | null; logo_url: string | null; portfolio: string[]; base_price: number | null; verified: boolean; rating: number; review_count: number; public_profile_active: boolean; slug: string | null; trial_ends_at: string | null; subscription_active: boolean; subscription_expires_at: string | null };
+          return { kind: "vendor", id: vv.id, name: vv.business_name, city: vv.city, state: vv.state, category: vv.category, cover_url: vv.logo_url, gallery: vv.portfolio ?? [], price_per_day: vv.base_price, max_guests: null, verified: vv.verified, rating: vv.rating, review_count: vv.review_count, public_profile_active: vv.public_profile_active, slug: vv.slug, trial_ends_at: vv.trial_ends_at, subscription_active: vv.subscription_active, subscription_expires_at: vv.subscription_expires_at } as Vendor;
         }))));
     } else {
       supabase.from("workers")
@@ -267,7 +267,7 @@ function Marketplace() {
                   </div>
                   <div className="mt-3 flex items-center justify-between">
                     <div className="text-sm font-semibold">
-                      {h.price_per_day ? `₹${h.price_per_day.toLocaleString("en-IN")}/day` : "On request"}
+                      {h.price_per_day ? `From ₹${h.price_per_day.toLocaleString("en-IN")}${h.kind !== "vendor" ? "/day" : ""}` : "Price on request"}
                     </div>
                     <span className="rounded-full btn-brand btn-brand-hover text-xs font-semibold px-3 py-1.5">View</span>
                   </div>
