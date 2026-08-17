@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Building2, Upload, Loader2, X, Save, Eye, EyeOff, Wallet, FileCheck } from "lucide-react";
+import { Building2, Upload, Loader2, X, Save, Eye, EyeOff, Wallet, FileCheck, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchMyHalls, createHall, updateHall, type Hall } from "@/lib/venue";
 import { VENDOR_CATEGORIES } from "@/lib/vendor";
@@ -28,6 +28,7 @@ function VenueProfilePage() {
   const [saving, setSaving] = useState(false);
   const [partnerTermsChecked, setPartnerTermsChecked] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
+  const [locating, setLocating] = useState(false);
 
   useEffect(() => {
     if (hall) setForm(hall);
@@ -189,6 +190,33 @@ function VenueProfilePage() {
           <Field label="State"><Input value={form.state ?? ""} onChange={(v) => set("state", v as never)} /></Field>
           <Field label="Pincode"><Input value={form.pincode ?? ""} onChange={(v) => set("pincode", v as never)} /></Field>
           <Field label="Country"><Input value={form.country ?? "India"} onChange={(v) => set("country", v as never)} /></Field>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              if (!navigator.geolocation) { toast.error("Location isn't available on this device/browser."); return; }
+              setLocating(true);
+              navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                  set("latitude", pos.coords.latitude as never);
+                  set("longitude", pos.coords.longitude as never);
+                  setLocating(false);
+                  toast.success("Location captured — customers can now find you in \"Near me\" search.");
+                },
+                () => { setLocating(false); toast.error("Couldn't get your location — check location permission and try again."); },
+                { enableHighAccuracy: true, timeout: 10000 }
+              );
+            }}
+            disabled={locating}
+            className="inline-flex items-center gap-1.5 rounded-full border border-input px-3.5 py-2 text-xs font-semibold hover:bg-accent disabled:opacity-60"
+          >
+            {locating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MapPin className="h-3.5 w-3.5" />}
+            {form.latitude != null ? "Update my location" : "Use my current location"}
+          </button>
+          {form.latitude != null && form.longitude != null && (
+            <span className="text-xs text-muted-foreground">Set — customers searching "Near me" can find this venue.</span>
+          )}
         </div>
       </Section>
 
