@@ -409,6 +409,135 @@ export async function markPayoutPaid(source: PayoutSource, id: string, payoutRef
 }
 
 // =============================================================
+// Per-event financial breakdown — "kontya event sathi kon kon hot,
+// konta venue/vendor/worker booking, commission cut, and net payout
+// per role, with receipt". fetchIncomingPayments/fetchPayouts above
+// are flat lists (all hall/worker/vendor rows mixed together) — this
+// groups the SAME underlying rows by customer_event_id so admin sees
+// one event = venue + vendor(s) + worker(s) + who owes what, in one
+// place, instead of piecing it together across two flat tables.
+//
+// If a venue owner provides everything himself (no separate vendor/
+// worker hired for that event), vendors/workers below are simply
+// empty arrays — the venue's own amount already covers everything,
+// so 100% of the payout math still flows through the existing
+// venue_payouts row, nothing extra needed for that case.
+// =============================================================
+
+export type EventPartyRow = {
+  id: string;                 // booking id (customer_bookings.id / vendor_tasks.id / worker_tasks.id)
+  role: "venue" | "vendor" | "worker";
+  name: string;                // booking name — hall name, or "Vendor business — task"
+  amount: number;               // what the customer was charged for this booking
+  commission: number;           // platform's cut
+  payout: number;                // amount - commission — what's owed to that role
+  paymentStatus: string;         // customer_bookings/worker_tasks/vendor_tasks payment_status
+  payoutStatus: "pending" | "paid" | "n/a"; // has the platform actually paid this role out yet
+  razorpayPaymentId: string | null;
+};
+
+export type EventFinancialRow = {
+  id: string;
+  name: string;
+  event_type: string | null;
+  event_date: string | null;
+  customer_name: string | null;
+  venue: EventPartyRow[];
+  vendors: EventPartyRow[];
+  workers: EventPartyRow[];
+  totalCollected: number;   // sum of amount across all paid parties for this event
+  totalCommission: number;  // sum of commission across all paid parties
+  totalOwed: number;        // sum of payout across all paid parties (pending + paid)
+  totalPaidOut: number;     // of totalOwed, how much has actually been sent already
+};
+
+export async function fetchEventFinancials(): Promise<EventFinancialRow[]> {
+  const [events, halls, vendors, workers, venuePayouts, vendorPayouts, workerPayouts] = await Promise.all([
+    supabase.from("customer_events" as never)
+      .select("id, name, event_type, event_date, user_id, created_at" as never)
+      .order("created_at" as never, { ascending: false }),
+    supabase.from("customer_bookings" as never)
+      .select("id, customer_event_id, target_name, amount, commission_amount, payment_status, razorpay_payment_id" as never)
+      .eq("kind" as never, "hall" as never).not("customer_event_id" as never, "is" as never, null as never),
+    supabase.from("vendor_tasks" as never)
+      .select("id, customer_event_id, task_name, payment_amount, commission_amount, payment_status, razorpay_payment_id, vendor:vendors(business_name)" as never)
+      .not("customer_event_id" as never, "is" as never, null as never),
+    supabase.from("worker_tasks" as never)
+      .select("id, customer_event_id, task_name, payment_amount, commission_amount, payment_status, razorpay_payment_id, worker:workers(full_name)" as never)
+      .not("customer_event_id" as never, "is" as never, null as never),
+    supabase.from("venue_payouts" as never).select("booking_id, status" as never),
+    supabase.from("vendor_payouts" as never).select("vendor_task_id, status" as never),
+    supabase.from("worker_payouts" as never).select("worker_task_id, status" as never),
+  ]);
+  if (events.error) throw events.error;
+  if (halls.error) throw halls.error;
+  if (vendors.error) throw vendors.error;
+  if (workers.error) throw workers.error;
+
+  type EventRow = { id: string; name: string; event_type: string | null; event_date: string | null; user_id: string };
+  type HallRow = { id: string; customer_event_id: string; target_name: string; amount: number; commission_amount: number; payment_status: string; razorpay_payment_id: string | null };
+  type TaskRow = { id: string; customer_event_id: string; task_name: string; payment_amount: number | null; commission_amount: number | null; payment_status: string; razorpay_payment_id: string | null };
+  type VendorTaskRow = TaskRow & { vendor: { business_name: string } | null };
+  type WorkerTaskRow = TaskRow & { worker: { full_name: string } | null };
+
+  const venuePayoutStatus = new Map<string, string>();
+  for (const p of ((venuePayouts.data as unknown as { booking_id: string; status: string }[]) ?? [])) venuePayoutStatus.set(p.booking_id, p.status);
+  const vendorPayoutStatus = new Map<string, string>();
+  for (const p of ((vendorPayouts.data as unknown as { vendor_task_id: string; status: string }[]) ?? [])) vendorPayoutStatus.set(p.vendor_task_id, p.status);
+  const workerPayoutStatus = new Map<string, string>();
+  for (const p of ((workerPayouts.data as unknown as { worker_task_id: string; status: string }[]) ?? [])) workerPayoutStatus.set(p.worker_task_id, p.status);
+
+  const evRows = (events.data as unknown as EventRow[]) ?? [];
+  const userIds = [...new Set(evRows.map((e) => e.user_id))];
+  const { data: profs } = userIds.length ? await supabase.from("profiles").select("id,full_name").in("id", userIds) : { data: [] as { id: string; full_name: string | null }[] };
+  const nameById = new Map((profs ?? []).map((p) => [p.id, p.full_name] as const));
+
+  function toParty(role: EventPartyRow["role"], id: string, name: string, amount: number, commission: number, paymentStatus: string, payoutStatus: string | undefined, razorpayPaymentId: string | null): EventPartyRow {
+    return {
+      id, role, name, amount: amount || 0, commission: commission || 0, payout: Math.max((amount || 0) - (commission || 0), 0),
+      paymentStatus, payoutStatus: paymentStatus !== "paid" ? "n/a" : (payoutStatus === "paid" ? "paid" : "pending"), razorpayPaymentId,
+    };
+  }
+
+  const hallByEvent = new Map<string, EventPartyRow[]>();
+  for (const r of (halls.data as unknown as HallRow[]) ?? []) {
+    const arr = hallByEvent.get(r.customer_event_id) ?? [];
+    arr.push(toParty("venue", r.id, r.target_name, r.amount, r.commission_amount, r.payment_status, venuePayoutStatus.get(r.id), r.razorpay_payment_id));
+    hallByEvent.set(r.customer_event_id, arr);
+  }
+  const vendorByEvent = new Map<string, EventPartyRow[]>();
+  for (const r of (vendors.data as unknown as VendorTaskRow[]) ?? []) {
+    const arr = vendorByEvent.get(r.customer_event_id) ?? [];
+    arr.push(toParty("vendor", r.id, `${r.vendor?.business_name ?? "Vendor"} — ${r.task_name}`, r.payment_amount ?? 0, r.commission_amount ?? 0, r.payment_status, vendorPayoutStatus.get(r.id), r.razorpay_payment_id));
+    vendorByEvent.set(r.customer_event_id, arr);
+  }
+  const workerByEvent = new Map<string, EventPartyRow[]>();
+  for (const r of (workers.data as unknown as WorkerTaskRow[]) ?? []) {
+    const arr = workerByEvent.get(r.customer_event_id) ?? [];
+    arr.push(toParty("worker", r.id, `${r.worker?.full_name ?? "Worker"} — ${r.task_name}`, r.payment_amount ?? 0, r.commission_amount ?? 0, r.payment_status, workerPayoutStatus.get(r.id), r.razorpay_payment_id));
+    workerByEvent.set(r.customer_event_id, arr);
+  }
+
+  const out: EventFinancialRow[] = evRows.map((e) => {
+    const venue = hallByEvent.get(e.id) ?? [];
+    const vendorList = vendorByEvent.get(e.id) ?? [];
+    const workerList = workerByEvent.get(e.id) ?? [];
+    const all = [...venue, ...vendorList, ...workerList].filter((p) => p.paymentStatus === "paid");
+    return {
+      id: e.id, name: e.name, event_type: e.event_type, event_date: e.event_date,
+      customer_name: nameById.get(e.user_id) ?? null,
+      venue, vendors: vendorList, workers: workerList,
+      totalCollected: all.reduce((s, p) => s + p.amount, 0),
+      totalCommission: all.reduce((s, p) => s + p.commission, 0),
+      totalOwed: all.reduce((s, p) => s + p.payout, 0),
+      totalPaidOut: all.filter((p) => p.payoutStatus === "paid").reduce((s, p) => s + p.payout, 0),
+    };
+  }).filter((e) => e.venue.length + e.vendors.length + e.workers.length > 0); // only events with at least one booking
+
+  return out;
+}
+
+// =============================================================
 // Broadcast Center — admin announcements with a real deadline and
 // per-user "seen it" tracking (see migration
 // 20260816090000_broadcast_messages.sql). Separate from
