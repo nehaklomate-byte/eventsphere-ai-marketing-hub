@@ -23,6 +23,7 @@ type WorkerProfile = {
   bio: string | null;
   daily_charges: number | null;
   hourly_charges: number | null;
+  pricing_options: { id: string; name: string; price: number; per_guest: boolean }[];
   payment_type: string | null;
   working_hours_start: string | null;
   working_hours_end: string | null;
@@ -146,7 +147,7 @@ function WorkerDetail() {
                   </span>
                   {worker.daily_charges != null && (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 font-medium">
-                      <IndianRupee className="h-3.5 w-3.5" />₹{Number(worker.daily_charges).toLocaleString("en-IN")} / day
+                      <IndianRupee className="h-3.5 w-3.5" />Starting ₹{Number(worker.daily_charges).toLocaleString("en-IN")} / day
                     </span>
                   )}
                   {worker.hourly_charges != null && (
@@ -239,7 +240,7 @@ function WorkerDetail() {
 function HireCard({ worker, eventId, sourceSlug }: { worker: WorkerProfile; eventId?: string; sourceSlug?: string }) {
   const navigate = useNavigate();
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
-  const [state, setState] = useState({ event_name: "", task_name: "", venue: "", venue_address: "", event_date: "", start_time: "", end_time: "", pay_amount: "" });
+  const [state, setState] = useState({ event_name: "", task_name: "", venue: "", venue_address: "", event_date: "", start_time: "", end_time: "", guest_count: "", pay_amount: "" });
   const isAgency = worker.worker_type === "agency";
   const minQty = worker.min_booking_qty ?? 1;
   const maxQty = worker.max_booking_qty ?? worker.agency_team_size ?? 99;
@@ -248,15 +249,24 @@ function HireCard({ worker, eventId, sourceSlug }: { worker: WorkerProfile; even
   const [sent, setSent] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  const options = worker.pricing_options ?? [];
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, boolean>>({});
+  const hasPerGuestOption = options.some((o) => o.per_guest);
+  const guestCount = Number(state.guest_count) || 0;
+
   useEffect(() => { supabase.auth.getUser().then(({ data }) => setLoggedIn(!!data.user)); }, []);
 
-  // Keep the suggested amount in sync with quantity for agency bookings
-  // (daily rate × headcount) — customer can still override it.
+  // Base = daily rate × headcount for an agency, else just the daily
+  // rate — plus every ticked add-on (per-guest ones × guest count).
+  // Kept in sync so pay_amount always reflects what was actually
+  // picked, instead of the customer guessing an offer amount.
+  const basePrice = isAgency ? (worker.daily_charges ?? 0) * quantity : (worker.daily_charges ?? 0);
+  const optionsTotal = options.reduce((s, o) => s + (selectedOptions[o.id] ? (o.per_guest ? o.price * guestCount : o.price) : 0), 0);
+  const estimatedTotal = basePrice + optionsTotal;
+
   useEffect(() => {
-    if (isAgency && worker.daily_charges != null) {
-      setState((s) => ({ ...s, pay_amount: String(Number(worker.daily_charges) * quantity) }));
-    }
-  }, [quantity, isAgency, worker.daily_charges]);
+    if (estimatedTotal > 0) setState((s) => ({ ...s, pay_amount: String(estimatedTotal) }));
+  }, [estimatedTotal]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -273,6 +283,11 @@ function HireCard({ worker, eventId, sourceSlug }: { worker: WorkerProfile; even
     const { data: userRes } = await supabase.auth.getUser();
     if (!userRes.user) { setSubmitting(false); setErr("Please log in first."); return; }
 
+    const chosenOptions = options.filter((o) => selectedOptions[o.id]);
+    const selectionSummary = [
+      isAgency ? `${quantity} workers × ₹${(worker.daily_charges ?? 0).toLocaleString("en-IN")}/day` : null,
+      ...chosenOptions.map((o) => `${o.name}: ₹${o.price.toLocaleString("en-IN")}${o.per_guest ? ` × ${guestCount} guests` : ""}`),
+    ].filter(Boolean).join("\n");
     const { error } = await supabase.from("worker_tasks" as never).insert({
       worker_id: worker.id,
       worker_user_id: worker.owner_id,
@@ -282,6 +297,7 @@ function HireCard({ worker, eventId, sourceSlug }: { worker: WorkerProfile; even
       customer_event_id: eventId ?? null,
       event_name: state.event_name.trim(),
       task_name: state.task_name.trim(),
+      description: selectionSummary || null,
       venue: state.venue || null,
       venue_address: state.venue_address || null,
       event_date: state.event_date,
@@ -351,11 +367,39 @@ function HireCard({ worker, eventId, sourceSlug }: { worker: WorkerProfile; even
         <input type="time" value={state.end_time} onChange={(e) => setState((s) => ({ ...s, end_time: e.target.value }))}
           className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
       </div>
+      {options.length > 0 && (
+        <div className="rounded-xl border border-border bg-muted/20 p-3 space-y-1.5">
+          <div className="text-xs font-semibold text-muted-foreground">Add-ons — pick what you actually need</div>
+          {options.map((o) => (
+            <label key={o.id} className="flex items-center justify-between gap-2 text-sm">
+              <span className="flex items-center gap-2">
+                <input type="checkbox" checked={!!selectedOptions[o.id]} onChange={(e) => setSelectedOptions((s) => ({ ...s, [o.id]: e.target.checked }))} />
+                {o.name}
+              </span>
+              <span className="font-semibold">+₹{o.price.toLocaleString("en-IN")}{o.per_guest ? "/guest" : ""}</span>
+            </label>
+          ))}
+          {hasPerGuestOption && (
+            <input type="number" placeholder="Expected guests (for per-guest add-ons)" value={state.guest_count}
+              onChange={(e) => setState((s) => ({ ...s, guest_count: e.target.value }))}
+              className="mt-1 w-full rounded-xl border border-input bg-background px-3.5 py-2 text-xs outline-none focus:border-brand-violet" />
+          )}
+        </div>
+      )}
+      {estimatedTotal > 0 && (
+        <div className="flex items-center justify-between rounded-xl bg-accent/40 px-3.5 py-2.5 text-sm font-semibold">
+          <span>Estimated total</span>
+          <span>₹{estimatedTotal.toLocaleString("en-IN")}</span>
+        </div>
+      )}
       <div className="relative">
         <Wallet className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <input type="number" placeholder="Pay amount (₹, optional)" value={state.pay_amount} onChange={(e) => setState((s) => ({ ...s, pay_amount: e.target.value }))}
           className="w-full rounded-xl border border-input bg-background pl-9 pr-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
       </div>
+      <p className="-mt-2 text-[11px] text-muted-foreground">
+        {estimatedTotal > 0 ? "Pre-filled from your selections above — adjust it if you'd like to negotiate." : "Not sure what to pay? Leave it blank and discuss with them after they accept."}
+      </p>
       {err && <p className="text-xs text-destructive">{err}</p>}
       <button type="submit" disabled={submitting} className="inline-flex w-full items-center justify-center gap-2 rounded-full btn-brand btn-brand-hover px-4 py-2.5 text-sm font-semibold disabled:opacity-70">
         <Send className="h-4 w-4" /> {submitting ? "Sending…" : "Send booking request"}
