@@ -29,6 +29,7 @@ export type VendorRow = {
   pincode: string | null;
   portfolio: string[];
   price_catalogue_url: string | null;
+  pricing_options: { id: string; name: string; price: number; per_guest: boolean }[];
   logo_url: string | null;
   instagram: string | null;
   facebook: string | null;
