@@ -44,6 +44,8 @@ export type Hall = {
   state: string | null;
   pincode: string | null;
   country: string | null;
+  latitude: number | null;
+  longitude: number | null;
   logo_url: string | null;
   cover_url: string | null;
   gallery: string[];
