@@ -27,6 +27,18 @@ export type Hall = {
   num_rooms: number | null;
   changing_rooms: number | null;
   facilities: Record<string, boolean>;
+  // Per vendor-category (Caterer, Decorator, DJ, ...): does this venue
+  // provide it in-house, at what base price, and optionally a list of
+  // pickable options (menu items, decoration packages) so a customer
+  // can build their own combination instead of one fixed price. A
+  // category left out or set to in_house:false means the customer has
+  // to book that separately from the vendor marketplace — see
+  // hall.$id.tsx "Not included".
+  service_offerings: Record<string, {
+    in_house: boolean;
+    price: number | null;                 // flat add-on price, used when there are no options below
+    options: { id: string; name: string; price: number; per_guest: boolean }[];
+  }>;
   address: string | null;
   city: string | null;
   state: string | null;
