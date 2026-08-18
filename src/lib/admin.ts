@@ -456,15 +456,18 @@ export async function fetchEventFinancials(): Promise<EventFinancialRow[]> {
     supabase.from("customer_events" as never)
       .select("id, name, event_type, event_date, user_id, created_at" as never)
       .order("created_at" as never, { ascending: false }),
+    // No `.not(customer_event_id, is, null)` filter here anymore — a
+    // booking made without going through "My Events" first (customer
+    // booked a venue/vendor/worker directly) still needs to show up
+    // somewhere, so those become their own standalone card below
+    // instead of silently disappearing from this page.
     supabase.from("customer_bookings" as never)
-      .select("id, customer_event_id, target_name, amount, commission_amount, payment_status, razorpay_payment_id" as never)
-      .eq("kind" as never, "hall" as never).not("customer_event_id" as never, "is" as never, null as never),
+      .select("id, customer_event_id, target_name, amount, commission_amount, payment_status, razorpay_payment_id, event_date, details" as never)
+      .eq("kind" as never, "hall" as never),
     supabase.from("vendor_tasks" as never)
-      .select("id, customer_event_id, task_name, payment_amount, commission_amount, payment_status, razorpay_payment_id, vendor:vendors(business_name)" as never)
-      .not("customer_event_id" as never, "is" as never, null as never),
+      .select("id, customer_event_id, task_name, event_name, event_date, payment_amount, commission_amount, payment_status, razorpay_payment_id, vendor:vendors(business_name)" as never),
     supabase.from("worker_tasks" as never)
-      .select("id, customer_event_id, task_name, payment_amount, commission_amount, payment_status, razorpay_payment_id, worker:workers(full_name)" as never)
-      .not("customer_event_id" as never, "is" as never, null as never),
+      .select("id, customer_event_id, task_name, event_name, event_date, payment_amount, commission_amount, payment_status, razorpay_payment_id, worker:workers(full_name)" as never),
     supabase.from("venue_payouts" as never).select("booking_id, status" as never),
     supabase.from("vendor_payouts" as never).select("vendor_task_id, status" as never),
     supabase.from("worker_payouts" as never).select("worker_task_id, status" as never),
@@ -475,8 +478,8 @@ export async function fetchEventFinancials(): Promise<EventFinancialRow[]> {
   if (workers.error) throw workers.error;
 
   type EventRow = { id: string; name: string; event_type: string | null; event_date: string | null; user_id: string };
-  type HallRow = { id: string; customer_event_id: string; target_name: string; amount: number; commission_amount: number; payment_status: string; razorpay_payment_id: string | null };
-  type TaskRow = { id: string; customer_event_id: string; task_name: string; payment_amount: number | null; commission_amount: number | null; payment_status: string; razorpay_payment_id: string | null };
+  type HallRow = { id: string; customer_event_id: string | null; target_name: string; amount: number; commission_amount: number; payment_status: string; razorpay_payment_id: string | null; event_date: string | null; details: { event_name?: string } | null };
+  type TaskRow = { id: string; customer_event_id: string | null; task_name: string; event_name: string | null; event_date: string | null; payment_amount: number | null; commission_amount: number | null; payment_status: string; razorpay_payment_id: string | null };
   type VendorTaskRow = TaskRow & { vendor: { business_name: string } | null };
   type WorkerTaskRow = TaskRow & { worker: { full_name: string } | null };
 
@@ -500,39 +503,64 @@ export async function fetchEventFinancials(): Promise<EventFinancialRow[]> {
   }
 
   const hallByEvent = new Map<string, EventPartyRow[]>();
+  const standaloneVenue: { key: string; party: EventPartyRow; eventDate: string | null; eventName: string | null }[] = [];
   for (const r of (halls.data as unknown as HallRow[]) ?? []) {
-    const arr = hallByEvent.get(r.customer_event_id) ?? [];
-    arr.push(toParty("venue", r.id, r.target_name, r.amount, r.commission_amount, r.payment_status, venuePayoutStatus.get(r.id), r.razorpay_payment_id));
-    hallByEvent.set(r.customer_event_id, arr);
+    const party = toParty("venue", r.id, r.target_name, r.amount, r.commission_amount, r.payment_status, venuePayoutStatus.get(r.id), r.razorpay_payment_id);
+    if (r.customer_event_id) {
+      const arr = hallByEvent.get(r.customer_event_id) ?? [];
+      arr.push(party);
+      hallByEvent.set(r.customer_event_id, arr);
+    } else {
+      standaloneVenue.push({ key: `standalone-venue-${r.id}`, party, eventDate: r.event_date, eventName: r.details?.event_name ?? null });
+    }
   }
   const vendorByEvent = new Map<string, EventPartyRow[]>();
+  const standaloneVendor: { key: string; party: EventPartyRow; eventDate: string | null; eventName: string | null }[] = [];
   for (const r of (vendors.data as unknown as VendorTaskRow[]) ?? []) {
-    const arr = vendorByEvent.get(r.customer_event_id) ?? [];
-    arr.push(toParty("vendor", r.id, `${r.vendor?.business_name ?? "Vendor"} — ${r.task_name}`, r.payment_amount ?? 0, r.commission_amount ?? 0, r.payment_status, vendorPayoutStatus.get(r.id), r.razorpay_payment_id));
-    vendorByEvent.set(r.customer_event_id, arr);
+    const party = toParty("vendor", r.id, `${r.vendor?.business_name ?? "Vendor"} — ${r.task_name}`, r.payment_amount ?? 0, r.commission_amount ?? 0, r.payment_status, vendorPayoutStatus.get(r.id), r.razorpay_payment_id);
+    if (r.customer_event_id) {
+      const arr = vendorByEvent.get(r.customer_event_id) ?? [];
+      arr.push(party);
+      vendorByEvent.set(r.customer_event_id, arr);
+    } else {
+      standaloneVendor.push({ key: `standalone-vendor-${r.id}`, party, eventDate: r.event_date, eventName: r.event_name });
+    }
   }
   const workerByEvent = new Map<string, EventPartyRow[]>();
+  const standaloneWorker: { key: string; party: EventPartyRow; eventDate: string | null; eventName: string | null }[] = [];
   for (const r of (workers.data as unknown as WorkerTaskRow[]) ?? []) {
-    const arr = workerByEvent.get(r.customer_event_id) ?? [];
-    arr.push(toParty("worker", r.id, `${r.worker?.full_name ?? "Worker"} — ${r.task_name}`, r.payment_amount ?? 0, r.commission_amount ?? 0, r.payment_status, workerPayoutStatus.get(r.id), r.razorpay_payment_id));
-    workerByEvent.set(r.customer_event_id, arr);
+    const party = toParty("worker", r.id, `${r.worker?.full_name ?? "Worker"} — ${r.task_name}`, r.payment_amount ?? 0, r.commission_amount ?? 0, r.payment_status, workerPayoutStatus.get(r.id), r.razorpay_payment_id);
+    if (r.customer_event_id) {
+      const arr = workerByEvent.get(r.customer_event_id) ?? [];
+      arr.push(party);
+      workerByEvent.set(r.customer_event_id, arr);
+    } else {
+      standaloneWorker.push({ key: `standalone-worker-${r.id}`, party, eventDate: r.event_date, eventName: r.event_name });
+    }
   }
 
-  const out: EventFinancialRow[] = evRows.map((e) => {
-    const venue = hallByEvent.get(e.id) ?? [];
-    const vendorList = vendorByEvent.get(e.id) ?? [];
-    const workerList = workerByEvent.get(e.id) ?? [];
-    const all = [...venue, ...vendorList, ...workerList].filter((p) => p.paymentStatus === "paid");
+  function summarize(id: string, name: string, event_type: string | null, event_date: string | null, customer_name: string | null, venue: EventPartyRow[], vendorsList: EventPartyRow[], workersList: EventPartyRow[]): EventFinancialRow {
+    const all = [...venue, ...vendorsList, ...workersList].filter((p) => p.paymentStatus === "paid");
     return {
-      id: e.id, name: e.name, event_type: e.event_type, event_date: e.event_date,
-      customer_name: nameById.get(e.user_id) ?? null,
-      venue, vendors: vendorList, workers: workerList,
+      id, name, event_type, event_date, customer_name,
+      venue, vendors: vendorsList, workers: workersList,
       totalCollected: all.reduce((s, p) => s + p.amount, 0),
       totalCommission: all.reduce((s, p) => s + p.commission, 0),
       totalOwed: all.reduce((s, p) => s + p.payout, 0),
       totalPaidOut: all.filter((p) => p.payoutStatus === "paid").reduce((s, p) => s + p.payout, 0),
     };
-  }).filter((e) => e.venue.length + e.vendors.length + e.workers.length > 0); // only events with at least one booking
+  }
+
+  const out: EventFinancialRow[] = evRows
+    .map((e) => summarize(e.id, e.name, e.event_type, e.event_date, nameById.get(e.user_id) ?? null, hallByEvent.get(e.id) ?? [], vendorByEvent.get(e.id) ?? [], workerByEvent.get(e.id) ?? []))
+    .filter((e) => e.venue.length + e.vendors.length + e.workers.length > 0); // only events with at least one booking
+
+  // Standalone bookings — no customer_event_id, so each one becomes
+  // its own single-party card, clearly labeled, instead of being
+  // hidden because it never belonged to an "Event".
+  for (const s of standaloneVenue) out.push(summarize(s.key, s.eventName ?? "Direct venue booking (no event)", null, s.eventDate, null, [s.party], [], []));
+  for (const s of standaloneVendor) out.push(summarize(s.key, s.eventName ?? "Direct vendor booking (no event)", null, s.eventDate, null, [], [s.party], []));
+  for (const s of standaloneWorker) out.push(summarize(s.key, s.eventName ?? "Direct worker booking (no event)", null, s.eventDate, null, [], [], [s.party]));
 
   return out;
 }
