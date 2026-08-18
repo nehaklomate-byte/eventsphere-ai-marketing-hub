@@ -261,6 +261,10 @@ function VendorHireCard({ vendor, eventId, sourceSlug }: { vendor: Vendor; event
       pkgName ? `Package: ${pkgName} (₹${basePrice.toLocaleString("en-IN")})` : null,
       ...chosenOptions.map((o) => `${o.name}: ₹${o.price.toLocaleString("en-IN")}${o.per_guest ? ` × ${guestCount} guests` : ""}`),
     ].filter(Boolean).join("\n");
+    const selectedItems = [
+      pkgName ? { name: `Package — ${pkgName}`, amount: basePrice } : null,
+      ...chosenOptions.map((o) => ({ name: o.per_guest ? `${o.name} (× ${guestCount} guests)` : o.name, amount: o.per_guest ? o.price * guestCount : o.price })),
+    ].filter(Boolean);
     const { error } = await supabase.from("vendor_tasks" as never).insert({
       vendor_id: vendor.id,
       vendor_user_id: vendor.owner_id,
@@ -270,6 +274,7 @@ function VendorHireCard({ vendor, eventId, sourceSlug }: { vendor: Vendor; event
       event_name: state.event_name.trim(),
       task_name: state.task_name.trim(),
       description: selectionSummary || null,
+      selected_items: selectedItems,
       venue: state.venue || null,
       venue_address: state.venue_address || null,
       event_date: state.event_date,
