@@ -111,6 +111,7 @@ function EventCard({ event }: { event: EventFinancialRow }) {
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-lg font-bold tracking-tight">{event.name}</h2>
             {event.event_type && <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-semibold capitalize text-muted-foreground">{event.event_type}</span>}
+            {event.id.startsWith("standalone-") && <span className="rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 px-2.5 py-0.5 text-[11px] font-semibold">Direct booking — not linked to an event</span>}
           </div>
           <div className="mt-1 text-xs text-muted-foreground">
             {event.customer_name && <>Customer: <span className="font-medium text-foreground">{event.customer_name}</span> · </>}
