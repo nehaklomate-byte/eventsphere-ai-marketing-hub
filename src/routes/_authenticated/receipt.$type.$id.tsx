@@ -22,6 +22,7 @@ type ReceiptData = {
   paidAt: string | null;
   razorpayPaymentId: string | null;
   razorpayOrderId: string | null;
+  lineItems: { name: string; amount: number }[] | null; // itemized breakdown of what makes up `amount`, when the booking had selectable add-ons
 };
 
 async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData | null> {
@@ -35,7 +36,7 @@ async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData 
     if (d.status !== "paid") {
       return {
         receiptNo: `PP-${id.slice(0, 8).toUpperCase()}`, itemLabel: "", counterpartyLabel: "",
-        eventName: null, eventDate: null, amount: 0, commission: 0, paidAt: null, razorpayPaymentId: null, razorpayOrderId: null,
+        eventName: null, eventDate: null, amount: 0, commission: 0, paidAt: null, razorpayPaymentId: null, razorpayOrderId: null, lineItems: null,
       };
     }
 
@@ -62,6 +63,7 @@ async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData 
       paidAt: d.created_at as string | null,
       razorpayPaymentId: d.razorpay_payment_id as string | null,
       razorpayOrderId: d.razorpay_order_id as string | null,
+      lineItems: null,
     };
   }
 
@@ -73,6 +75,12 @@ async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData 
     if (!data) return null;
     const d = data as unknown as Record<string, unknown>;
     const details = (d.details as Record<string, unknown>) ?? {};
+    const selectedServices = (details.selected_services as { name: string; line_amount: number }[]) ?? [];
+    const addOnsTotal = selectedServices.reduce((s, x) => s + (x.line_amount ?? 0), 0);
+    const baseAmount = Number(d.amount ?? 0) - addOnsTotal;
+    const lineItems = selectedServices.length > 0
+      ? [{ name: "Venue (base price)", amount: baseAmount }, ...selectedServices.map((x) => ({ name: x.name, amount: x.line_amount }))]
+      : null;
     return {
       receiptNo: `HB-${id.slice(0, 8).toUpperCase()}`,
       itemLabel: "Venue booking",
@@ -84,17 +92,19 @@ async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData 
       paidAt: d.paid_at as string | null,
       razorpayPaymentId: d.razorpay_payment_id as string | null,
       razorpayOrderId: d.razorpay_order_id as string | null,
+      lineItems,
     };
   }
 
   if (type === "worker") {
     const { data, error } = await supabase.from("worker_tasks" as never)
-      .select("id,task_name,event_name,event_date,payment_amount,commission_amount,paid_at,razorpay_payment_id,razorpay_order_id,worker:workers(full_name)")
+      .select("id,task_name,event_name,event_date,payment_amount,commission_amount,paid_at,razorpay_payment_id,razorpay_order_id,selected_items,worker:workers(full_name)")
       .eq("id" as never, id as never).maybeSingle();
     if (error) throw error;
     if (!data) return null;
     const d = data as unknown as Record<string, unknown>;
     const worker = d.worker as { full_name: string } | null;
+    const items = (d.selected_items as { name: string; amount: number }[]) ?? [];
     return {
       receiptNo: `WT-${id.slice(0, 8).toUpperCase()}`,
       itemLabel: d.task_name as string,
@@ -106,16 +116,18 @@ async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData 
       paidAt: d.paid_at as string | null,
       razorpayPaymentId: d.razorpay_payment_id as string | null,
       razorpayOrderId: d.razorpay_order_id as string | null,
+      lineItems: items.length > 0 ? items : null,
     };
   }
 
   const { data, error } = await supabase.from("vendor_tasks" as never)
-    .select("id,task_name,event_name,event_date,payment_amount,commission_amount,paid_at,razorpay_payment_id,razorpay_order_id,vendor:vendors(business_name)")
+    .select("id,task_name,event_name,event_date,payment_amount,commission_amount,paid_at,razorpay_payment_id,razorpay_order_id,selected_items,vendor:vendors(business_name)")
     .eq("id" as never, id as never).maybeSingle();
   if (error) throw error;
   if (!data) return null;
   const d = data as unknown as Record<string, unknown>;
   const vendor = d.vendor as { business_name: string } | null;
+  const items = (d.selected_items as { name: string; amount: number }[]) ?? [];
   return {
     receiptNo: `VT-${id.slice(0, 8).toUpperCase()}`,
     itemLabel: d.task_name as string,
@@ -127,6 +139,7 @@ async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData 
     paidAt: d.paid_at as string | null,
     razorpayPaymentId: d.razorpay_payment_id as string | null,
     razorpayOrderId: d.razorpay_order_id as string | null,
+    lineItems: items.length > 0 ? items : null,
   };
 }
 
@@ -185,6 +198,14 @@ function ReceiptPage() {
         </dl>
 
         <div className="mt-6 space-y-2 border-t border-border pt-4 text-sm">
+          {data.lineItems && data.lineItems.length > 0 && (
+            <div className="mb-3 space-y-1.5 border-b border-dashed border-border pb-3">
+              <div className="text-xs font-semibold text-muted-foreground">Breakdown</div>
+              {data.lineItems.map((li, i) => (
+                <div key={i} className="flex justify-between text-muted-foreground"><span>{li.name}</span><span>₹{li.amount.toLocaleString("en-IN")}</span></div>
+              ))}
+            </div>
+          )}
           <div className="flex justify-between"><span className="text-muted-foreground">Amount paid</span><span className="font-semibold">₹{data.amount.toLocaleString("en-IN")}</span></div>
           {data.commission > 0 && (
             <>
