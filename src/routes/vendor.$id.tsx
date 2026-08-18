@@ -220,6 +220,12 @@ function VendorHireCard({ vendor, eventId, sourceSlug }: { vendor: Vendor; event
   const [selectedOptions, setSelectedOptions] = useState<Record<string, boolean>>({});
   const hasPerGuestOption = options.some((o) => o.per_guest);
   const guestCount = Number(state.guest_count) || 0;
+  // Once the customer types into "Offer amount" themselves, their
+  // number is a deliberate choice (e.g. negotiating) — it must stop
+  // being silently clobbered the next time a selection changes. Before
+  // that first manual edit, it's fine (expected, even) to keep it in
+  // sync with the calculated total.
+  const [payAmountTouched, setPayAmountTouched] = useState(false);
 
   useEffect(() => { supabase.auth.getUser().then(({ data }) => setLoggedIn(!!data.user)); }, []);
   useEffect(() => {
@@ -243,8 +249,8 @@ function VendorHireCard({ vendor, eventId, sourceSlug }: { vendor: Vendor; event
   const estimatedTotal = basePrice + optionsTotal;
 
   useEffect(() => {
-    if (estimatedTotal > 0) setState((s) => ({ ...s, pay_amount: String(estimatedTotal) }));
-  }, [estimatedTotal]);
+    if (estimatedTotal > 0 && !payAmountTouched) setState((s) => ({ ...s, pay_amount: String(estimatedTotal) }));
+  }, [estimatedTotal, payAmountTouched]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -388,11 +394,14 @@ function VendorHireCard({ vendor, eventId, sourceSlug }: { vendor: Vendor; event
       )}
       <div className="relative">
         <Wallet className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <input type="number" placeholder="Offer amount (₹, optional)" value={state.pay_amount} onChange={(e) => setState((s) => ({ ...s, pay_amount: e.target.value }))}
+        <input type="number" placeholder="Offer amount (₹, optional)" value={state.pay_amount}
+          onChange={(e) => { setPayAmountTouched(true); setState((s) => ({ ...s, pay_amount: e.target.value })); }}
           className="w-full rounded-xl border border-input bg-background pl-9 pr-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
       </div>
       <p className="-mt-2 text-[11px] text-muted-foreground">
-        {estimatedTotal > 0 ? "Pre-filled from your selections above — adjust it if you'd like to negotiate." : "Not sure what to offer? Leave it blank and discuss with them after they accept."}
+        {payAmountTouched
+          ? "Your own amount — it won't change automatically even if you tick more add-ons above."
+          : estimatedTotal > 0 ? "Pre-filled from your selections above — adjust it if you'd like to negotiate." : "Not sure what to offer? Leave it blank and discuss with them after they accept."}
       </p>
       {err && <p className="text-xs text-destructive">{err}</p>}
       <button type="submit" disabled={submitting} className="inline-flex w-full items-center justify-center gap-2 rounded-full btn-brand btn-brand-hover px-4 py-2.5 text-sm font-semibold disabled:opacity-70">
