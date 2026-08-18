@@ -288,6 +288,10 @@ function HireCard({ worker, eventId, sourceSlug }: { worker: WorkerProfile; even
       isAgency ? `${quantity} workers × ₹${(worker.daily_charges ?? 0).toLocaleString("en-IN")}/day` : null,
       ...chosenOptions.map((o) => `${o.name}: ₹${o.price.toLocaleString("en-IN")}${o.per_guest ? ` × ${guestCount} guests` : ""}`),
     ].filter(Boolean).join("\n");
+    const selectedItems = [
+      isAgency ? { name: `${quantity} workers × ₹${(worker.daily_charges ?? 0).toLocaleString("en-IN")}/day`, amount: basePrice } : (worker.daily_charges ? { name: "Base charge", amount: worker.daily_charges } : null),
+      ...chosenOptions.map((o) => ({ name: o.per_guest ? `${o.name} (× ${guestCount} guests)` : o.name, amount: o.per_guest ? o.price * guestCount : o.price })),
+    ].filter(Boolean);
     const { error } = await supabase.from("worker_tasks" as never).insert({
       worker_id: worker.id,
       worker_user_id: worker.owner_id,
@@ -298,6 +302,7 @@ function HireCard({ worker, eventId, sourceSlug }: { worker: WorkerProfile; even
       event_name: state.event_name.trim(),
       task_name: state.task_name.trim(),
       description: selectionSummary || null,
+      selected_items: selectedItems,
       venue: state.venue || null,
       venue_address: state.venue_address || null,
       event_date: state.event_date,
