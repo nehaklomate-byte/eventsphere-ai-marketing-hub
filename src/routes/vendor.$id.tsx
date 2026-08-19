@@ -85,7 +85,7 @@ export const Route = createFileRoute("/vendor/$id")({
 });
 
 function VendorDetail() {
-  const { vendor } = Route.useLoaderData();
+  const { vendor } = Route.useLoaderData() as { vendor: Vendor };
   const { event_id, ref } = Route.useSearch();
   const stats = useVendorStats(vendor.id);
 
