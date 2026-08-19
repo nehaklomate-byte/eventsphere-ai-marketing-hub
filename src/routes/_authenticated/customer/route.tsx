@@ -1,4 +1,4 @@
-import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useNavigate, useRouterState, redirect } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
@@ -15,6 +15,23 @@ import { subscribeNotificationToasts } from "@/lib/realtimeToast";
 
 export const Route = createFileRoute("/_authenticated/customer")({
   head: () => ({ meta: [{ title: "Customer workspace — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
+  beforeLoad: async () => {
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) throw redirect({ to: "/login" });
+
+    // Mirrors the Organization/Venue Owner route guards: an authenticated
+    // user whose account isn't actually a customer account must never
+    // reach this workspace (previously there was no beforeLoad here at
+    // all, so any logged-in user — a vendor, worker, etc. — could open
+    // /customer by URL, which also silently created a customers row for
+    // them via ensureCustomerBootstrapped()).
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("primary_role")
+      .eq("id", data.user.id)
+      .maybeSingle();
+    if (profile?.primary_role !== "customer") throw redirect({ to: "/" });
+  },
   component: CustomerLayout,
 });
 
