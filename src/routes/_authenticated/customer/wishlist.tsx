@@ -8,11 +8,11 @@ import { PageShell, EmptyState, LoadingRows } from "./-ui";
 
 export const Route = createFileRoute("/_authenticated/customer/wishlist")({ component: WishlistPage });
 
-const DETAIL_BASE: Record<"hall" | "vendor" | "worker", string> = {
+const DETAIL_BASE = {
   hall: "/hall",
   vendor: "/vendor",
   worker: "/worker",
-};
+} as const satisfies Record<"hall" | "vendor" | "worker", string>;
 const KIND_ICON = { hall: Building2, vendor: Wrench, worker: HardHat } as const;
 
 function WishlistPage() {
@@ -50,7 +50,7 @@ function WishlistPage() {
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {items.map((w) => (
                     <div key={w.id} className="group overflow-hidden rounded-2xl border border-border bg-card">
-                      <Link to={`${DETAIL_BASE[k]}/$id`} params={{ id: w.target_id }} className="block">
+                      <Link to={`${DETAIL_BASE[k]}/$id`} params={{ id: w.target_id }} search={{ event_id: undefined, ref: undefined }} className="block">
                         <div className="relative h-32 w-full overflow-hidden bg-accent">
                           {w.target_image_url ? (
                             <img src={w.target_image_url} alt={w.target_name} loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
@@ -60,7 +60,7 @@ function WishlistPage() {
                         </div>
                       </Link>
                       <div className="flex items-start justify-between gap-3 p-4">
-                        <Link to={`${DETAIL_BASE[k]}/$id`} params={{ id: w.target_id }} className="min-w-0">
+                        <Link to={`${DETAIL_BASE[k]}/$id`} params={{ id: w.target_id }} search={{ event_id: undefined, ref: undefined }} className="min-w-0">
                           <div className="text-[10px] font-semibold uppercase tracking-widest text-brand-violet">{w.kind}</div>
                           <div className="mt-1 font-semibold truncate hover:underline">{w.target_name}</div>
                         </Link>
