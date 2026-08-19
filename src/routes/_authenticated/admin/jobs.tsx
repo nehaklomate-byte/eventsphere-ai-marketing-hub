@@ -21,11 +21,11 @@ type Application = {
   worker?: { full_name: string; category: string | null; city: string | null };
 };
 
-async function fetchAllPostings(): Promise<Posting[]> {
+async function fetchAllPostings(): Promise<(Posting & { posterType: string; posterName?: string; postedByName: string })[]> {
   const { data, error } = await supabase.from("worker_job_postings" as never).select("*").order("created_at" as never, { ascending: false });
   if (error) throw error;
   const postings = (data as unknown as Posting[]) ?? [];
-  if (postings.length === 0) return postings;
+  if (postings.length === 0) return [];
 
   const orgIds = Array.from(new Set(postings.map((p) => p.org_id).filter(Boolean))) as string[];
   const hallIds = Array.from(new Set(postings.map((p) => p.hall_id).filter(Boolean))) as string[];
@@ -55,7 +55,7 @@ async function fetchApplicationsFor(postingId: string): Promise<Application[]> {
   if (error) throw error;
   const list = (apps as unknown as Application[]) ?? [];
   if (list.length === 0) return list;
-  const { data: workers } = await supabase.from("workers").select("id, full_name, category, city").in("id", list.map((a: never) => (a as unknown as { worker_id: string }).worker_id));
+  const { data: workers } = await supabase.from("workers").select("id, full_name, category, city").in("id", list.map((a) => (a as unknown as { worker_id: string }).worker_id));
   const byId = new Map((workers ?? []).map((w) => [w.id, w]));
   return list.map((a) => ({ ...a, worker: byId.get((a as unknown as { worker_id: string }).worker_id) }));
 }
