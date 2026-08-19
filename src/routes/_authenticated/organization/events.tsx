@@ -127,7 +127,7 @@ function OrgEventsPage() {
             </div>
             <div className="flex items-center gap-3">
               <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_BADGE[ev.status]}`}>{ev.status}</span>
-              <Link to={`/organization/events/${ev.id}/form`} className="rounded-full border border-input px-3 py-1.5 text-xs font-semibold hover:bg-accent">
+              <Link to="/organization/events/$eventId/form" params={{ eventId: ev.id }} className="rounded-full border border-input px-3 py-1.5 text-xs font-semibold hover:bg-accent">
                 Registration form
               </Link>
               {(ev.status === "draft" || ev.status === "published") && (
