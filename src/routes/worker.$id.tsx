@@ -93,7 +93,7 @@ export const Route = createFileRoute("/worker/$id")({
 });
 
 function WorkerDetail() {
-  const { worker } = Route.useLoaderData();
+  const { worker } = Route.useLoaderData() as { worker: WorkerProfile };
   const { event_id, ref } = Route.useSearch();
   const stats = useWorkerStats(worker.id);
 
