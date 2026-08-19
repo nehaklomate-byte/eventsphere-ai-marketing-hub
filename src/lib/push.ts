@@ -50,6 +50,22 @@ export async function enablePushNotifications(userId: string): Promise<boolean> 
   return !error;
 }
 
+/** Fire-and-forget OS push notification to one or more users — the
+ * same mechanism chat.ts already uses for messages, reused here for
+ * hire requests (venue→worker, venue→vendor, vendor→worker) so the
+ * recipient is actually alerted instead of only getting a row in
+ * worker_notifications/vendor_notifications that they'd have to open
+ * the app and check for themselves. Never throws — a push failure
+ * should never block the booking request itself from going through. */
+export async function notifyUsers(userIds: string[], title: string, body: string, url = "/"): Promise<void> {
+  if (userIds.length === 0) return;
+  try {
+    await supabase.functions.invoke("send-push", { body: { user_ids: userIds, title, body, url } });
+  } catch {
+    // best-effort — the in-app notification row still exists regardless
+  }
+}
+
 export async function disablePushNotifications(): Promise<void> {
   if (!pushSupported()) return;
   const reg = await navigator.serviceWorker.ready;
