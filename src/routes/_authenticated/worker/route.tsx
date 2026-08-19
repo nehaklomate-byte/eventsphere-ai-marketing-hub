@@ -17,6 +17,18 @@ export const Route = createFileRoute("/_authenticated/worker")({
   beforeLoad: async () => {
     const { data } = await supabase.auth.getUser();
     if (!data.user) throw redirect({ to: "/login" });
+
+    // Mirrors the Organization/Venue Owner route guards: an authenticated
+    // user whose account isn't actually a worker account must never reach
+    // this workspace (previously this check was missing here, so any
+    // logged-in user — a customer, vendor, etc. — could open /worker by URL).
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("primary_role")
+      .eq("id", data.user.id)
+      .maybeSingle();
+    if (profile?.primary_role !== "worker") throw redirect({ to: "/" });
+
     return { userId: data.user.id };
   },
   component: WorkerShell,
