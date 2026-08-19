@@ -66,6 +66,7 @@ function AdminDashboardHome() {
       {totalPending > 0 && (
         <Link
           to="/admin/verification"
+          search={{ role: undefined }}
           className="flex items-center justify-between rounded-2xl border border-amber-300/60 bg-amber-50 dark:bg-amber-950/20 px-6 py-4 text-sm font-semibold text-amber-800 dark:text-amber-300 hover:border-amber-400 transition"
         >
           <span className="flex items-center gap-2">
