@@ -118,7 +118,7 @@ function normalize(d: Record<string, unknown>): Hall {
 }
 
 function HallDetail() {
-  const { hall } = Route.useLoaderData();
+  const { hall } = Route.useLoaderData() as { hall: Hall };
   const { event_id, ref } = Route.useSearch();
   const [reviews, setReviews] = useState<Array<{ id: string; rating: number; comment: string | null; created_at: string; author: string | null }>>([]);
 
@@ -343,7 +343,7 @@ function HallDetail() {
                 <>
                   <div className="text-xs uppercase tracking-widest text-muted-foreground">Starting at</div>
                   <div className="mt-1 font-display text-3xl font-semibold text-gradient-brand">₹{hall.price_per_day.toLocaleString("en-IN")}</div>
-                  <div className="text-xs text-muted-foreground">per day{hall.price_per_hour ? ` • ₹${hall.price_per_hour.toLocaleString("en-IN")}/hour` : ""}</div>
+                  <div className="text-xs text-muted-foreground">Final price depends on your event dates and what you add{hall.price_per_hour ? ` • ₹${hall.price_per_hour.toLocaleString("en-IN")}/hour also available` : ""}</div>
                 </>
               ) : (
                 <div className="text-sm text-muted-foreground">Contact venue for pricing</div>
@@ -562,11 +562,15 @@ const bookingSchema = z.object({
   contact_person: z.string().trim().min(2, "Enter contact person's name"),
   contact_phone: phoneSchema,
   contact_email: emailSchema,
-  event_date: z.string().min(1, "Pick a date"),
+  start_date: z.string().min(1, "Pick a start date"),
+  end_date: z.string().min(1, "Pick an end date"),
   start_time: z.string().min(1, "Pick a start time"),
   end_time: z.string().min(1, "Pick an end time"),
   guest_count: z.string().regex(/^\d+$/, "Enter guest count"),
   special_instructions: z.string().max(1000).optional(),
+}).refine((d) => d.end_date >= d.start_date, {
+  message: "End date can't be before the start date",
+  path: ["end_date"],
 });
 
 function BookingForm({
@@ -574,7 +578,7 @@ function BookingForm({
 }: { hallId: string; hallName: string; pricePerDay: number | null; advanceAmount: number | null; serviceOfferings: ServiceOfferingMap; eventId?: string; sourceSlug?: string }) {
   const [state, setState] = useState({
     event_name: "", organizer_type: "", organizer_type_other: "", event_type: "", event_type_other: "",
-    contact_person: "", contact_phone: "", contact_email: "", event_date: "", start_time: "", end_time: "",
+    contact_person: "", contact_phone: "", contact_email: "", start_date: "", end_date: "", start_time: "", end_time: "",
     guest_count: "", special_instructions: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -599,13 +603,36 @@ function BookingForm({
     return init;
   });
   const guestCount = Number(state.guest_count) || 0;
+  // Number of days the venue itself is charged for — inclusive of both
+  // the start and end date (a same-day event is 1 day, not 0). Falls
+  // back to 1 day until both dates are picked, so the total shown
+  // before that is just the venue's starting per-day rate.
+  const numberOfDays = state.start_date && state.end_date && state.end_date >= state.start_date
+    ? Math.floor((new Date(state.end_date).getTime() - new Date(state.start_date).getTime()) / 86400000) + 1
+    : 1;
+  const venueTotal = (pricePerDay ?? 0) * numberOfDays;
   const servicesTotal = inHouseServices.reduce((sum, [cat, v]) => {
     if ((v.options ?? []).length > 0) {
       return sum + v.options.reduce((s, o) => s + (selected[o.id] ? (o.per_guest ? o.price * guestCount : o.price) : 0), 0);
     }
     return sum + (selected[cat] ? (v.price ?? 0) : 0);
   }, 0);
-  const totalAmount = (pricePerDay ?? 0) + servicesTotal;
+  const totalAmount = venueTotal + servicesTotal;
+
+  // Itemized breakdown shown to the customer as a running "cart" —
+  // updates live as they change dates, guest count, or tick services.
+  const cartLines: { label: string; amount: number }[] = [
+    { label: `Venue — ₹${(pricePerDay ?? 0).toLocaleString("en-IN")} × ${numberOfDays} day${numberOfDays > 1 ? "s" : ""}`, amount: venueTotal },
+    ...inHouseServices.flatMap(([cat, v]) => {
+      if ((v.options ?? []).length > 0) {
+        return v.options.filter((o) => selected[o.id]).map((o) => ({
+          label: o.per_guest ? `${o.name} — ₹${o.price.toLocaleString("en-IN")} × ${guestCount} guests` : o.name,
+          amount: o.per_guest ? o.price * guestCount : o.price,
+        }));
+      }
+      return selected[cat] ? [{ label: cat, amount: v.price ?? 0 }] : [];
+    }),
+  ];
 
   const set = (k: string, v: string) => setState((s) => ({ ...s, [k]: v }));
 
@@ -632,7 +659,8 @@ function BookingForm({
       target_id: hallId,
       target_name: hallName,
       customer_event_id: eventId ?? null,
-      event_date: d.event_date,
+      event_date: d.start_date,
+      end_date: d.end_date,
       amount: totalAmount,
       advance_amount: advanceAmount ?? null,
       booking_source: sourceSlug ? "public_profile_link" : "marketplace",
@@ -647,6 +675,9 @@ function BookingForm({
         contact_person: d.contact_person,
         contact_phone: d.contact_phone,
         contact_email: d.contact_email,
+        start_date: d.start_date,
+        end_date: d.end_date,
+        number_of_days: numberOfDays,
         start_time: d.start_time,
         end_time: d.end_time,
         guest_count: Number(d.guest_count),
@@ -731,10 +762,15 @@ function BookingForm({
         </Row>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        <Row label="Event date" error={errors.event_date}>
-          <input type="date" className="input" value={state.event_date} onChange={(e) => set("event_date", e.target.value)} />
+      <div className="grid grid-cols-2 gap-3">
+        <Row label="Start date" error={errors.start_date}>
+          <input type="date" className="input" value={state.start_date} onChange={(e) => set("start_date", e.target.value)} />
         </Row>
+        <Row label="End date" error={errors.end_date}>
+          <input type="date" className="input" value={state.end_date} min={state.start_date || undefined} onChange={(e) => set("end_date", e.target.value)} />
+        </Row>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
         <Row label="Start time" error={errors.start_time}>
           <input type="time" className="input" value={state.start_time} onChange={(e) => set("start_time", e.target.value)} />
         </Row>
@@ -788,9 +824,20 @@ function BookingForm({
         </div>
       )}
 
-      <div className="flex items-center justify-between rounded-xl bg-accent/40 px-3.5 py-2.5 text-sm font-semibold">
-        <span>Total</span>
-        <span>₹{totalAmount.toLocaleString("en-IN")}</span>
+      <div className="rounded-xl bg-accent/40 px-3.5 py-2.5 text-sm">
+        <div className="text-xs font-semibold text-muted-foreground mb-1.5">Your booking so far</div>
+        <div className="space-y-1">
+          {cartLines.map((l, i) => (
+            <div key={i} className="flex items-center justify-between gap-2 text-xs">
+              <span className="text-muted-foreground">{l.label}</span>
+              <span className="font-medium">₹{l.amount.toLocaleString("en-IN")}</span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-2 flex items-center justify-between border-t border-border/60 pt-2 font-semibold">
+          <span>Total</span>
+          <span>₹{totalAmount.toLocaleString("en-IN")}</span>
+        </div>
       </div>
 
       {advanceAmount != null && advanceAmount > 0 && (
