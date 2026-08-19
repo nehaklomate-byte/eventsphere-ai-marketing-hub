@@ -36,7 +36,7 @@ type Worker = {
 type Item = Hall | Vendor | Worker;
 type Tab = "venue" | "vendor" | "worker";
 
-const TAB_META: Record<Tab, { label: string; icon: typeof Building2; empty: string; detailBase: string; listBtn: string; flow: string }> = {
+const TAB_META: Record<Tab, { label: string; icon: typeof Building2; empty: string; detailBase: "/hall" | "/vendor" | "/worker"; listBtn: string; flow: string }> = {
   venue: { label: "Venues", icon: Building2, empty: "hall, banquet or lawn", detailBase: "/hall", listBtn: "List your venue", flow: "Instant booking" },
   vendor: { label: "Vendors", icon: Wrench, empty: "vendor business (decor, catering, sound…)", detailBase: "/vendor", listBtn: "List your vendor business", flow: "Request pricing" },
   worker: { label: "Workers", icon: HardHat, empty: "skilled worker profile", detailBase: "/worker", listBtn: "List your worker profile", flow: "Request pricing" },
@@ -155,9 +155,23 @@ function Marketplace() {
   const filtered = withDistance.filter((h) => {
     const okQ = !q || h.name.toLowerCase().includes(q.toLowerCase()) || (h.city ?? "").toLowerCase().includes(q.toLowerCase()) || (h.category ?? "").toLowerCase().includes(q.toLowerCase());
     const okCity = !city || h.city === city;
-    const okNear = !myLocation || h._km != null; // "Near me" active → only show items with known coordinates
-    return okQ && okCity && okNear;
-  }).sort((a, b) => (myLocation ? (a._km ?? Infinity) - (b._km ?? Infinity) : 0));
+    // Previously this also required `h._km != null` when "Near me" was
+    // on, which hid every venue that hasn't saved a location yet. Since
+    // most venues never set lat/lng (it's a recent, optional field on
+    // the owner's profile page), that made "Near me" come back empty
+    // for almost everyone. Now we just stop filtering on distance —
+    // sorting below puts the ones with a known distance first and
+    // still shows the rest underneath instead of hiding them.
+    return okQ && okCity;
+  }).sort((a, b) => {
+    if (!myLocation) return 0;
+    // Known-distance venues first (closest first); venues with no
+    // saved location sort after all of those, in their existing order.
+    if (a._km == null && b._km == null) return 0;
+    if (a._km == null) return 1;
+    if (b._km == null) return -1;
+    return a._km - b._km;
+  });
   const cities = Array.from(new Set((items ?? []).map((h) => h.city).filter(Boolean))) as string[];
   const meta = TAB_META[tab];
 
@@ -214,7 +228,7 @@ function Marketplace() {
               {locating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MapPin className="h-3.5 w-3.5" />}
               {myLocation ? "Near me: on" : "Near me"}
             </button>
-            {myLocation && <span className="text-xs text-muted-foreground">Showing venues with a saved location, closest first.</span>}
+            {myLocation && <span className="text-xs text-muted-foreground">Closest first — venues without a saved location are shown after.</span>}
           </div>
         )}
       </PageHeader>
@@ -227,7 +241,7 @@ function Marketplace() {
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 stagger-children">
             {filtered.map((h) => (
-              <Link key={h.id} to={`${meta.detailBase}/$id`} params={{ id: h.id }} search={search.event_id ? { event_id: search.event_id } : undefined}
+              <Link key={h.id} to={`${meta.detailBase}/$id`} params={{ id: h.id }} search={{ event_id: search.event_id, ref: undefined }}
                 className="group card-interactive overflow-hidden rounded-2xl border border-border bg-card shadow-soft hover:shadow-elegant">
                 <div className="relative h-64 overflow-hidden bg-accent">
                   {h.cover_url || h.gallery[0] ? (
@@ -272,7 +286,7 @@ function Marketplace() {
                   </div>
                   <div className="mt-3 flex items-center justify-between">
                     <div className="text-sm font-semibold">
-                      {h.price_per_day ? `From ₹${h.price_per_day.toLocaleString("en-IN")}${h.kind !== "vendor" ? "/day" : ""}` : "Price on request"}
+                      {h.price_per_day ? `From ₹${h.price_per_day.toLocaleString("en-IN")}` : "Price on request"}
                     </div>
                     <span className="rounded-full btn-brand btn-brand-hover text-xs font-semibold px-3 py-1.5">View</span>
                   </div>
