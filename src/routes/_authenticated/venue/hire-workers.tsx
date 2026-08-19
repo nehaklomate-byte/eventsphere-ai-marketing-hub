@@ -10,6 +10,7 @@ import { useSession } from "@/lib/session";
 import { fetchMyHalls, fetchHallBookings } from "@/lib/venue";
 import { WORKER_CATEGORIES, isVideoUrl } from "@/lib/worker";
 import { payForWorkerTask } from "@/lib/razorpay";
+import { notifyUsers } from "@/lib/push";
 
 export const Route = createFileRoute("/_authenticated/venue/hire-workers")({
   head: () => ({ meta: [{ title: "Hire Workers — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
@@ -275,6 +276,10 @@ function HirePanel({ worker, bookings, userId, onClose }: {
       } as never).select().maybeSingle();
       if (error) throw error;
       if (!data) throw new Error("Request was blocked — please refresh and try again.");
+      // The in-app notification row is created by a DB trigger, but nothing
+      // was actually alerting the worker (no OS push) — they'd only find out
+      // by opening the app and checking. This makes the request actually reach them.
+      notifyUsers([worker.owner_id], "New booking request", `You've been requested for "${form.task_name.trim()}" — check Jobs to accept.`, "/worker/jobs");
     },
     onSuccess: () => { toast.success("Booking request sent!"); qc.invalidateQueries({ queryKey: ["verified-workers"] }); onClose(); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to send request"),
