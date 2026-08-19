@@ -11,6 +11,7 @@ import { fetchMyHalls, fetchHallBookings } from "@/lib/venue";
 import { isVideoUrl } from "@/lib/worker";
 import { VENDOR_CATEGORIES } from "@/lib/vendor";
 import { payForWorkerTask } from "@/lib/razorpay";
+import { notifyUsers } from "@/lib/push";
 
 export const Route = createFileRoute("/_authenticated/venue/hire-vendors")({
   head: () => ({ meta: [{ title: "Hire Vendors — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
@@ -276,6 +277,7 @@ function HirePanel({ vendor, bookings, userId, onClose }: {
       } as never).select().maybeSingle();
       if (error) throw error;
       if (!data) throw new Error("Request was blocked — please refresh and try again.");
+      notifyUsers([vendor.owner_id], "New booking request", `You've been requested for "${form.task_name.trim()}" — check Jobs to accept.`, "/vendor/jobs");
     },
     onSuccess: () => { toast.success("Booking request sent!"); qc.invalidateQueries({ queryKey: ["verified-vendors"] }); onClose(); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to send request"),
