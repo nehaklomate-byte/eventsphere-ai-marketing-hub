@@ -247,6 +247,7 @@ function PayoutsTable({ rows, isLoading, adminUserId, onPaid }: { rows: PayoutRo
             <tr className="border-b border-border text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               <th className="px-5 py-3">Owed to</th>
               <th className="px-5 py-3">Details</th>
+              <th className="px-5 py-3">Pay via UPI</th>
               <th className="px-5 py-3">Amount</th>
               <th className="px-5 py-3">Status</th>
               <th className="px-5 py-3">Reference</th>
@@ -256,8 +257,18 @@ function PayoutsTable({ rows, isLoading, adminUserId, onPaid }: { rows: PayoutRo
           <tbody>
             {rows.map((r) => (
               <tr key={`${r.source}-${r.id}`} className="border-b border-border last:border-0">
-                <td className="px-5 py-3"><span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold capitalize ${SOURCE_STYLE[r.source]}`}>{r.source}</span></td>
+                <td className="px-5 py-3">
+                  <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold capitalize ${SOURCE_STYLE[r.source]}`}>{r.source}</span>
+                  <div className="mt-1 font-medium">{r.recipientName}</div>
+                </td>
                 <td className="px-5 py-3 font-medium">{r.title}</td>
+                <td className="px-5 py-3">
+                  {r.recipientUpiId ? (
+                    <span className="font-mono text-xs">{r.recipientUpiId}</span>
+                  ) : (
+                    <span className="rounded-full bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 px-2.5 py-0.5 text-[11px] font-semibold">Not set yet</span>
+                  )}
+                </td>
                 <td className="px-5 py-3 font-semibold">{money(r.amount)}</td>
                 <td className="px-5 py-3">
                   {r.status === "paid" ? (
@@ -284,7 +295,12 @@ function PayoutsTable({ rows, isLoading, adminUserId, onPaid }: { rows: PayoutRo
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={() => setMarking(null)}>
           <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <h3 className="flex items-center gap-2 font-semibold"><Wallet className="h-4 w-4 text-brand-violet" /> Mark payout as paid</h3>
-            <p className="mt-1.5 text-sm text-muted-foreground">{marking.title} — {money(marking.amount)}</p>
+            <p className="mt-1.5 text-sm text-muted-foreground">{marking.recipientName} — {marking.title} — {money(marking.amount)}</p>
+            {marking.recipientUpiId ? (
+              <p className="mt-1 text-sm font-mono text-foreground">UPI: {marking.recipientUpiId}</p>
+            ) : (
+              <p className="mt-1 text-xs font-semibold text-rose-700 dark:text-rose-400">This person hasn't added their UPI ID yet — ask them to set it in their Settings before you send anything.</p>
+            )}
             <p className="mt-2 text-xs text-muted-foreground">Confirm you've sent this via UPI outside the platform, then record the reference (transaction ID) here.</p>
             <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="UPI transaction reference (optional)"
               className="mt-3 w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
