@@ -31,7 +31,7 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { worker_task_id, entity_type } = await req.json();
+    const { worker_task_id, entity_type, payment_stage } = await req.json();
     if (!worker_task_id) {
       return new Response(JSON.stringify({ error: "worker_task_id is required" }), { status: 400, headers: corsHeaders });
     }
@@ -45,9 +45,16 @@ serve(async (req) => {
     const table = entity_type === "vendor" ? "vendor_tasks" : entity_type === "hall" ? "customer_bookings" : "worker_tasks";
 
     if (entity_type === "hall") {
+      // Two-stage payment (migration 20260819150000): the venue owner
+      // sets the advance amount at confirm time and the final whole
+      // price later — this endpoint now needs to know WHICH of the two
+      // it's collecting right now. Defaults to "advance" for anyone
+      // calling without the new param, so nothing existing breaks.
+      const stage = payment_stage === "balance" ? "balance" : "advance";
+
       const { data: booking, error: bookingErr } = await supabase
         .from("customer_bookings")
-        .select("id, amount, payment_status, status, target_name, kind")
+        .select("id, amount, advance_amount, advance_paid_amount, payment_status, status, target_name, kind")
         .eq("id", worker_task_id)
         .maybeSingle();
 
@@ -60,11 +67,30 @@ serve(async (req) => {
       if (booking.payment_status === "paid") {
         return new Response(JSON.stringify({ error: "This booking is already paid." }), { status: 400, headers: corsHeaders });
       }
-      if (!booking.amount || booking.amount <= 0) {
-        return new Response(JSON.stringify({ error: "No payable amount was set for this booking." }), { status: 400, headers: corsHeaders });
+
+      let payableAmount: number;
+      if (stage === "advance") {
+        if (booking.payment_status !== "pending") {
+          return new Response(JSON.stringify({ error: "The advance has already been paid for this booking." }), { status: 400, headers: corsHeaders });
+        }
+        if (!booking.advance_amount || booking.advance_amount <= 0) {
+          return new Response(JSON.stringify({ error: "The venue hasn't set an advance amount for this booking yet." }), { status: 400, headers: corsHeaders });
+        }
+        payableAmount = booking.advance_amount;
+      } else {
+        if (booking.payment_status !== "partial") {
+          return new Response(JSON.stringify({ error: "Pay the advance first before paying the remaining balance." }), { status: 400, headers: corsHeaders });
+        }
+        if (booking.amount == null) {
+          return new Response(JSON.stringify({ error: "The venue hasn't set the final price for this booking yet." }), { status: 400, headers: corsHeaders });
+        }
+        payableAmount = Math.round((booking.amount - (booking.advance_paid_amount ?? 0)) * 100) / 100;
+        if (payableAmount <= 0) {
+          return new Response(JSON.stringify({ error: "There's nothing left to pay on this booking." }), { status: 400, headers: corsHeaders });
+        }
       }
 
-      const amountPaise = Math.round(booking.amount * 100);
+      const amountPaise = Math.round(payableAmount * 100);
 
       const orderRes = await fetch("https://api.razorpay.com/v1/orders", {
         method: "POST",
@@ -76,7 +102,7 @@ serve(async (req) => {
           amount: amountPaise,
           currency: "INR",
           receipt: worker_task_id,
-          notes: { customer_booking_id: worker_task_id, target_name: booking.target_name },
+          notes: { customer_booking_id: worker_task_id, target_name: booking.target_name, payment_stage: stage },
         }),
       });
 
