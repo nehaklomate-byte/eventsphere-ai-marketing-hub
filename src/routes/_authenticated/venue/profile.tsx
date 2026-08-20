@@ -59,10 +59,10 @@ function VenueProfilePage() {
   // of getting one fixed price — e.g. Caterer: "Paneer Butter Masala —
   // ₹180/plate", Decorator: "Floral stage — ₹15,000". per_guest ones
   // multiply by the guest count the customer enters at booking time.
-  function addServiceOption(category: string, name: string, price: number, perGuest: boolean) {
+  function addServiceOption(category: string, name: string, price: number, perGuest: boolean, items: string[]) {
     const current = (form.service_offerings as Hall["service_offerings"]) ?? {};
     const existing = current[category] ?? { in_house: true, price: null, options: [] };
-    const option = { id: crypto.randomUUID(), name, price, per_guest: perGuest };
+    const option = { id: crypto.randomUUID(), name, price, per_guest: perGuest, items: items.length > 0 ? items : undefined };
     set("service_offerings", { ...current, [category]: { ...existing, in_house: true, options: [...existing.options, option] } } as never);
   }
 
@@ -313,17 +313,22 @@ function VenueProfilePage() {
                     {(svc.options ?? []).length > 0 && (
                       <div className="space-y-1">
                         {svc.options.map((o) => (
-                          <div key={o.id} className="flex items-center justify-between gap-2 rounded-lg bg-background px-3 py-1.5 text-xs">
-                            <span>{o.name}</span>
-                            <span className="flex items-center gap-2">
-                              <span className="font-semibold">₹{o.price.toLocaleString("en-IN")}{o.per_guest ? " / guest" : ""}</span>
-                              <button type="button" onClick={() => removeServiceOption(cat, o.id)} className="text-muted-foreground hover:text-destructive"><X className="h-3.5 w-3.5" /></button>
-                            </span>
+                          <div key={o.id} className="rounded-lg bg-background px-3 py-1.5 text-xs">
+                            <div className="flex items-center justify-between gap-2">
+                              <span>{o.name}</span>
+                              <span className="flex items-center gap-2">
+                                <span className="font-semibold">₹{o.price.toLocaleString("en-IN")}{o.per_guest ? " / guest" : ""}</span>
+                                <button type="button" onClick={() => removeServiceOption(cat, o.id)} className="text-muted-foreground hover:text-destructive"><X className="h-3.5 w-3.5" /></button>
+                              </span>
+                            </div>
+                            {o.items && o.items.length > 0 && (
+                              <div className="mt-0.5 text-[11px] text-muted-foreground">Includes: {o.items.join(", ")}</div>
+                            )}
                           </div>
                         ))}
                       </div>
                     )}
-                    <ServiceOptionInput onAdd={(name, price, perGuest) => addServiceOption(cat, name, price, perGuest)} />
+                    <ServiceOptionInput onAdd={(name, price, perGuest, items) => addServiceOption(cat, name, price, perGuest, items)} />
                     <p className="text-[11px] text-muted-foreground">
                       {(svc.options ?? []).length > 0
                         ? "Customer picks and combines whichever of the above they want — total updates live."
@@ -668,37 +673,47 @@ function GuestPricingTiersEditor({ basePrice, tiers, onChange }: { basePrice: nu
   );
 }
 
-function ServiceOptionInput({ onAdd }: { onAdd: (name: string, price: number, perGuest: boolean) => void }) {
+function ServiceOptionInput({ onAdd }: { onAdd: (name: string, price: number, perGuest: boolean, items: string[]) => void }) {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [perGuest, setPerGuest] = useState(false);
+  const [itemsText, setItemsText] = useState("");
 
   function add() {
     const n = name.trim();
     const p = Number(price);
     if (!n || !price || Number.isNaN(p) || p <= 0) return;
-    onAdd(n, p, perGuest);
-    setName(""); setPrice(""); setPerGuest(false);
+    const items = itemsText.split(",").map((x) => x.trim()).filter(Boolean);
+    onAdd(n, p, perGuest, items);
+    setName(""); setPrice(""); setPerGuest(false); setItemsText("");
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="space-y-1.5">
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. Veg Basic, Premium decoration"
+          className="min-w-[14rem] flex-1 rounded-lg border border-input bg-background px-3 py-1.5 text-xs outline-none focus:border-brand-violet"
+        />
+        <input
+          value={price}
+          onChange={(e) => setPrice(e.target.value.replace(/[^0-9]/g, ""))}
+          placeholder="Price ₹"
+          inputMode="numeric"
+          className="w-24 rounded-lg border border-input bg-background px-3 py-1.5 text-xs outline-none focus:border-brand-violet"
+        />
+        <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <input type="checkbox" checked={perGuest} onChange={(e) => setPerGuest(e.target.checked)} /> per guest
+        </label>
+      </div>
       <input
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="e.g. Paneer Butter Masala, Floral stage decor"
-        className="min-w-[14rem] flex-1 rounded-lg border border-input bg-background px-3 py-1.5 text-xs outline-none focus:border-brand-violet"
+        value={itemsText}
+        onChange={(e) => setItemsText(e.target.value)}
+        placeholder="What's included (comma-separated) — e.g. Paneer, Dal, Rice, Roti, Salad, Dessert"
+        className="w-full rounded-lg border border-input bg-background px-3 py-1.5 text-xs outline-none focus:border-brand-violet"
       />
-      <input
-        value={price}
-        onChange={(e) => setPrice(e.target.value.replace(/[^0-9]/g, ""))}
-        placeholder="Price ₹"
-        inputMode="numeric"
-        className="w-24 rounded-lg border border-input bg-background px-3 py-1.5 text-xs outline-none focus:border-brand-violet"
-      />
-      <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-        <input type="checkbox" checked={perGuest} onChange={(e) => setPerGuest(e.target.checked)} /> per guest
-      </label>
       <button type="button" onClick={add} className="rounded-full border border-input px-3 py-1.5 text-[11px] font-semibold hover:bg-accent">Add</button>
     </div>
   );
