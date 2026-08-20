@@ -35,7 +35,6 @@ export type VendorRow = {
   facebook: string | null;
   website: string | null;
   service_areas: string[];
-  available_days: string[];
   status: "draft" | "published";
   verified: boolean;
   rating: number;
@@ -134,7 +133,6 @@ export function computeVendorCompletion(form: Partial<VendorRow>): number {
   return Math.round((filled / fields.length) * 100);
 }
 
-export const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export function vendorStatusTone(status: VendorTask["status"]) {
   const m: Record<VendorTask["status"], string> = {
