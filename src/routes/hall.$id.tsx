@@ -472,7 +472,7 @@ const EVENT_TYPES = [
 type ServiceOfferingMap = Record<string, {
   in_house: boolean;
   price: number | null;
-  options: { id: string; name: string; price: number; per_guest: boolean }[];
+  options: { id: string; name: string; price: number; per_guest: boolean; items?: string[] }[];
 }>;
 
 function ServiceOfferings({ serviceOfferings, eventId }: { serviceOfferings: ServiceOfferingMap; eventId?: string }) {
@@ -491,11 +491,16 @@ function ServiceOfferings({ serviceOfferings, eventId }: { serviceOfferings: Ser
                 {(v.options ?? []).length > 0 ? (
                   <>
                     <div className="font-medium">{cat} — choose what you like</div>
-                    <div className="mt-0.5 space-y-0.5 text-xs text-muted-foreground">
+                    <div className="mt-0.5 space-y-1.5 text-xs text-muted-foreground">
                       {v.options.map((o) => (
-                        <div key={o.id} className="flex items-center justify-between">
-                          <span>{o.name}</span>
-                          <span className="font-semibold text-foreground">₹{o.price.toLocaleString("en-IN")}{o.per_guest ? "/guest" : ""}</span>
+                        <div key={o.id}>
+                          <div className="flex items-center justify-between">
+                            <span>{o.name}</span>
+                            <span className="font-semibold text-foreground">₹{o.price.toLocaleString("en-IN")}{o.per_guest ? "/guest" : ""}</span>
+                          </div>
+                          {o.items && o.items.length > 0 && (
+                            <div className="mt-0.5 pl-3 text-[11px]">Includes: {o.items.join(", ")}</div>
+                          )}
                         </div>
                       ))}
                     </div>
