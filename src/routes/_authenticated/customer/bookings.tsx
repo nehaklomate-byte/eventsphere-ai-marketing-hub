@@ -23,7 +23,9 @@ type Row = {
   name: string;
   event_date: string | null;
   requested_event_date: string | null;
-  amount: number;
+  amount: number; // hall: 0 until the venue owner sets the final price
+  advance_amount: number; // hall only
+  advance_paid_amount: number; // hall only
   status: string;
   payment_status: string;
 };
@@ -42,21 +44,26 @@ async function fetchAllBookings(userId: string): Promise<Row[]> {
     rows.push({
       id: b.id, source: "booking", kind: b.kind as Row["kind"], name: b.target_name,
       event_date: b.event_date, requested_event_date: (b as { requested_event_date?: string | null }).requested_event_date ?? null,
-      amount: Number(b.amount ?? 0), status: b.status, payment_status: b.payment_status,
+      amount: Number(b.amount ?? 0),
+      advance_amount: Number((b as { advance_amount?: number | null }).advance_amount ?? 0),
+      advance_paid_amount: Number((b as { advance_paid_amount?: number | null }).advance_paid_amount ?? 0),
+      status: b.status, payment_status: b.payment_status,
     });
   }
   for (const t of workerTasks.data ?? []) {
     rows.push({
       id: t.id, source: "worker_task", kind: "worker", name: `${t.task_name} — ${t.event_name}`,
       event_date: t.event_date, requested_event_date: null,
-      amount: Number(t.payment_amount ?? 0), status: t.status, payment_status: t.payment_status ?? "pending",
+      amount: Number(t.payment_amount ?? 0), advance_amount: 0, advance_paid_amount: 0,
+      status: t.status, payment_status: t.payment_status ?? "pending",
     });
   }
   for (const t of vendorTasks.data ?? []) {
     rows.push({
       id: t.id, source: "vendor_task", kind: "vendor", name: `${t.task_name} — ${t.event_name}`,
       event_date: t.event_date, requested_event_date: null,
-      amount: Number(t.payment_amount ?? 0), status: t.status, payment_status: t.payment_status ?? "pending",
+      amount: Number(t.payment_amount ?? 0), advance_amount: 0, advance_paid_amount: 0,
+      status: t.status, payment_status: t.payment_status ?? "pending",
     });
   }
   return rows.sort((a, b) => (b.event_date ?? "").localeCompare(a.event_date ?? ""));
@@ -87,11 +94,20 @@ function BookingsPage() {
     toast.success("Booking cancelled"); refresh();
   }
 
+  // hall bookings: 'pending' payment_status → paying the advance;
+  // 'partial' → advance already in, this pays the remaining balance
+  // (migration 20260819150000). Worker/vendor tasks are unchanged —
+  // still a single payment.
+  function paymentStageFor(row: Row): "advance" | "balance" | undefined {
+    if (row.kind !== "hall") return undefined;
+    return row.payment_status === "partial" ? "balance" : "advance";
+  }
+
   async function handlePay(row: Row) {
     setPayingId(row.id);
     try {
       const entityType = row.kind === "hall" ? "hall" : row.kind;
-      await payForWorkerTask({ workerTaskId: row.id, entityType });
+      await payForWorkerTask({ workerTaskId: row.id, entityType, paymentStage: paymentStageFor(row) });
       toast.success("Payment successful!");
       refresh();
     } catch (e) {
@@ -109,11 +125,22 @@ function BookingsPage() {
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not submit refund request"); }
   }
 
-  const canPay = (r: Row) =>
-    r.payment_status !== "paid" && r.amount > 0 &&
-    (r.source === "booking"
-      ? r.kind === "hall" && ["confirmed", "in_progress", "completed"].includes(r.status)
-      : ["accepted", "in_progress", "completed"].includes(r.status));
+  const canPay = (r: Row) => {
+    if (r.payment_status === "paid") return false;
+    if (r.source !== "booking" || r.kind !== "hall") {
+      return r.amount > 0 && ["accepted", "in_progress", "completed"].includes(r.status);
+    }
+    // Hall booking, not yet confirmed by the venue at all
+    if (!["confirmed", "in_progress", "completed"].includes(r.status)) return false;
+    if (r.payment_status === "partial") return r.amount > r.advance_paid_amount; // owner has set the final price and there's a balance left
+    return r.advance_amount > 0; // still owed the advance — owner must have set one for a Pay button to appear
+  };
+
+  const payLabel = (r: Row) => {
+    if (r.kind !== "hall") return "Pay";
+    if (r.payment_status === "partial") return `Pay remaining ₹${(r.amount - r.advance_paid_amount).toLocaleString("en-IN")}`;
+    return `Pay advance ₹${r.advance_amount.toLocaleString("en-IN")}`;
+  };
 
   return (
     <PageShell title="Bookings" subtitle="Every venue booking and every vendor or worker you hired — in one place.">
@@ -147,7 +174,13 @@ function BookingsPage() {
                       <div className="text-[11px] text-amber-600">New date requested: {b.requested_event_date}</div>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right">{b.amount > 0 ? `₹${b.amount.toLocaleString("en-IN")}` : "—"}</td>
+                  <td className="px-4 py-3 text-right">
+                    {b.kind === "hall" ? (
+                      b.payment_status === "paid" ? `₹${b.amount.toLocaleString("en-IN")}` :
+                      b.payment_status === "partial" ? (b.amount > 0 ? `₹${(b.amount - b.advance_paid_amount).toLocaleString("en-IN")} pending` : "Awaiting final price") :
+                      b.advance_amount > 0 ? `₹${b.advance_amount.toLocaleString("en-IN")} advance due` : "—"
+                    ) : (b.amount > 0 ? `₹${b.amount.toLocaleString("en-IN")}` : "—")}
+                  </td>
                   <td className="px-4 py-3 capitalize">{b.status.replace(/_/g, " ")}</td>
                   <td className="px-4 py-3 capitalize">{b.payment_status}</td>
                   <td className="px-4 py-3 text-right">
@@ -165,7 +198,7 @@ function BookingsPage() {
                       ) : canPay(b) ? (
                         <button onClick={() => handlePay(b)} disabled={payingId === b.id}
                           className="inline-flex items-center gap-1.5 rounded-lg btn-brand btn-brand-hover px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-70">
-                          {payingId === b.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <IndianRupee className="h-3.5 w-3.5" />} Pay
+                          {payingId === b.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <IndianRupee className="h-3.5 w-3.5" />} {payLabel(b)}
                         </button>
                       ) : null}
                       <Link to="/customer/messages" className="inline-flex items-center gap-1 rounded-lg border border-input px-2.5 py-1 text-xs hover:bg-accent">
