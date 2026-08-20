@@ -36,7 +36,6 @@ export type WorkerRow = {
   willing_to_travel: boolean;
   working_hours_start: string | null;
   working_hours_end: string | null;
-  available_days: unknown;
   id_proof_type: string | null;
   id_proof_number: string | null;
   emergency_contact_name: string | null;
@@ -108,7 +107,6 @@ export const AGENCY_SERVICES = [
   "Sound", "Lighting", "Transportation", "Staffing", "Cleaning",
 ];
 
-export const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export async function fetchMyWorker(userId: string) {
   const { data, error } = await supabase
@@ -171,7 +169,6 @@ export function computeCompletion(w: Partial<WorkerRow> | null): number {
     !!w.id_proof_type,
     !!w.emergency_contact_phone,
     !!(w.work_images && (w.work_images as unknown[]).length > 0),
-    !!(w.available_days && (w.available_days as unknown[]).length > 0),
   ];
   const done = checks.filter(Boolean).length;
   return Math.round((done / checks.length) * 100);
