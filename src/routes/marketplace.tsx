@@ -282,7 +282,7 @@ function Marketplace() {
                     </div>
                     <span className="rounded-full btn-brand btn-brand-hover text-xs font-semibold px-3 py-1.5">View</span>
                   </div>
-                  {h.price_per_day && <p className="mt-1 text-[10.5px] text-muted-foreground">Final price depends on what you choose to add</p>}
+                  {h.price_per_day && h.kind !== "vendor" && <p className="mt-1 text-[10.5px] text-muted-foreground">Venue shares the final price after reviewing your request</p>}
                 </div>
               </Link>
             ))}
