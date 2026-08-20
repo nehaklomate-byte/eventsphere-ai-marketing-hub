@@ -103,7 +103,10 @@ export type HallBooking = {
   target_id: string;
   target_name: string;
   event_date: string | null;
-  amount: number;
+  event_end_date: string | null;
+  amount: number | null; // null until the venue owner sets the final price (migration 20260819150000)
+  advance_amount: number | null; // set by the venue owner at confirm time
+  advance_paid_amount: number;
   status: "pending" | "confirmed" | "in_progress" | "completed" | "cancelled" | "reschedule_requested";
   payment_status: "pending" | "paid" | "failed" | "refunded" | "partial";
   notes: string | null;
@@ -175,6 +178,28 @@ export async function fetchHallBookings(hallIds: string[]): Promise<HallBooking[
 
 export async function updateBookingStatus(id: string, status: HallBooking["status"]): Promise<void> {
   const { error } = await supabase.from("customer_bookings" as never).update({ status } as never).eq("id" as never, id as never);
+  if (error) throw error;
+}
+
+/** Owner confirms a request and sets the advance to collect. Doing
+ * both in one call keeps a booking from ever landing in "confirmed"
+ * with no advance amount set (which would leave the customer with no
+ * way to pay). See migration 20260819150000. */
+export async function confirmBookingWithAdvance(id: string, advanceAmount: number): Promise<void> {
+  const { error } = await supabase.from("customer_bookings" as never)
+    .update({ status: "confirmed", advance_amount: advanceAmount } as never)
+    .eq("id" as never, id as never);
+  if (error) throw error;
+}
+
+/** Owner sets (or updates) the whole final price for a confirmed
+ * booking, once everything's been finalised with the customer outside
+ * the app. The customer's remaining balance (amount - advance_paid_amount)
+ * becomes payable the moment this is set. */
+export async function setBookingFinalPrice(id: string, amount: number): Promise<void> {
+  const { error } = await supabase.from("customer_bookings" as never)
+    .update({ amount, final_price_set_at: new Date().toISOString() } as never)
+    .eq("id" as never, id as never);
   if (error) throw error;
 }
 
