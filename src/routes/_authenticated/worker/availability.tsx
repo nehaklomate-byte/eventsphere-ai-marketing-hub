@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
-import { fetchMyWorker, WEEKDAYS } from "@/lib/worker";
+import { fetchMyWorker } from "@/lib/worker";
 import { Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 
@@ -18,7 +18,6 @@ function AvailabilityPage() {
     queryKey: ["me-worker", user?.id], queryFn: () => fetchMyWorker(user!.id), enabled: !!user?.id,
   });
 
-  const [days, setDays] = useState<string[]>([]);
   const [start, setStart] = useState("09:00");
   const [end, setEnd] = useState("18:00");
   const [travel, setTravel] = useState(false);
@@ -29,7 +28,6 @@ function AvailabilityPage() {
 
   useEffect(() => {
     if (!worker) return;
-    setDays(Array.isArray(worker.available_days) ? worker.available_days as string[] : []);
     setStart(worker.working_hours_start ?? "09:00");
     setEnd(worker.working_hours_end ?? "18:00");
     setTravel(!!worker.willing_to_travel);
@@ -42,7 +40,6 @@ function AvailabilityPage() {
     mutationFn: async () => {
       const { error } = await supabase.from("workers")
         .update({
-          available_days: days as never,
           working_hours_start: start,
           working_hours_end: end,
           willing_to_travel: travel,
@@ -62,21 +59,6 @@ function AvailabilityPage() {
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Availability</h1>
         <p className="mt-1 text-sm text-muted-foreground">Set the days, hours and travel radius you're available for work.</p>
       </div>
-
-      <Section title="Working days">
-        <div className="flex flex-wrap gap-2">
-          {WEEKDAYS.map((d) => {
-            const active = days.includes(d);
-            return (
-              <button key={d} type="button"
-                onClick={() => setDays((prev) => prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d])}
-                className={`rounded-xl px-4 py-2 text-sm font-semibold border ${active ? "bg-brand-violet text-white border-brand-violet" : "border-border hover:bg-accent"}`}>
-                {d}
-              </button>
-            );
-          })}
-        </div>
-      </Section>
 
       <Section title="Working hours">
         <div className="grid grid-cols-2 gap-4 max-w-md">
