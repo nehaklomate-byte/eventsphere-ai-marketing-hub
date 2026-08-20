@@ -37,7 +37,12 @@ export type Hall = {
   service_offerings: Record<string, {
     in_house: boolean;
     price: number | null;                 // flat add-on price, used when there are no options below
-    options: { id: string; name: string; price: number; per_guest: boolean }[];
+    // items: what's actually included in this option — e.g. a "VEG
+    // BASIC" catering option lists ["Paneer","Dal","Rice","Roti"] so
+    // the customer sees what they're paying for instead of guessing
+    // what a price covers. Optional — free text, comma-separated on
+    // input, rendered as a list on the customer-facing page.
+    options: { id: string; name: string; price: number; per_guest: boolean; items?: string[] }[];
   }>;
   address: string | null;
   city: string | null;
