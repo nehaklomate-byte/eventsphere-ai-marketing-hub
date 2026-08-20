@@ -58,6 +58,11 @@ export type Hall = {
   videos: string[];
   price_per_day: number | null;
   price_per_hour: number | null;
+  // Guest-count based pricing (migration 20260819120000) — when set,
+  // the customer's guest_count picks the matching tier's price instead
+  // of always charging the flat price_per_day. Empty = old flat-price
+  // behavior, unchanged.
+  guest_pricing_tiers: { max_guests: number; price: number }[];
   advance_amount: number | null;
   cancellation_policy: string | null;
   working_hours: string | null;
@@ -240,4 +245,17 @@ export async function fetchApplicationsForHallPosting(postingId: string): Promis
     .in("id", list.map((a) => a.worker_id));
   const byId = new Map((workers ?? []).map((w) => [w.id, w]));
   return list.map((a) => ({ ...a, worker: byId.get(a.worker_id) as JobApplication["worker"] }));
+}
+
+/** Client-side mirror of the DB function public.resolve_hall_base_price
+ * (migration 20260819120000) — same tier-selection logic, so the quote
+ * shown to the customer while filling the form matches what the server
+ * would compute. Empty tiers = old flat price_per_day behavior. */
+export function resolveHallBasePrice(pricePerDay: number | null, tiers: { max_guests: number; price: number }[] | null | undefined, guestCount: number): number {
+  const base = pricePerDay ?? 0;
+  if (!tiers || tiers.length === 0 || !guestCount) return base;
+  const sorted = [...tiers].sort((a, b) => a.max_guests - b.max_guests);
+  const match = sorted.find((t) => guestCount <= t.max_guests);
+  if (match) return match.price;
+  return sorted[sorted.length - 1].price; // above every tier — use the highest one, not the (lower) base
 }
