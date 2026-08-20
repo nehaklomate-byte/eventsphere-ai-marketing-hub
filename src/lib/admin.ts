@@ -309,44 +309,27 @@ export type IncomingPayment = {
 /** Every payment that has actually cleared through Razorpay, across
  * hall bookings, worker tasks, and vendor tasks — money that has
  * landed in the platform's account, whether or not it's been paid
- * out to the worker/vendor/venue owner yet. */
+ * out to the worker/vendor/venue owner yet.
+ *
+ * Reads from platform_commission_ledger (migration
+ * 20260819110000) instead of three separately hand-computed queries —
+ * one server-side view is the single source of truth for gross/
+ * commission/net everywhere in the app, so this screen, the Event
+ * Financials screen, and any future report can never quietly disagree
+ * with each other again. */
 export async function fetchIncomingPayments(): Promise<IncomingPayment[]> {
-  const [halls, workers, vendors] = await Promise.all([
-    supabase.from("customer_bookings" as never)
-      .select("id, target_name, amount, commission_amount, razorpay_payment_id, paid_at, created_at" as never)
-      .eq("kind" as never, "hall" as never).eq("payment_status" as never, "paid" as never)
-      .order("created_at" as never, { ascending: false }),
-    // commission_amount added by migration 20260806100000_per_role_commission.sql —
-    // was previously not selected here at all, so worker/vendor commission was
-    // hardcoded to 0 below even though the DB trigger computes and stores the
-    // real figure the moment the task is paid.
-    supabase.from("worker_tasks" as never)
-      .select("id, event_name, task_name, payment_amount, commission_amount, razorpay_payment_id, paid_at, updated_at" as never)
-      .eq("payment_status" as never, "paid" as never)
-      .order("updated_at" as never, { ascending: false }),
-    supabase.from("vendor_tasks" as never)
-      .select("id, event_name, task_name, payment_amount, commission_amount, razorpay_payment_id, paid_at, updated_at" as never)
-      .eq("payment_status" as never, "paid" as never)
-      .order("updated_at" as never, { ascending: false }),
-  ]);
-  if (halls.error) throw halls.error;
-  if (workers.error) throw workers.error;
-  if (vendors.error) throw vendors.error;
+  const { data, error } = await supabase
+    .from("platform_commission_ledger" as never)
+    .select("source_id, source_type, counterparty_label, gross_amount, commission_amount, razorpay_payment_id, paid_at, created_at" as never)
+    .eq("payment_status" as never, "paid" as never)
+    .order("paid_at" as never, { ascending: false, nullsFirst: false });
+  if (error) throw error;
 
-  type HallRow = { id: string; target_name: string; amount: number; commission_amount: number; razorpay_payment_id: string | null; paid_at: string | null; created_at: string };
-  type TaskRow = { id: string; event_name: string; task_name: string; payment_amount: number | null; commission_amount: number | null; razorpay_payment_id: string | null; paid_at?: string | null; updated_at: string };
-
-  const out: IncomingPayment[] = [];
-  for (const r of (halls.data as unknown as HallRow[]) ?? []) {
-    out.push({ id: r.id, source: "hall", title: r.target_name, amount: r.amount, commission_amount: r.commission_amount ?? 0, razorpay_payment_id: r.razorpay_payment_id, paid_at: r.paid_at, created_at: r.created_at });
-  }
-  for (const r of (workers.data as unknown as TaskRow[]) ?? []) {
-    out.push({ id: r.id, source: "worker", title: `${r.event_name} — ${r.task_name}`, amount: r.payment_amount ?? 0, commission_amount: r.commission_amount ?? 0, razorpay_payment_id: r.razorpay_payment_id, paid_at: r.paid_at ?? r.updated_at, created_at: r.updated_at });
-  }
-  for (const r of (vendors.data as unknown as TaskRow[]) ?? []) {
-    out.push({ id: r.id, source: "vendor", title: `${r.event_name} — ${r.task_name}`, amount: r.payment_amount ?? 0, commission_amount: r.commission_amount ?? 0, razorpay_payment_id: r.razorpay_payment_id, paid_at: r.paid_at ?? r.updated_at, created_at: r.updated_at });
-  }
-  return out.sort((a, b) => (b.paid_at ?? b.created_at).localeCompare(a.paid_at ?? a.created_at));
+  type LedgerRow = { source_id: string; source_type: IncomingPaymentSource; counterparty_label: string; gross_amount: number; commission_amount: number; razorpay_payment_id: string | null; paid_at: string | null; created_at: string };
+  return ((data as unknown as LedgerRow[]) ?? []).map((r) => ({
+    id: r.source_id, source: r.source_type, title: r.counterparty_label, amount: r.gross_amount ?? 0,
+    commission_amount: r.commission_amount ?? 0, razorpay_payment_id: r.razorpay_payment_id, paid_at: r.paid_at, created_at: r.created_at,
+  }));
 }
 
 export type PayoutSource = "worker" | "vendor" | "venue";
@@ -356,12 +339,13 @@ export type PayoutRow = {
   source: PayoutSource;
   title: string;
   amount: number;
-  status: "pending" | "paid";
+  status: "pending" | "paid" | "cancelled" | "clawback_required";
   payout_reference: string | null;
   paid_at: string | null;
   created_at: string;
   recipientName: string;
   recipientUpiId: string | null; // null = they haven't set it yet, admin has nowhere to send this
+  notes: string | null; // set by the refund-sync trigger when auto-cancelled/clawback_required
 };
 
 /** What the platform owes out to workers, vendors, and venue owners —
@@ -377,33 +361,33 @@ export type PayoutRow = {
 export async function fetchPayouts(): Promise<PayoutRow[]> {
   const [workers, vendors, venues] = await Promise.all([
     supabase.from("worker_payouts" as never)
-      .select("id, amount, status, payout_reference, paid_at, created_at, worker_task_id, worker_tasks:worker_task_id(event_name, task_name), workers:worker_id(full_name, payout_upi_id)" as never)
+      .select("id, amount, status, payout_reference, paid_at, created_at, notes, worker_task_id, worker_tasks:worker_task_id(event_name, task_name), workers:worker_id(full_name, payout_upi_id)" as never)
       .order("created_at" as never, { ascending: false }),
     supabase.from("vendor_payouts" as never)
-      .select("id, amount, status, payout_reference, paid_at, created_at, vendor_task_id, vendor_tasks:vendor_task_id(event_name, task_name), vendors:vendor_id(business_name, payout_upi_id)" as never)
+      .select("id, amount, status, payout_reference, paid_at, created_at, notes, vendor_task_id, vendor_tasks:vendor_task_id(event_name, task_name), vendors:vendor_id(business_name, payout_upi_id)" as never)
       .order("created_at" as never, { ascending: false }),
     supabase.from("venue_payouts" as never)
-      .select("id, amount, status, payout_reference, paid_at, created_at, booking_id, customer_bookings:booking_id(target_name), profiles:hall_owner_id(full_name, payout_upi_id)" as never)
+      .select("id, amount, status, payout_reference, paid_at, created_at, notes, booking_id, customer_bookings:booking_id(target_name), profiles:hall_owner_id(full_name, payout_upi_id)" as never)
       .order("created_at" as never, { ascending: false }),
   ]);
   if (workers.error) throw workers.error;
   if (vendors.error) throw vendors.error;
   if (venues.error) throw venues.error;
 
-  type Base = { id: string; amount: number; status: "pending" | "paid"; payout_reference: string | null; paid_at: string | null; created_at: string };
+  type Base = { id: string; amount: number; status: "pending" | "paid" | "cancelled" | "clawback_required"; payout_reference: string | null; paid_at: string | null; created_at: string; notes: string | null };
   type WorkerRow = Base & { worker_tasks: { event_name: string; task_name: string } | null; workers: { full_name: string; payout_upi_id: string | null } | null };
   type VendorRow = Base & { vendor_tasks: { event_name: string; task_name: string } | null; vendors: { business_name: string; payout_upi_id: string | null } | null };
   type VenueRow = Base & { customer_bookings: { target_name: string } | null; profiles: { full_name: string; payout_upi_id: string | null } | null };
 
   const out: PayoutRow[] = [];
   for (const r of (workers.data as unknown as WorkerRow[]) ?? []) {
-    out.push({ id: r.id, source: "worker", title: r.worker_tasks ? `${r.worker_tasks.event_name} — ${r.worker_tasks.task_name}` : "Worker task", amount: r.amount, status: r.status, payout_reference: r.payout_reference, paid_at: r.paid_at, created_at: r.created_at, recipientName: r.workers?.full_name ?? "Worker", recipientUpiId: r.workers?.payout_upi_id ?? null });
+    out.push({ id: r.id, source: "worker", title: r.worker_tasks ? `${r.worker_tasks.event_name} — ${r.worker_tasks.task_name}` : "Worker task", amount: r.amount, status: r.status, payout_reference: r.payout_reference, paid_at: r.paid_at, created_at: r.created_at, recipientName: r.workers?.full_name ?? "Worker", recipientUpiId: r.workers?.payout_upi_id ?? null, notes: r.notes });
   }
   for (const r of (vendors.data as unknown as VendorRow[]) ?? []) {
-    out.push({ id: r.id, source: "vendor", title: r.vendor_tasks ? `${r.vendor_tasks.event_name} — ${r.vendor_tasks.task_name}` : "Vendor task", amount: r.amount, status: r.status, payout_reference: r.payout_reference, paid_at: r.paid_at, created_at: r.created_at, recipientName: r.vendors?.business_name ?? "Vendor", recipientUpiId: r.vendors?.payout_upi_id ?? null });
+    out.push({ id: r.id, source: "vendor", title: r.vendor_tasks ? `${r.vendor_tasks.event_name} — ${r.vendor_tasks.task_name}` : "Vendor task", amount: r.amount, status: r.status, payout_reference: r.payout_reference, paid_at: r.paid_at, created_at: r.created_at, recipientName: r.vendors?.business_name ?? "Vendor", recipientUpiId: r.vendors?.payout_upi_id ?? null, notes: r.notes });
   }
   for (const r of (venues.data as unknown as VenueRow[]) ?? []) {
-    out.push({ id: r.id, source: "venue", title: r.customer_bookings ? r.customer_bookings.target_name : "Hall booking", amount: r.amount, status: r.status, payout_reference: r.payout_reference, paid_at: r.paid_at, created_at: r.created_at, recipientName: r.profiles?.full_name ?? "Venue owner", recipientUpiId: r.profiles?.payout_upi_id ?? null });
+    out.push({ id: r.id, source: "venue", title: r.customer_bookings ? r.customer_bookings.target_name : "Hall booking", amount: r.amount, status: r.status, payout_reference: r.payout_reference, paid_at: r.paid_at, created_at: r.created_at, recipientName: r.profiles?.full_name ?? "Venue owner", recipientUpiId: r.profiles?.payout_upi_id ?? null, notes: r.notes });
   }
   return out.sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
