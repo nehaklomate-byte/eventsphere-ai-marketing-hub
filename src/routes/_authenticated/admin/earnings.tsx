@@ -273,6 +273,10 @@ function PayoutsTable({ rows, isLoading, adminUserId, onPaid }: { rows: PayoutRo
                 <td className="px-5 py-3">
                   {r.status === "paid" ? (
                     <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 text-xs font-semibold"><CheckCircle2 className="h-3.5 w-3.5" /> Paid</span>
+                  ) : r.status === "cancelled" ? (
+                    <span className="rounded-full bg-muted text-muted-foreground px-2.5 py-0.5 text-[11px] font-semibold" title={r.notes ?? undefined}>Cancelled (refunded)</span>
+                  ) : r.status === "clawback_required" ? (
+                    <span className="rounded-full bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 px-2.5 py-0.5 text-[11px] font-semibold" title={r.notes ?? undefined}>⚠ Recover — already paid, now refunded</span>
                   ) : (
                     <span className="rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 px-2.5 py-0.5 text-[11px] font-semibold">Pending</span>
                   )}
