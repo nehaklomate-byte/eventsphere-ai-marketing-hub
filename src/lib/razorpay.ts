@@ -29,6 +29,7 @@ function loadRazorpayScript(): Promise<void> {
 export async function payForWorkerTask(opts: {
   workerTaskId: string;
   entityType?: "worker" | "vendor" | "hall";
+  paymentStage?: "advance" | "balance"; // hall bookings only — which of the two payments this is
   payerName?: string;
   payerEmail?: string;
   payerPhone?: string;
@@ -39,7 +40,7 @@ export async function payForWorkerTask(opts: {
   if (!accessToken) throw new Error("You need to be logged in to pay.");
 
   const { data: fnResp, error: fnErr } = await supabase.functions.invoke("razorpay-create-order", {
-    body: { worker_task_id: opts.workerTaskId, entity_type: entityType },
+    body: { worker_task_id: opts.workerTaskId, entity_type: entityType, payment_stage: opts.paymentStage },
   });
   if (fnErr) throw new Error(fnErr.message || "Could not start the payment.");
   if (fnResp?.error) throw new Error(fnResp.error);
@@ -57,7 +58,7 @@ export async function payForWorkerTask(opts: {
       currency,
       order_id,
       name: "EventOrbit Nova",
-      description: entityType === "vendor" ? "Vendor payment" : entityType === "hall" ? "Venue booking payment" : "Worker payment",
+      description: entityType === "vendor" ? "Vendor payment" : entityType === "hall" ? (opts.paymentStage === "balance" ? "Venue booking — remaining balance" : "Venue booking — advance payment") : "Worker payment",
       prefill: { name: opts.payerName, email: opts.payerEmail, contact: opts.payerPhone },
       theme: { color: "#7c3aed" },
       handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
@@ -65,6 +66,7 @@ export async function payForWorkerTask(opts: {
           body: {
             worker_task_id: opts.workerTaskId,
             entity_type: entityType,
+            payment_stage: opts.paymentStage,
             razorpay_order_id: response.razorpay_order_id,
             razorpay_payment_id: response.razorpay_payment_id,
             razorpay_signature: response.razorpay_signature,
