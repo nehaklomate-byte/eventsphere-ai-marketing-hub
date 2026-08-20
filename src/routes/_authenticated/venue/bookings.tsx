@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CalendarCheck, Check, X, Loader2, IndianRupee, Eye, Download, Ban, Users, HardHat, Store, Receipt } from "lucide-react";
-import { fetchMyHalls, fetchHallBookings, updateBookingStatus, type HallBooking } from "@/lib/venue";
+import { fetchMyHalls, fetchHallBookings, updateBookingStatus, confirmBookingWithAdvance, setBookingFinalPrice, type HallBooking } from "@/lib/venue";
 import { downloadCsv } from "@/lib/admin";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -43,6 +43,47 @@ function BookingsPage() {
       qc.invalidateQueries({ queryKey: ["venue-bookings"] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to update");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  // Confirming now also requires an advance amount in the same step —
+  // a booking should never sit "confirmed" with nothing the customer
+  // can actually pay (migration 20260819150000).
+  async function confirmWithAdvance(b: HallBooking) {
+    const input = window.prompt(`Advance amount to collect for "${b.target_name}" (₹)`, b.advance_amount ? String(b.advance_amount) : "");
+    if (input === null) return;
+    const amt = Number(input);
+    if (!amt || amt <= 0) return toast.error("Enter a valid advance amount");
+    setBusyId(b.id);
+    try {
+      await confirmBookingWithAdvance(b.id, amt);
+      toast.success("Booking confirmed — customer can now pay the advance");
+      qc.invalidateQueries({ queryKey: ["venue-bookings"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to confirm");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  // Sets (or updates) the whole final price once everything's agreed
+  // with the customer — the remaining balance becomes payable the
+  // moment this is saved.
+  async function setFinalPrice(b: HallBooking) {
+    const input = window.prompt(`Whole final price for "${b.target_name}" (₹) — the advance already paid will be subtracted for the customer automatically`, b.amount ? String(b.amount) : "");
+    if (input === null) return;
+    const amt = Number(input);
+    if (!amt || amt <= 0) return toast.error("Enter a valid amount");
+    if (amt < b.advance_paid_amount) return toast.error(`Final price can't be less than the ₹${b.advance_paid_amount.toLocaleString("en-IN")} advance already paid`);
+    setBusyId(b.id);
+    try {
+      await setBookingFinalPrice(b.id, amt);
+      toast.success("Final price set — customer can now pay the remaining balance");
+      qc.invalidateQueries({ queryKey: ["venue-bookings"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save");
     } finally {
       setBusyId(null);
     }
@@ -100,7 +141,11 @@ function BookingsPage() {
                   <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                     {b.event_date && <span>{new Date(b.event_date).toLocaleDateString()}</span>}
                     {!!b.details?.event_type && <span>{String(b.details.event_type)}</span>}
-                    <span className="flex items-center gap-1"><IndianRupee className="h-3.5 w-3.5" /> {b.amount.toLocaleString("en-IN")}</span>
+                    <span className="flex items-center gap-1"><IndianRupee className="h-3.5 w-3.5" /> {
+                      b.payment_status === "paid" ? `${b.amount?.toLocaleString("en-IN")} paid in full` :
+                      b.payment_status === "partial" ? (b.amount ? `${(b.amount - b.advance_paid_amount).toLocaleString("en-IN")} balance pending` : `${b.advance_paid_amount.toLocaleString("en-IN")} advance received — set final price`) :
+                      b.advance_amount ? `${b.advance_amount.toLocaleString("en-IN")} advance requested` : "Price not set yet"
+                    }</span>
                     <span className="capitalize">Payment: {b.payment_status}</span>
                   </div>
                   {b.notes && <p className="mt-2 text-sm text-foreground/80">{b.notes}</p>}
@@ -130,10 +175,10 @@ function BookingsPage() {
                     <>
                       <button
                         disabled={busyId === b.id}
-                        onClick={() => setStatus(b.id, "confirmed")}
+                        onClick={() => confirmWithAdvance(b)}
                         className="flex items-center gap-1.5 rounded-full bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
                       >
-                        {busyId === b.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} Confirm
+                        {busyId === b.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} Confirm & set advance
                       </button>
                       <button
                         disabled={busyId === b.id}
@@ -143,6 +188,15 @@ function BookingsPage() {
                         <X className="h-3.5 w-3.5" /> Decline
                       </button>
                     </>
+                  )}
+                  {b.status === "confirmed" && b.payment_status !== "paid" && (
+                    <button
+                      disabled={busyId === b.id}
+                      onClick={() => setFinalPrice(b)}
+                      className="flex items-center gap-1.5 rounded-full border border-brand-violet text-brand-violet px-3.5 py-2 text-xs font-semibold hover:bg-brand-violet/10 disabled:opacity-50"
+                    >
+                      <IndianRupee className="h-3.5 w-3.5" /> {b.amount ? "Update final price" : "Set final price"}
+                    </button>
                   )}
                   {b.status === "confirmed" && (
                     <>
