@@ -12,6 +12,7 @@ import { z } from "zod";
 import { emailSchema, phoneSchema } from "@/lib/validation";
 import { WishlistButton } from "@/components/WishlistButton";
 import { VENDOR_CATEGORIES } from "@/lib/vendor";
+import { resolveHallBasePrice } from "@/lib/venue";
 
 type Hall = {
   id: string;
@@ -39,6 +40,8 @@ type Hall = {
   service_offerings: ServiceOfferingMap;
   price_per_day: number | null;
   price_per_hour: number | null;
+  guest_pricing_tiers: { max_guests: number; price: number }[];
+  blocked_dates: string[]; // "YYYY-MM-DD" strings kept in sync by the DB when a booking is confirmed/cancelled (migration 20260819140000)
   advance_amount: number | null;
   cancellation_policy: string | null;
   working_hours: string | null;
@@ -105,6 +108,8 @@ function normalize(d: Record<string, unknown>): Hall {
     facilities: (d.facilities as Record<string, boolean>) ?? {},
     service_offerings: (d.service_offerings as ServiceOfferingMap) ?? {},
     price_per_day: (d.price_per_day as number) ?? null,
+    guest_pricing_tiers: (d.guest_pricing_tiers as { max_guests: number; price: number }[]) ?? [],
+    blocked_dates: (d.blocked_dates as string[]) ?? [],
     price_per_hour: (d.price_per_hour as number) ?? null,
     advance_amount: (d.advance_amount as number) ?? null,
     cancellation_policy: (d.cancellation_policy as string) ?? null,
@@ -118,7 +123,7 @@ function normalize(d: Record<string, unknown>): Hall {
 }
 
 function HallDetail() {
-  const { hall } = Route.useLoaderData() as { hall: Hall };
+  const { hall } = Route.useLoaderData();
   const { event_id, ref } = Route.useSearch();
   const [reviews, setReviews] = useState<Array<{ id: string; rating: number; comment: string | null; created_at: string; author: string | null }>>([]);
 
@@ -343,7 +348,7 @@ function HallDetail() {
                 <>
                   <div className="text-xs uppercase tracking-widest text-muted-foreground">Starting at</div>
                   <div className="mt-1 font-display text-3xl font-semibold text-gradient-brand">₹{hall.price_per_day.toLocaleString("en-IN")}</div>
-                  <div className="text-xs text-muted-foreground">Final price depends on your event dates and what you add{hall.price_per_hour ? ` • ₹${hall.price_per_hour.toLocaleString("en-IN")}/hour also available` : ""}</div>
+                  <div className="text-xs text-muted-foreground">Final price depends on guest count and what you add</div>
                 </>
               ) : (
                 <div className="text-sm text-muted-foreground">Contact venue for pricing</div>
@@ -354,7 +359,7 @@ function HallDetail() {
             </div>
             <ServiceOfferings serviceOfferings={hall.service_offerings} eventId={event_id} />
             <div className="mt-6">
-              <BookingAndEnquiry hallId={hall.id} hallName={hall.name} pricePerDay={hall.price_per_day} advanceAmount={hall.advance_amount} serviceOfferings={hall.service_offerings} eventId={event_id} sourceSlug={ref} />
+              <BookingAndEnquiry hallId={hall.id} hallName={hall.name} pricePerDay={hall.price_per_day} guestPricingTiers={hall.guest_pricing_tiers} blockedDates={hall.blocked_dates} advanceAmount={hall.advance_amount} serviceOfferings={hall.service_offerings} eventId={event_id} sourceSlug={ref} />
             </div>
           </div>
         </aside>
@@ -525,8 +530,8 @@ function ServiceOfferings({ serviceOfferings, eventId }: { serviceOfferings: Ser
 }
 
 function BookingAndEnquiry({
-  hallId, hallName, pricePerDay, advanceAmount, serviceOfferings, eventId, sourceSlug,
-}: { hallId: string; hallName: string; pricePerDay: number | null; advanceAmount: number | null; serviceOfferings: ServiceOfferingMap; eventId?: string; sourceSlug?: string }) {
+  hallId, hallName, pricePerDay, guestPricingTiers, blockedDates, advanceAmount, serviceOfferings, eventId, sourceSlug,
+}: { hallId: string; hallName: string; pricePerDay: number | null; guestPricingTiers: { max_guests: number; price: number }[]; blockedDates: string[]; advanceAmount: number | null; serviceOfferings: ServiceOfferingMap; eventId?: string; sourceSlug?: string }) {
   const [mode, setMode] = useState<"booking" | "enquiry">("booking");
   return (
     <div>
@@ -547,11 +552,13 @@ function BookingAndEnquiry({
         </button>
       </div>
       {mode === "booking"
-        ? <BookingForm hallId={hallId} hallName={hallName} pricePerDay={pricePerDay} advanceAmount={advanceAmount} serviceOfferings={serviceOfferings} eventId={eventId} sourceSlug={sourceSlug} />
+        ? <BookingForm hallId={hallId} hallName={hallName} pricePerDay={pricePerDay} guestPricingTiers={guestPricingTiers} blockedDates={blockedDates} advanceAmount={advanceAmount} serviceOfferings={serviceOfferings} eventId={eventId} sourceSlug={sourceSlug} />
         : <EnquiryForm hallId={hallId} sourceSlug={sourceSlug} />}
     </div>
   );
 }
+
+const TODAY_ISO = new Date().toISOString().slice(0, 10);
 
 const bookingSchema = z.object({
   event_name: z.string().trim().min(2, "Enter an event name"),
@@ -562,23 +569,20 @@ const bookingSchema = z.object({
   contact_person: z.string().trim().min(2, "Enter contact person's name"),
   contact_phone: phoneSchema,
   contact_email: emailSchema,
-  start_date: z.string().min(1, "Pick a start date"),
-  end_date: z.string().min(1, "Pick an end date"),
+  event_date: z.string().min(1, "Pick a start date").refine((v) => v >= TODAY_ISO, "Pick a date from today onwards — past dates can't be booked"),
+  event_end_date: z.string().optional(),
   start_time: z.string().min(1, "Pick a start time"),
   end_time: z.string().min(1, "Pick an end time"),
   guest_count: z.string().regex(/^\d+$/, "Enter guest count"),
   special_instructions: z.string().max(1000).optional(),
-}).refine((d) => d.end_date >= d.start_date, {
-  message: "End date can't be before the start date",
-  path: ["end_date"],
 });
 
 function BookingForm({
-  hallId, hallName, pricePerDay, advanceAmount, serviceOfferings, eventId, sourceSlug,
-}: { hallId: string; hallName: string; pricePerDay: number | null; advanceAmount: number | null; serviceOfferings: ServiceOfferingMap; eventId?: string; sourceSlug?: string }) {
+  hallId, hallName, pricePerDay, guestPricingTiers, blockedDates, advanceAmount, serviceOfferings, eventId, sourceSlug,
+}: { hallId: string; hallName: string; pricePerDay: number | null; guestPricingTiers: { max_guests: number; price: number }[]; blockedDates: string[]; advanceAmount: number | null; serviceOfferings: ServiceOfferingMap; eventId?: string; sourceSlug?: string }) {
   const [state, setState] = useState({
     event_name: "", organizer_type: "", organizer_type_other: "", event_type: "", event_type_other: "",
-    contact_person: "", contact_phone: "", contact_email: "", start_date: "", end_date: "", start_time: "", end_time: "",
+    contact_person: "", contact_phone: "", contact_email: "", event_date: "", event_end_date: "", start_time: "", end_time: "",
     guest_count: "", special_instructions: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -603,36 +607,34 @@ function BookingForm({
     return init;
   });
   const guestCount = Number(state.guest_count) || 0;
-  // Number of days the venue itself is charged for — inclusive of both
-  // the start and end date (a same-day event is 1 day, not 0). Falls
-  // back to 1 day until both dates are picked, so the total shown
-  // before that is just the venue's starting per-day rate.
-  const numberOfDays = state.start_date && state.end_date && state.end_date >= state.start_date
-    ? Math.floor((new Date(state.end_date).getTime() - new Date(state.start_date).getTime()) / 86400000) + 1
-    : 1;
-  const venueTotal = (pricePerDay ?? 0) * numberOfDays;
+  // Which dates in the picked range are already confirmed for someone
+  // else — checked against halls.blocked_dates (kept in sync by the DB
+  // trigger in migration 20260819140000 whenever a booking is
+  // confirmed/cancelled). Caught here, before the customer even
+  // submits, instead of only failing later when the owner tries to
+  // confirm a clashing request.
+  const clashDate = (() => {
+    if (!state.event_date) return null;
+    const start = new Date(state.event_date);
+    const end = state.event_end_date ? new Date(state.event_end_date) : start;
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const iso = d.toISOString().slice(0, 10);
+      if (blockedDates.includes(iso)) return iso;
+    }
+    return null;
+  })();
+  // Base venue price now follows the guest-count tier the owner set
+  // (migration 20260819120000) instead of always being the flat
+  // price_per_day — same tier logic the server uses, so what the
+  // customer sees here matches what actually gets charged.
+  const basePrice = resolveHallBasePrice(pricePerDay, guestPricingTiers, guestCount);
   const servicesTotal = inHouseServices.reduce((sum, [cat, v]) => {
     if ((v.options ?? []).length > 0) {
       return sum + v.options.reduce((s, o) => s + (selected[o.id] ? (o.per_guest ? o.price * guestCount : o.price) : 0), 0);
     }
     return sum + (selected[cat] ? (v.price ?? 0) : 0);
   }, 0);
-  const totalAmount = venueTotal + servicesTotal;
-
-  // Itemized breakdown shown to the customer as a running "cart" —
-  // updates live as they change dates, guest count, or tick services.
-  const cartLines: { label: string; amount: number }[] = [
-    { label: `Venue — ₹${(pricePerDay ?? 0).toLocaleString("en-IN")} × ${numberOfDays} day${numberOfDays > 1 ? "s" : ""}`, amount: venueTotal },
-    ...inHouseServices.flatMap(([cat, v]) => {
-      if ((v.options ?? []).length > 0) {
-        return v.options.filter((o) => selected[o.id]).map((o) => ({
-          label: o.per_guest ? `${o.name} — ₹${o.price.toLocaleString("en-IN")} × ${guestCount} guests` : o.name,
-          amount: o.per_guest ? o.price * guestCount : o.price,
-        }));
-      }
-      return selected[cat] ? [{ label: cat, amount: v.price ?? 0 }] : [];
-    }),
-  ];
+  const totalAmount = basePrice + servicesTotal;
 
   const set = (k: string, v: string) => setState((s) => ({ ...s, [k]: v }));
 
@@ -659,8 +661,8 @@ function BookingForm({
       target_id: hallId,
       target_name: hallName,
       customer_event_id: eventId ?? null,
-      event_date: d.start_date,
-      end_date: d.end_date,
+      event_date: d.event_date,
+      event_end_date: d.event_end_date || null,
       amount: totalAmount,
       advance_amount: advanceAmount ?? null,
       booking_source: sourceSlug ? "public_profile_link" : "marketplace",
@@ -675,9 +677,6 @@ function BookingForm({
         contact_person: d.contact_person,
         contact_phone: d.contact_phone,
         contact_email: d.contact_email,
-        start_date: d.start_date,
-        end_date: d.end_date,
-        number_of_days: numberOfDays,
         start_time: d.start_time,
         end_time: d.end_time,
         guest_count: Number(d.guest_count),
@@ -762,15 +761,18 @@ function BookingForm({
         </Row>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Row label="Start date" error={errors.start_date}>
-          <input type="date" className="input" value={state.start_date} onChange={(e) => set("start_date", e.target.value)} />
+      <div className="grid grid-cols-3 gap-3">
+        <Row label="Event start date" error={errors.event_date}>
+          <input type="date" className="input" min={TODAY_ISO} value={state.event_date} onChange={(e) => set("event_date", e.target.value)} />
         </Row>
-        <Row label="End date" error={errors.end_date}>
-          <input type="date" className="input" value={state.end_date} min={state.start_date || undefined} onChange={(e) => set("end_date", e.target.value)} />
+        <Row label="Event end date (optional — leave blank for a single-day event)" error={errors.event_end_date}>
+          <input type="date" className="input" min={state.event_date || TODAY_ISO} value={state.event_end_date} onChange={(e) => set("event_end_date", e.target.value)} />
         </Row>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
+        {clashDate && (
+          <p className="rounded-lg bg-rose-50 dark:bg-rose-950/30 px-3 py-2 text-xs font-medium text-rose-700 dark:text-rose-300">
+            This venue is already booked on {clashDate} — please pick different dates.
+          </p>
+        )}
         <Row label="Start time" error={errors.start_time}>
           <input type="time" className="input" value={state.start_time} onChange={(e) => set("start_time", e.target.value)} />
         </Row>
@@ -825,16 +827,17 @@ function BookingForm({
       )}
 
       <div className="rounded-xl bg-accent/40 px-3.5 py-2.5 text-sm">
-        <div className="text-xs font-semibold text-muted-foreground mb-1.5">Your booking so far</div>
-        <div className="space-y-1">
-          {cartLines.map((l, i) => (
-            <div key={i} className="flex items-center justify-between gap-2 text-xs">
-              <span className="text-muted-foreground">{l.label}</span>
-              <span className="font-medium">₹{l.amount.toLocaleString("en-IN")}</span>
-            </div>
-          ))}
+        <div className="flex items-center justify-between text-muted-foreground">
+          <span>Venue{guestCount ? ` (for ${guestCount} guests)` : ""}</span>
+          <span>₹{basePrice.toLocaleString("en-IN")}</span>
         </div>
-        <div className="mt-2 flex items-center justify-between border-t border-border/60 pt-2 font-semibold">
+        {servicesTotal > 0 && (
+          <div className="mt-1 flex items-center justify-between text-muted-foreground">
+            <span>Add-ons selected</span>
+            <span>₹{servicesTotal.toLocaleString("en-IN")}</span>
+          </div>
+        )}
+        <div className="mt-1.5 flex items-center justify-between border-t border-border/60 pt-1.5 font-semibold">
           <span>Total</span>
           <span>₹{totalAmount.toLocaleString("en-IN")}</span>
         </div>
@@ -843,7 +846,7 @@ function BookingForm({
       {advanceAmount != null && advanceAmount > 0 && (
         <p className="text-xs text-muted-foreground">An advance of ₹{advanceAmount.toLocaleString("en-IN")} will be requested once the venue confirms.</p>
       )}
-      <button type="submit" disabled={submitting} className="w-full inline-flex items-center justify-center gap-2 rounded-full btn-brand btn-brand-hover px-4 py-2.5 text-sm font-semibold disabled:opacity-70">
+      <button type="submit" disabled={submitting || !!clashDate} className="w-full inline-flex items-center justify-center gap-2 rounded-full btn-brand btn-brand-hover px-4 py-2.5 text-sm font-semibold disabled:opacity-70">
         {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Request booking
       </button>
       <style>{`
@@ -858,7 +861,7 @@ const enquirySchema = z.object({
   contact_name: z.string().trim().min(2, "Enter your name"),
   contact_email: emailSchema,
   contact_phone: phoneSchema.optional().or(z.literal("")),
-  event_date: z.string().min(1, "Pick a date"),
+  event_date: z.string().min(1, "Pick a date").refine((v) => v >= TODAY_ISO, "Pick a date from today onwards"),
   guest_count: z.string().regex(/^\d+$/, "Enter guest count"),
   message: z.string().max(1000).optional(),
 });
@@ -922,7 +925,7 @@ function EnquiryForm({ hallId, sourceSlug }: { hallId: string; sourceSlug?: stri
       </Row>
       <div className="grid grid-cols-2 gap-3">
         <Row label="Event date" error={errors.event_date}>
-          <input type="date" className="input" value={state.event_date} onChange={(e) => setState({ ...state, event_date: e.target.value })} />
+          <input type="date" className="input" min={TODAY_ISO} value={state.event_date} onChange={(e) => setState({ ...state, event_date: e.target.value })} />
         </Row>
         <Row label="Guests" error={errors.guest_count}>
           <input type="number" className="input" value={state.guest_count} onChange={(e) => setState({ ...state, guest_count: e.target.value })} placeholder="e.g., 250" />
