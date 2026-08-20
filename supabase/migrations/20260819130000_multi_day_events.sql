@@ -16,7 +16,9 @@
 alter table public.customer_bookings add column if not exists event_end_date date;
 alter table public.customer_events add column if not exists event_end_date date;
 
+alter table public.customer_bookings drop constraint if exists customer_bookings_end_after_start;
 alter table public.customer_bookings add constraint customer_bookings_end_after_start
   check (event_end_date is null or event_date is null or event_end_date >= event_date) not valid;
+alter table public.customer_events drop constraint if exists customer_events_end_after_start;
 alter table public.customer_events add constraint customer_events_end_after_start
   check (event_end_date is null or event_date is null or event_end_date >= event_date) not valid;
