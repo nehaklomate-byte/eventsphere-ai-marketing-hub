@@ -30,7 +30,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { worker_task_id, entity_type, razorpay_order_id, razorpay_payment_id, razorpay_signature } = await req.json();
+    const { worker_task_id, entity_type, razorpay_order_id, razorpay_payment_id, razorpay_signature, payment_stage } = await req.json();
     if (!worker_task_id || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return new Response(JSON.stringify({ error: "Missing fields" }), { status: 400, headers: corsHeaders });
     }
@@ -49,6 +49,53 @@ serve(async (req) => {
     // Service role — this function is the trusted source of truth once
     // the signature checks out, RLS shouldn't block the write.
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Hall bookings go through the two-stage advance→balance flow
+    // (migration 20260819150000) instead of always jumping straight to
+    // "paid" — an advance payment only moves payment_status to
+    // 'partial', the booking isn't fully paid until the balance clears.
+    if (entity_type === "hall") {
+      const stage = payment_stage === "balance" ? "balance" : "advance";
+
+      const { data: booking, error: fetchErr } = await admin
+        .from("customer_bookings")
+        .select("id, razorpay_order_id, payment_status, advance_amount, advance_paid_amount")
+        .eq("id", worker_task_id)
+        .maybeSingle();
+      if (fetchErr || !booking) {
+        return new Response(JSON.stringify({ error: "Booking not found" }), { status: 404, headers: corsHeaders });
+      }
+      if (booking.razorpay_order_id !== razorpay_order_id) {
+        return new Response(JSON.stringify({ error: "Order mismatch" }), { status: 400, headers: corsHeaders });
+      }
+      if (booking.payment_status === "paid") {
+        return new Response(JSON.stringify({ success: true, already_paid: true }), { status: 200, headers: corsHeaders });
+      }
+
+      if (stage === "advance") {
+        const { error: updateErr } = await admin
+          .from("customer_bookings")
+          .update({
+            payment_status: "partial",
+            advance_paid_amount: booking.advance_amount ?? 0,
+            advance_razorpay_payment_id: razorpay_payment_id,
+          })
+          .eq("id", worker_task_id);
+        if (updateErr) {
+          return new Response(JSON.stringify({ error: updateErr.message }), { status: 500, headers: corsHeaders });
+        }
+      } else {
+        const { error: updateErr } = await admin
+          .from("customer_bookings")
+          .update({ payment_status: "paid", razorpay_payment_id, paid_at: new Date().toISOString() })
+          .eq("id", worker_task_id);
+        if (updateErr) {
+          return new Response(JSON.stringify({ error: updateErr.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      return new Response(JSON.stringify({ success: true, stage }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     const { data: task, error: fetchErr } = await admin
       .from(table)
