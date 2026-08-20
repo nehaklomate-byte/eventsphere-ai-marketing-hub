@@ -242,6 +242,12 @@ function VenueProfilePage() {
           <Field label="Advance amount (₹)"><NumberInput value={form.advance_amount} onChange={(v) => set("advance_amount", v as never)} /></Field>
         </div>
         <Field label="Working hours"><Input value={form.working_hours ?? ""} onChange={(v) => set("working_hours", v as never)} placeholder="e.g. 8 AM – 11 PM" /></Field>
+
+        <GuestPricingTiersEditor
+          basePrice={form.price_per_day as number | null | undefined}
+          tiers={(form.guest_pricing_tiers as Hall["guest_pricing_tiers"]) ?? []}
+          onChange={(tiers) => set("guest_pricing_tiers", tiers as never)}
+        />
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Maximum event duration (hours)"><NumberInput value={extra.max_event_duration_hours as number | undefined} onChange={(v) => setExtra("max_event_duration_hours", v as never)} /></Field>
           <Field label="Extra-hour charges (₹ per hour, beyond max duration)"><NumberInput value={extra.extra_hour_charge as number | undefined} onChange={(v) => setExtra("extra_hour_charge", v as never)} /></Field>
@@ -608,6 +614,59 @@ function NumberInput({ value, onChange }: { value?: number | null; onChange: (v:
       onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))}
       className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet"
     />
+  );
+}
+
+function GuestPricingTiersEditor({ basePrice, tiers, onChange }: { basePrice: number | null | undefined; tiers: Hall["guest_pricing_tiers"]; onChange: (tiers: Hall["guest_pricing_tiers"]) => void }) {
+  const [maxGuests, setMaxGuests] = useState("");
+  const [price, setPrice] = useState("");
+  const sorted = [...tiers].sort((a, b) => a.max_guests - b.max_guests);
+
+  function add() {
+    const mg = Number(maxGuests), p = Number(price);
+    if (!mg || !p) return;
+    onChange([...tiers, { max_guests: mg, price: p }]);
+    setMaxGuests(""); setPrice("");
+  }
+  function remove(i: number) {
+    onChange(sorted.filter((_, idx) => idx !== i));
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-muted/20 p-3.5 space-y-2.5">
+      <div>
+        <div className="text-sm font-semibold">Price by guest count (optional)</div>
+        <p className="text-xs text-muted-foreground">
+          Charge a different venue price depending on how many guests the customer books for, instead of always
+          charging the flat "Price per day" above. Leave this empty to keep charging the flat price for everyone.
+        </p>
+      </div>
+
+      {sorted.length > 0 && (
+        <div className="space-y-1.5">
+          {sorted.map((t, i) => (
+            <div key={i} className="flex items-center justify-between gap-2 rounded-lg bg-background px-3 py-2 text-sm">
+              <span>Up to <strong>{t.max_guests}</strong> guests</span>
+              <span className="flex items-center gap-3">
+                <span className="font-semibold">₹{t.price.toLocaleString("en-IN")}</span>
+                <button type="button" onClick={() => remove(i)} className="text-muted-foreground hover:text-destructive">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="w-28"><Field label="Up to guests"><NumberInput value={maxGuests === "" ? null : Number(maxGuests)} onChange={(v) => setMaxGuests(v == null ? "" : String(v))} /></Field></div>
+        <div className="w-32"><Field label="Price (₹)"><NumberInput value={price === "" ? null : Number(price)} onChange={(v) => setPrice(v == null ? "" : String(v))} /></Field></div>
+        <button type="button" onClick={add} className="rounded-xl border border-input px-3.5 py-2.5 text-sm font-semibold hover:bg-accent">Add tier</button>
+      </div>
+      {sorted.length === 0 && basePrice != null && (
+        <p className="text-xs text-muted-foreground">Right now every booking is charged the flat ₹{basePrice.toLocaleString("en-IN")}, regardless of guest count.</p>
+      )}
+    </div>
   );
 }
 
