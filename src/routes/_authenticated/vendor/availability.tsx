@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "@/lib/session";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Save, CalendarX } from "lucide-react";
-import { fetchMyVendor, WEEKDAYS } from "@/lib/vendor";
+import { fetchMyVendor } from "@/lib/vendor";
 
 export const Route = createFileRoute("/_authenticated/vendor/availability")({
   head: () => ({ meta: [{ title: "Availability — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
@@ -17,7 +17,6 @@ function AvailabilityPage() {
   const { data: vendor, isLoading } = useQuery({ queryKey: ["me-vendor", user?.id], queryFn: () => fetchMyVendor(user!.id), enabled: !!user?.id });
   const v = vendor as (typeof vendor & { blocked_dates?: string[]; willing_to_travel?: boolean; max_travel_km?: number | null; working_hours_start?: string | null; working_hours_end?: string | null }) | null | undefined;
 
-  const [days, setDays] = useState<string[]>([]);
   const [start, setStart] = useState("09:00");
   const [end, setEnd] = useState("18:00");
   const [travel, setTravel] = useState(false);
@@ -28,7 +27,6 @@ function AvailabilityPage() {
 
   useEffect(() => {
     if (!v) return;
-    setDays(Array.isArray(v.available_days) ? v.available_days : []);
     setStart(v.working_hours_start ?? "09:00");
     setEnd(v.working_hours_end ?? "18:00");
     setTravel(!!v.willing_to_travel);
@@ -40,7 +38,6 @@ function AvailabilityPage() {
     mutationFn: async () => {
       if (!v?.id) throw new Error("Vendor profile not found.");
       const { data, error } = await supabase.from("vendors").update({
-        available_days: days,
         working_hours_start: start,
         working_hours_end: end,
         willing_to_travel: travel,
@@ -63,18 +60,7 @@ function AvailabilityPage() {
       </div>
 
       <section className="rounded-2xl border border-border bg-card p-6 space-y-4">
-        <h2 className="text-sm font-semibold">Working days</h2>
-        <div className="flex flex-wrap gap-2">
-          {WEEKDAYS.map((d) => {
-            const on = days.includes(d);
-            return (
-              <button key={d} type="button" onClick={() => setDays(on ? days.filter((x) => x !== d) : [...days, d])}
-                className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${on ? "border-brand-violet bg-brand-violet/10 text-brand-violet" : "border-input text-muted-foreground hover:bg-accent"}`}>
-                {d}
-              </button>
-            );
-          })}
-        </div>
+        <h2 className="text-sm font-semibold">Working hours</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="text-sm">
             <span className="mb-1 block font-medium">Start time</span>
