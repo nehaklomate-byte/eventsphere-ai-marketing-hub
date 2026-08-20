@@ -292,10 +292,14 @@ function HireCard({ worker, eventId, sourceSlug }: { worker: WorkerProfile; even
       isAgency ? `${quantity} workers × ₹${(worker.daily_charges ?? 0).toLocaleString("en-IN")}/day` : null,
       ...chosenOptions.map((o) => `${o.name}: ₹${o.price.toLocaleString("en-IN")}${o.per_guest ? ` × ${guestCount} guests` : ""}`),
     ].filter(Boolean).join("\n");
+    // Amounts here are only a client preview — the DB trigger
+    // (tg_recompute_worker_task_amount) re-derives the real
+    // payment_amount server-side from workers using these ref_ids,
+    // ignoring whatever amount is sent from here.
     const selectedItems = [
-      isAgency ? { name: `${quantity} workers × ₹${(worker.daily_charges ?? 0).toLocaleString("en-IN")}/day`, amount: basePrice } : (worker.daily_charges ? { name: "Base charge", amount: worker.daily_charges } : null),
-      ...chosenOptions.map((o) => ({ name: o.per_guest ? `${o.name} (× ${guestCount} guests)` : o.name, amount: o.per_guest ? o.price * guestCount : o.price })),
-    ].filter(Boolean);
+      { type: "daily_charge", ref_id: worker.id, name: isAgency ? `${quantity} workers × ₹${(worker.daily_charges ?? 0).toLocaleString("en-IN")}/day` : "Base charge", amount: basePrice },
+      ...chosenOptions.map((o) => ({ type: "option", ref_id: o.id, per_guest: o.per_guest, name: o.per_guest ? `${o.name} (× ${guestCount} guests)` : o.name, amount: o.per_guest ? o.price * guestCount : o.price })),
+    ];
     const { error } = await supabase.from("worker_tasks" as never).insert({
       worker_id: worker.id,
       worker_user_id: worker.owner_id,
@@ -307,6 +311,7 @@ function HireCard({ worker, eventId, sourceSlug }: { worker: WorkerProfile; even
       task_name: state.task_name.trim(),
       description: selectionSummary || null,
       selected_items: selectedItems,
+      guest_count: guestCount || null,
       venue: state.venue || null,
       venue_address: state.venue_address || null,
       event_date: state.event_date,
@@ -314,6 +319,8 @@ function HireCard({ worker, eventId, sourceSlug }: { worker: WorkerProfile; even
       end_time: state.end_time || null,
       priority: "normal",
       status: "pending",
+      // Overwritten server-side by the recompute trigger — kept here
+      // only so the UI has a value to show before the insert returns.
       payment_amount: state.pay_amount ? Number(state.pay_amount) : null,
       quantity: isAgency ? quantity : 1,
       booking_source: sourceSlug ? "public_profile_link" : "marketplace",
