@@ -72,6 +72,8 @@ function EventDetailPage() {
         {event.notes && <p className="mt-3 text-sm text-muted-foreground border-t border-border pt-3">{event.notes}</p>}
       </div>
 
+      <EventQuoteSummary eventName={event.name} venueBookings={venueBookings} vendors={vendors} workers={workers} />
+
       {/* Venue */}
       <Section
         icon={Building2} title="Venue"
@@ -110,6 +112,56 @@ function EventDetailPage() {
           <Row key={w.id} id={w.id} kind="worker" name={`${w.worker?.full_name ?? "Worker"} — ${w.task_name}`} status={w.status} paid={w.payment_status === "paid"} amount={w.payment_amount ?? undefined} />
         ))}
       </Section>
+    </div>
+  );
+}
+
+function EventQuoteSummary({
+  eventName, venueBookings, vendors, workers,
+}: {
+  eventName: string;
+  venueBookings: { id: string; target_name: string; amount: number; payment_status: string }[];
+  vendors: { id: string; task_name: string; vendor: { business_name: string } | null; payment_amount: number | null; payment_status: string }[];
+  workers: { id: string; task_name: string; worker: { full_name: string } | null; payment_amount: number | null; payment_status: string }[];
+}) {
+  // Lines with no amount yet (e.g. a hall booking still awaiting the
+  // owner's advance/final price, per the owner-set pricing flow) are
+  // shown as "Pending" rather than counted as ₹0 — the total only
+  // adds up amounts that are actually known, and says so.
+  type Line = { name: string; amount: number | null; paid: boolean };
+  const lines: Line[] = [
+    ...venueBookings.map((b) => ({ name: b.target_name, amount: b.amount ?? null, paid: b.payment_status === "paid" })),
+    ...vendors.map((v) => ({ name: `${v.vendor?.business_name ?? "Vendor"} — ${v.task_name}`, amount: v.payment_amount, paid: v.payment_status === "paid" })),
+    ...workers.map((w) => ({ name: `${w.worker?.full_name ?? "Worker"} — ${w.task_name}`, amount: w.payment_amount, paid: w.payment_status === "paid" })),
+  ];
+
+  if (lines.length === 0) return null;
+
+  const known = lines.filter((l) => l.amount != null);
+  const pendingCount = lines.length - known.length;
+  const total = known.reduce((sum, l) => sum + (l.amount ?? 0), 0);
+  const paidTotal = known.filter((l) => l.paid).reduce((sum, l) => sum + (l.amount ?? 0), 0);
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-6">
+      <div className="flex items-center gap-2 text-sm font-semibold"><IndianRupee className="h-4 w-4" /> Event summary — {eventName}</div>
+      <div className="mt-3 divide-y divide-border/60">
+        {lines.map((l, i) => (
+          <div key={i} className="flex items-center justify-between gap-3 py-2 text-sm">
+            <span className="text-muted-foreground">{l.name}</span>
+            <span className="font-semibold">
+              {l.amount != null ? `₹${l.amount.toLocaleString("en-IN")}` : <span className="text-xs italic text-muted-foreground">Pending — price not set yet</span>}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
+        <div className="text-xs text-muted-foreground">
+          {paidTotal > 0 && <>₹{paidTotal.toLocaleString("en-IN")} already paid. </>}
+          {pendingCount > 0 && <>{pendingCount} item{pendingCount > 1 ? "s" : ""} still awaiting a price.</>}
+        </div>
+        <div className="text-base font-bold">Total{pendingCount > 0 ? " so far" : ""}: ₹{total.toLocaleString("en-IN")}</div>
+      </div>
     </div>
   );
 }
