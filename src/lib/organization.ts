@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { notifyUsers } from "@/lib/push";
 
 /**
  * Organization dashboard — data access layer.
@@ -631,11 +632,25 @@ export async function rejectApplication(id: string): Promise<void> {
 /** Accepting is atomic on the database side (via the accept_worker_application
  * RPC) — it also creates the row in worker_tasks, so everything already
  * built for workers (accept/reject, check-in/check-out, mandatory
- * photo-proof) just works with zero extra wiring. */
+ * photo-proof) just works with zero extra wiring.
+ *
+ * The RPC itself can't call the send-push edge function (plain SQL has no
+ * HTTP access here), so — same gap as the direct-hire flows — the worker
+ * never got alerted that their application was accepted, only a row
+ * appeared in worker_notifications that they'd have to go check for
+ * themselves. This fetches the just-created task and pushes to the worker. */
 export async function acceptApplication(id: string): Promise<string> {
   const { data, error } = await supabase.rpc("accept_worker_application" as never, { p_application_id: id } as never);
   if (error) throw error;
-  return data as unknown as string;
+  const taskId = data as unknown as string;
+
+  supabase.from("worker_tasks" as never).select("worker_user_id, task_name" as never).eq("id" as never, taskId as never).maybeSingle()
+    .then(({ data: task }) => {
+      const t = task as unknown as { worker_user_id: string; task_name: string } | null;
+      if (t) notifyUsers([t.worker_user_id], "Application accepted!", `You're hired for "${t.task_name}" — check Jobs for details.`, "/worker/jobs");
+    });
+
+  return taskId;
 }
 // ============================================================
 // ADD everything below to the BOTTOM of src/lib/organization.ts
