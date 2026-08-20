@@ -249,8 +249,6 @@ function VenueProfilePage() {
           onChange={(tiers) => set("guest_pricing_tiers", tiers as never)}
         />
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Maximum event duration (hours)"><NumberInput value={extra.max_event_duration_hours as number | undefined} onChange={(v) => setExtra("max_event_duration_hours", v as never)} /></Field>
-          <Field label="Extra-hour charges (₹ per hour, beyond max duration)"><NumberInput value={extra.extra_hour_charge as number | undefined} onChange={(v) => setExtra("extra_hour_charge", v as never)} /></Field>
         </div>
         <Field label="Cancellation policy"><Textarea value={form.cancellation_policy ?? ""} onChange={(v) => set("cancellation_policy", v as never)} /></Field>
       </Section>
