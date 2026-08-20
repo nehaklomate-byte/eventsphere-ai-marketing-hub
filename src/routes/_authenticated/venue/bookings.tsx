@@ -289,6 +289,7 @@ function HiredTeamPanel({ bookingId }: { bookingId: string }) {
 }
 
 function BookingDetailsModal({ booking, onClose }: { booking: HallBooking; onClose: () => void }) {
+  const requestedServices = (booking.details?.requested_services as { category: string; name: string }[] | undefined) ?? [];
   const rows: [string, unknown][] = [
     ["Event name", booking.details?.event_name],
     ["Organizer type", booking.details?.organizer_type],
@@ -302,6 +303,10 @@ function BookingDetailsModal({ booking, onClose }: { booking: HallBooking; onClo
     ["Expected guests", booking.details?.guest_count],
     ["Amount", booking.amount],
     ["Payment status", booking.payment_status],
+    [
+      "In-house services requested",
+      requestedServices.length > 0 ? requestedServices.map((s) => `${s.name} (${s.category})`).join(", ") : null,
+    ],
     ["Special instructions", booking.notes],
     ["Status", booking.status],
   ];
