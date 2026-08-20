@@ -267,9 +267,17 @@ function VendorHireCard({ vendor, eventId, sourceSlug }: { vendor: Vendor; event
       pkgName ? `Package: ${pkgName} (₹${basePrice.toLocaleString("en-IN")})` : null,
       ...chosenOptions.map((o) => `${o.name}: ₹${o.price.toLocaleString("en-IN")}${o.per_guest ? ` × ${guestCount} guests` : ""}`),
     ].filter(Boolean).join("\n");
+    // Amounts here are only a client preview — the DB trigger
+    // (tg_recompute_vendor_task_amount) re-derives the real
+    // payment_amount server-side from vendor_packages/vendors using
+    // these ref_ids, ignoring whatever amount is sent from here. Never
+    // trust this array as the final price; it exists so the customer
+    // sees a sensible number before the trigger overwrites it.
     const selectedItems = [
-      pkgName ? { name: `Package — ${pkgName}`, amount: basePrice } : null,
-      ...chosenOptions.map((o) => ({ name: o.per_guest ? `${o.name} (× ${guestCount} guests)` : o.name, amount: o.per_guest ? o.price * guestCount : o.price })),
+      selectedPackage
+        ? { type: "package", ref_id: selectedPackage, name: `Package — ${pkgName}`, amount: basePrice }
+        : { type: "base_price", ref_id: vendor.id, name: "Base price", amount: basePrice },
+      ...chosenOptions.map((o) => ({ type: "option", ref_id: o.id, per_guest: o.per_guest, name: o.per_guest ? `${o.name} (× ${guestCount} guests)` : o.name, amount: o.per_guest ? o.price * guestCount : o.price })),
     ].filter(Boolean);
     const { error } = await supabase.from("vendor_tasks" as never).insert({
       vendor_id: vendor.id,
@@ -281,6 +289,7 @@ function VendorHireCard({ vendor, eventId, sourceSlug }: { vendor: Vendor; event
       task_name: state.task_name.trim(),
       description: selectionSummary || null,
       selected_items: selectedItems,
+      guest_count: guestCount || null,
       venue: state.venue || null,
       venue_address: state.venue_address || null,
       event_date: state.event_date,
@@ -288,6 +297,8 @@ function VendorHireCard({ vendor, eventId, sourceSlug }: { vendor: Vendor; event
       end_time: state.end_time || null,
       priority: "normal",
       status: "pending",
+      // Overwritten server-side by the recompute trigger — kept here
+      // only so the UI has a value to show before the insert returns.
       payment_amount: state.pay_amount ? Number(state.pay_amount) : null,
       booking_source: sourceSlug ? "public_profile_link" : "marketplace",
       source_slug: sourceSlug ?? null,
