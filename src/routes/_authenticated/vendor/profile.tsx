@@ -115,7 +115,6 @@ function ProfilePage() {
 
   const completion = computeVendorCompletion(form as never);
   const serviceAreas = (form.service_areas as string[]) ?? [];
-  const availableDays = (form.available_days as string[]) ?? [];
   const portfolio = (form.portfolio as string[]) ?? [];
 
   return (
@@ -161,7 +160,6 @@ function ProfilePage() {
             <Field label="Pincode" required><Input value={(form.pincode as string) ?? ""} onChange={(v) => set("pincode", v)} /></Field>
             <Field label="Address"><Input value={(form.address as string) ?? ""} onChange={(v) => set("address", v)} /></Field>
             <Field label="Service areas"><CsvInput key={`sa-${vendor?.id ?? "new"}`} initial={serviceAreas} onCommit={(arr) => set("service_areas", arr)} placeholder="Comma-separated cities you serve, e.g. Pune, Mumbai, Nashik" /></Field>
-            <Field label="Available days"><CsvInput key={`ad-${vendor?.id ?? "new"}`} initial={availableDays} onCommit={(arr) => set("available_days", arr)} placeholder="e.g., Mon, Tue, Wed or All days on request" /></Field>
           </FieldGrid>
         )}
 
