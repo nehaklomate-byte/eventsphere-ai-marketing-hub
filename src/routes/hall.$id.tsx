@@ -622,6 +622,10 @@ function BookingForm({
   })();
 
   const set = (k: string, v: string) => setState((s) => ({ ...s, [k]: v }));
+  const [requestedOptions, setRequestedOptions] = useState<Record<string, boolean>>({});
+  function toggleOption(key: string) {
+    setRequestedOptions((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -666,6 +670,15 @@ function BookingForm({
         start_time: d.start_time,
         end_time: d.end_time,
         guest_count: Number(d.guest_count),
+        // Which in-house options the customer is interested in — no
+        // price attached (the venue owner still sets the final price
+        // manually, on purpose — see the note above). This just turns
+        // "mention it in special instructions" into a structured list
+        // so the owner knows exactly what to quote for, without
+        // reintroducing customer-computed pricing.
+        requested_services: Object.entries(serviceOfferings).flatMap(([cat, svc]) =>
+          svc.in_house ? svc.options.filter((o) => requestedOptions[o.id]).map((o) => ({ category: cat, name: o.name })) : []
+        ),
       },
     } as never);
     setSubmitting(false);
@@ -767,14 +780,29 @@ function BookingForm({
       </Row>
 
       {inHouseServices.length > 0 && (
-        <div className="rounded-xl border border-border bg-muted/20 p-3 space-y-1.5">
-          <div className="text-xs font-semibold text-muted-foreground">This venue can also arrange in-house</div>
-          <div className="flex flex-wrap gap-1.5">
-            {inHouseServices.map(([cat]) => (
-              <span key={cat} className="rounded-full bg-background border border-border px-2.5 py-1 text-xs">{cat}</span>
-            ))}
-          </div>
-          <p className="text-[11px] text-muted-foreground">Mention what you'd like in the instructions above — the venue will include it in the price they share with you.</p>
+        <div className="rounded-xl border border-border bg-muted/20 p-3 space-y-2">
+          <div className="text-xs font-semibold text-muted-foreground">Interested in any of these in-house services?</div>
+          {inHouseServices.map(([cat, svc]) => (
+            <div key={cat} className="space-y-1">
+              <div className="text-xs font-semibold">{cat}</div>
+              {svc.options.length === 0 ? (
+                <span className="rounded-full bg-background border border-border px-2.5 py-1 text-xs text-muted-foreground">Ask about pricing</span>
+              ) : (
+                <div className="space-y-1">
+                  {svc.options.map((o) => (
+                    <label key={o.id} className="flex items-start gap-2 rounded-lg bg-background border border-border px-2.5 py-1.5 text-xs cursor-pointer">
+                      <input type="checkbox" className="mt-0.5" checked={!!requestedOptions[o.id]} onChange={() => toggleOption(o.id)} />
+                      <span>
+                        <span className="font-medium">{o.name}</span>
+                        {o.items && o.items.length > 0 && <span className="block text-[11px] text-muted-foreground">Includes: {o.items.join(", ")}</span>}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+          <p className="text-[11px] text-muted-foreground">Tick what you're interested in — the venue will include it in the price they share with you. Add any other details in the instructions above.</p>
         </div>
       )}
 
