@@ -137,32 +137,71 @@ function EventCard({ event }: { event: EventFinancialRow }) {
 
 function PartyRow({ party }: { party: EventPartyRow }) {
   const Icon = ROLE_ICON[party.role];
+  const [expanded, setExpanded] = useState(false);
+  const snap = party.snapshot;
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 p-4">
-      <div className="flex items-center gap-2.5 min-w-0">
-        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${ROLE_STYLE[party.role]}`}>
-          <Icon className="h-3 w-3" /> {ROLE_LABEL[party.role]}
-        </span>
-        <span className="font-medium truncate">{party.name}</span>
+    <div className="p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${ROLE_STYLE[party.role]}`}>
+            <Icon className="h-3 w-3" /> {ROLE_LABEL[party.role]}
+          </span>
+          <span className="font-medium truncate">{party.name}</span>
+          {snap && (
+            <button type="button" onClick={() => setExpanded((v) => !v)} className="text-[11px] font-semibold text-brand-violet hover:underline shrink-0">
+              {expanded ? "Hide frozen details" : "View frozen details"}
+            </button>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-4 text-xs">
+          <Figure label="Amount" value={money(party.amount)} />
+          <Figure label="Commission" value={money(party.commission)} tone="text-brand-violet" />
+          <Figure label="Payout" value={money(party.payout)} tone="text-amber-600" />
+          {party.paymentStatus === "paid" ? (
+            <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-semibold"><CheckCircle2 className="h-3.5 w-3.5" /> Paid by customer</span>
+          ) : (
+            <span className="rounded-full bg-muted px-2.5 py-0.5 font-semibold capitalize text-muted-foreground">{party.paymentStatus}</span>
+          )}
+          {party.payoutStatus === "paid" && <span className="rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 px-2.5 py-0.5 font-semibold">Payout sent</span>}
+          {party.payoutStatus === "pending" && <span className="rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 px-2.5 py-0.5 font-semibold">Payout pending</span>}
+          {party.paymentStatus === "paid" && (
+            <Link to="/receipt/$type/$id" params={{ type: party.role === "venue" ? "hall" : party.role, id: party.id }} target="_blank"
+              className="inline-flex items-center gap-1 rounded-full border border-input px-2.5 py-1 font-semibold text-brand-violet hover:bg-accent">
+              <Download className="h-3.5 w-3.5" /> Receipt
+            </Link>
+          )}
+        </div>
       </div>
-      <div className="flex flex-wrap items-center gap-4 text-xs">
-        <Figure label="Amount" value={money(party.amount)} />
-        <Figure label="Commission" value={money(party.commission)} tone="text-brand-violet" />
-        <Figure label="Payout" value={money(party.payout)} tone="text-amber-600" />
-        {party.paymentStatus === "paid" ? (
-          <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-semibold"><CheckCircle2 className="h-3.5 w-3.5" /> Paid by customer</span>
-        ) : (
-          <span className="rounded-full bg-muted px-2.5 py-0.5 font-semibold capitalize text-muted-foreground">{party.paymentStatus}</span>
-        )}
-        {party.payoutStatus === "paid" && <span className="rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 px-2.5 py-0.5 font-semibold">Payout sent</span>}
-        {party.payoutStatus === "pending" && <span className="rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 px-2.5 py-0.5 font-semibold">Payout pending</span>}
-        {party.paymentStatus === "paid" && (
-          <Link to="/receipt/$type/$id" params={{ type: party.role === "venue" ? "hall" : party.role, id: party.id }} target="_blank"
-            className="inline-flex items-center gap-1 rounded-full border border-input px-2.5 py-1 font-semibold text-brand-violet hover:bg-accent">
-            <Download className="h-3.5 w-3.5" /> Receipt
-          </Link>
-        )}
-      </div>
+      {expanded && snap && (
+        // Frozen at the moment the owner set the final price — never
+        // re-derived from the venue's current profile, so this stays
+        // accurate even if the venue has since changed its pricing.
+        <div className="mt-3 rounded-xl bg-muted/30 p-3 text-xs space-y-1.5">
+          <div className="flex justify-between"><span className="text-muted-foreground">Venue base price used</span><span className="font-medium">{snap.venue_base_price_used != null ? money(snap.venue_base_price_used) : "—"}</span></div>
+          {snap.applicable_guest_tier && (
+            <div className="flex justify-between"><span className="text-muted-foreground">Guest tier applied</span><span className="font-medium">Up to {snap.applicable_guest_tier.max_guests} guests — {money(snap.applicable_guest_tier.price)}</span></div>
+          )}
+          {snap.guest_count != null && (
+            <div className="flex justify-between"><span className="text-muted-foreground">Guest count</span><span className="font-medium">{snap.guest_count}</span></div>
+          )}
+          {snap.amenities.length > 0 && (
+            <div className="flex justify-between gap-4"><span className="text-muted-foreground shrink-0">Amenities included</span><span className="font-medium text-right">{snap.amenities.join(", ")}</span></div>
+          )}
+          {snap.requested_services.length > 0 && (
+            <div>
+              <span className="text-muted-foreground">Services at the time</span>
+              <div className="mt-1 space-y-0.5">
+                {snap.requested_services.map((s, i) => (
+                  <div key={i} className="flex justify-between">
+                    <span>{s.name} <span className="text-muted-foreground">({s.category})</span></span>
+                    <span className="font-medium">{s.price != null ? `${money(s.price)}${s.per_guest ? "/guest" : ""}` : "no price at request time"}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
