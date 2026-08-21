@@ -631,8 +631,19 @@ function BookingForm({
 
   const set = (k: string, v: string) => setState((s) => ({ ...s, [k]: v }));
   const [requestedOptions, setRequestedOptions] = useState<Record<string, boolean>>({});
+  // Per-service requirement, e.g. under "Decoration" a customer might type
+  // "Theme: Royal Rajasthani, red & gold" — kept separate per option so the
+  // venue owner sees exactly which service a note belongs to, instead of
+  // everything lumped into the one general instructions box below.
+  const [serviceNotes, setServiceNotes] = useState<Record<string, string>>({});
   function toggleOption(key: string) {
-    setRequestedOptions((prev) => ({ ...prev, [key]: !prev[key] }));
+    setRequestedOptions((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      // Clear a note if the option gets unticked, so a stray note can't
+      // silently ride along on a service the customer no longer wants.
+      if (!next[key]) setServiceNotes((n) => { const c = { ...n }; delete c[key]; return c; });
+      return next;
+    });
   }
 
   async function submit(e: React.FormEvent) {
@@ -683,7 +694,16 @@ function BookingForm({
         // so the owner knows exactly what to quote for, without
         // reintroducing customer-computed pricing.
         requested_services: Object.entries(serviceOfferings).flatMap(([cat, svc]) =>
-          svc.in_house ? svc.options.filter((o) => requestedOptions[o.id]).map((o) => ({ category: cat, name: o.name })) : []
+          svc.in_house
+            ? svc.options.filter((o) => requestedOptions[o.id]).map((o) => ({
+                category: cat,
+                name: o.name,
+                // What the customer wants FOR this specific service (theme,
+                // colours, must-haves, etc.) — the venue owner sees this
+                // right next to the item when they price it.
+                requirement_note: (serviceNotes[o.id] || "").trim() || null,
+              }))
+            : []
         ),
       },
     } as never);
@@ -775,8 +795,8 @@ function BookingForm({
         <input type="number" className="input" value={state.guest_count} onChange={(e) => set("guest_count", e.target.value)} placeholder="e.g., 250" />
       </Row>
 
-      <Row label="Special instructions (optional)" error={errors.special_instructions}>
-        <textarea rows={3} className="input" value={state.special_instructions} onChange={(e) => set("special_instructions", e.target.value)} placeholder="Anything the venue should know" />
+      <Row label="Anything else? (optional)" error={errors.special_instructions}>
+        <textarea rows={3} className="input" value={state.special_instructions} onChange={(e) => set("special_instructions", e.target.value)} placeholder="Any requirement not covered by a service below — e.g. a specific decoration idea the venue doesn't list" />
       </Row>
 
       {inHouseServices.length > 0 && (
@@ -790,24 +810,35 @@ function BookingForm({
               ) : (
                 <div className="space-y-1">
                   {svc.options.map((o) => (
-                    <label key={o.id} className="flex items-start gap-2 rounded-lg bg-background border border-border px-2.5 py-1.5 text-xs cursor-pointer">
-                      <input type="checkbox" className="mt-0.5" checked={!!requestedOptions[o.id]} onChange={() => toggleOption(o.id)} />
-                      <span>
-                        <span className="font-medium">{o.name}</span>
-                        {o.items && o.items.length > 0 && <span className="block text-[11px] text-muted-foreground">Includes: {o.items.join(", ")}</span>}
-                      </span>
-                    </label>
+                    <div key={o.id} className="rounded-lg bg-background border border-border px-2.5 py-1.5 text-xs">
+                      <label className="flex items-start gap-2 cursor-pointer">
+                        <input type="checkbox" className="mt-0.5" checked={!!requestedOptions[o.id]} onChange={() => toggleOption(o.id)} />
+                        <span>
+                          <span className="font-medium">{o.name}</span>
+                          {o.items && o.items.length > 0 && <span className="block text-[11px] text-muted-foreground">Includes: {o.items.join(", ")}</span>}
+                        </span>
+                      </label>
+                      {requestedOptions[o.id] && (
+                        <textarea
+                          rows={2}
+                          className="input mt-1.5"
+                          placeholder={`Any specific requirement for ${o.name}? (theme, colours, must-haves…)`}
+                          value={serviceNotes[o.id] || ""}
+                          onChange={(e) => setServiceNotes((n) => ({ ...n, [o.id]: e.target.value }))}
+                        />
+                      )}
+                    </div>
                   ))}
                 </div>
               )}
             </div>
           ))}
-          <p className="text-[11px] text-muted-foreground">Tick what you're interested in — the venue will include it in the price they share with you. Add any other details in the instructions above.</p>
+          <p className="text-[11px] text-muted-foreground">Tick what you're interested in and add any specific requirement under it. The venue will price each one and share an itemised total with you.</p>
         </div>
       )}
 
       <div className="rounded-xl bg-accent/40 px-3.5 py-2.5 text-sm text-muted-foreground">
-        No payment is needed to send this request. The venue will review it and share a price with you — you'll pay the advance once they confirm.
+        No payment is needed to send this request. The venue will review it, price each service you selected, and share an itemised total — you'll pay the advance once they confirm.
       </div>
 
       <button type="submit" disabled={submitting || !!clashDate} className="w-full inline-flex items-center justify-center gap-2 rounded-full btn-brand btn-brand-hover px-4 py-2.5 text-sm font-semibold disabled:opacity-70">
