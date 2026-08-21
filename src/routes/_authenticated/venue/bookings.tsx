@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CalendarCheck, Check, X, Loader2, IndianRupee, Eye, Download, Ban, Users, HardHat, Store, Receipt } from "lucide-react";
 import { fetchMyHalls, fetchHallBookings, updateBookingStatus, confirmBookingWithAdvance, setBookingFinalPrice, type HallBooking } from "@/lib/venue";
+import { notifyUsers } from "@/lib/push";
 import { downloadCsv } from "@/lib/admin";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -80,6 +81,10 @@ function BookingsPage() {
     setBusyId(b.id);
     try {
       await setBookingFinalPrice(b.id, amt);
+      // In-app notification is also written by the notify_final_price_set
+      // DB trigger (migration 20260822090000) — this adds the actual OS
+      // push on top, same pattern as the hire-request notifications.
+      notifyUsers([b.user_id], "Your venue price is ready", `Final price for "${b.target_name}" is ₹${amt.toLocaleString("en-IN")} — pay the remaining balance to confirm.`, "/customer/bookings");
       toast.success("Final price set — customer can now pay the remaining balance");
       qc.invalidateQueries({ queryKey: ["venue-bookings"] });
     } catch (e) {
@@ -298,8 +303,7 @@ function BookingDetailsModal({ booking, onClose }: { booking: HallBooking; onClo
     ["Contact phone", booking.details?.contact_phone],
     ["Contact email", booking.details?.contact_email],
     ["Event date", booking.event_date],
-    ["Start time", booking.details?.start_time],
-    ["End time", booking.details?.end_time],
+    ["Event end date", booking.details?.event_end_date ?? booking.event_end_date],
     ["Expected guests", booking.details?.guest_count],
     ["Amount", booking.amount],
     ["Payment status", booking.payment_status],
