@@ -23,6 +23,9 @@ type ReceiptData = {
   razorpayPaymentId: string | null;
   razorpayOrderId: string | null;
   lineItems: { name: string; amount: number }[] | null; // itemized breakdown of what makes up `amount`, when the booking had selectable add-ons
+  advancePaid: number | null; // hall bookings only — the two-stage advance→balance model (migration 20260819150000)
+  advanceRazorpayPaymentId: string | null;
+  balanceRazorpayPaymentId: string | null;
 };
 
 async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData | null> {
@@ -37,6 +40,7 @@ async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData 
       return {
         receiptNo: `PP-${id.slice(0, 8).toUpperCase()}`, itemLabel: "", counterpartyLabel: "",
         eventName: null, eventDate: null, amount: 0, commission: 0, paidAt: null, razorpayPaymentId: null, razorpayOrderId: null, lineItems: null,
+        advancePaid: null, advanceRazorpayPaymentId: null, balanceRazorpayPaymentId: null,
       };
     }
 
@@ -64,53 +68,25 @@ async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData 
       razorpayPaymentId: d.razorpay_payment_id as string | null,
       razorpayOrderId: d.razorpay_order_id as string | null,
       lineItems: null,
+      advancePaid: null, advanceRazorpayPaymentId: null, balanceRazorpayPaymentId: null,
     };
   }
 
   if (type === "hall") {
     const { data, error } = await supabase.from("customer_bookings" as never)
-      .select("id,target_name,event_date,amount,commission_amount,paid_at,razorpay_payment_id,razorpay_order_id,details,snapshot")
+      .select("id,target_name,event_date,amount,commission_amount,paid_at,razorpay_payment_id,razorpay_order_id,advance_amount,advance_paid_amount,advance_razorpay_payment_id,details")
       .eq("id" as never, id as never).maybeSingle();
     if (error) throw error;
     if (!data) return null;
     const d = data as unknown as Record<string, unknown>;
     const details = (d.details as Record<string, unknown>) ?? {};
-    const snapshot = d.snapshot as {
-      venue_base_price_used: number | null;
-      applicable_guest_tier: { max_guests: number; price: number } | null;
-      requested_services: { category: string; name: string; price: number | null; per_guest: boolean | null }[];
-      guest_count: number | null;
-    } | null;
-
-    let lineItems: { name: string; amount: number }[] | null = null;
-    if (snapshot) {
-      // Frozen at the moment the venue owner set the final price —
-      // never recalculated from current venue/service data, even if
-      // the venue changed prices since. See 20260821090000_hall_booking_snapshot.sql.
-      const venueLine = snapshot.applicable_guest_tier?.price ?? snapshot.venue_base_price_used ?? null;
-      const serviceLines = (snapshot.requested_services ?? [])
-        .filter((s) => s.price != null)
-        .map((s) => ({
-          name: s.per_guest && snapshot.guest_count ? `${s.name} (${snapshot.guest_count} × ₹${s.price})` : s.name,
-          amount: s.per_guest && snapshot.guest_count ? (s.price as number) * snapshot.guest_count : (s.price as number),
-        }));
-      if (venueLine != null || serviceLines.length > 0) {
-        lineItems = [
-          ...(venueLine != null ? [{ name: "Venue (base price)", amount: venueLine }] : []),
-          ...serviceLines,
-        ];
-      }
-    } else {
-      // Booking made before the snapshot system existed — fall back to
-      // the older (pre-19-Aug) selected_services shape if present.
-      const selectedServices = (details.selected_services as { name: string; line_amount: number }[]) ?? [];
-      const addOnsTotal = selectedServices.reduce((s, x) => s + (x.line_amount ?? 0), 0);
-      const baseAmount = Number(d.amount ?? 0) - addOnsTotal;
-      lineItems = selectedServices.length > 0
-        ? [{ name: "Venue (base price)", amount: baseAmount }, ...selectedServices.map((x) => ({ name: x.name, amount: x.line_amount }))]
-        : null;
-    }
-
+    // Customer only REQUESTS these (informational — a wishlist for the
+    // owner to price into the whole final amount), they were never
+    // individually priced/selected by the customer since the advance→
+    // balance redesign (migration 20260819150000), so there's no
+    // itemized line-item breakdown to show anymore — just the whole
+    // final amount the owner set. `requested_services` replaces the old
+    // `selected_services` shape ({category,name} vs {name,line_amount}).
     return {
       receiptNo: `HB-${id.slice(0, 8).toUpperCase()}`,
       itemLabel: "Venue booking",
@@ -122,7 +98,10 @@ async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData 
       paidAt: d.paid_at as string | null,
       razorpayPaymentId: d.razorpay_payment_id as string | null,
       razorpayOrderId: d.razorpay_order_id as string | null,
-      lineItems,
+      lineItems: null,
+      advancePaid: Number(d.advance_paid_amount ?? 0) > 0 ? Number(d.advance_paid_amount) : null,
+      advanceRazorpayPaymentId: d.advance_razorpay_payment_id as string | null,
+      balanceRazorpayPaymentId: d.razorpay_payment_id as string | null,
     };
   }
 
@@ -147,6 +126,7 @@ async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData 
       razorpayPaymentId: d.razorpay_payment_id as string | null,
       razorpayOrderId: d.razorpay_order_id as string | null,
       lineItems: items.length > 0 ? items : null,
+      advancePaid: null, advanceRazorpayPaymentId: null, balanceRazorpayPaymentId: null,
     };
   }
 
@@ -170,6 +150,7 @@ async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData 
     razorpayPaymentId: d.razorpay_payment_id as string | null,
     razorpayOrderId: d.razorpay_order_id as string | null,
     lineItems: items.length > 0 ? items : null,
+    advancePaid: null, advanceRazorpayPaymentId: null, balanceRazorpayPaymentId: null,
   };
 }
 
@@ -224,7 +205,13 @@ function ReceiptPage() {
           <dd className="text-right font-mono text-xs">{data.razorpayOrderId ?? "—"}</dd>
 
           <dt className="text-muted-foreground">Razorpay payment ID</dt>
-          <dd className="text-right font-mono text-xs">{data.razorpayPaymentId ?? "—"}</dd>
+          <dd className="text-right font-mono text-xs">{data.balanceRazorpayPaymentId ?? data.razorpayPaymentId ?? "—"}</dd>
+          {data.advancePaid != null && (
+            <>
+              <dt className="text-muted-foreground">Advance payment ID</dt>
+              <dd className="text-right font-mono text-xs">{data.advanceRazorpayPaymentId ?? "—"}</dd>
+            </>
+          )}
         </dl>
 
         <div className="mt-6 space-y-2 border-t border-border pt-4 text-sm">
@@ -236,7 +223,13 @@ function ReceiptPage() {
               ))}
             </div>
           )}
-          <div className="flex justify-between"><span className="text-muted-foreground">Amount paid</span><span className="font-semibold">₹{data.amount.toLocaleString("en-IN")}</span></div>
+          {data.advancePaid != null && (
+            <div className="mb-1.5 space-y-1 border-b border-dashed border-border pb-3">
+              <div className="flex justify-between text-muted-foreground"><span>Advance paid earlier</span><span>₹{data.advancePaid.toLocaleString("en-IN")}</span></div>
+              <div className="flex justify-between text-muted-foreground"><span>Balance paid now</span><span>₹{(data.amount - data.advancePaid).toLocaleString("en-IN")}</span></div>
+            </div>
+          )}
+          <div className="flex justify-between"><span className="text-muted-foreground">Amount paid{data.advancePaid != null ? " (total)" : ""}</span><span className="font-semibold">₹{data.amount.toLocaleString("en-IN")}</span></div>
           {data.commission > 0 && (
             <>
               <div className="flex justify-between text-muted-foreground"><span>Platform fee</span><span>− ₹{data.commission.toLocaleString("en-IN")}</span></div>
