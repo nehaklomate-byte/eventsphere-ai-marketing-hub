@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CalendarCheck, Check, X, Loader2, IndianRupee, Eye, Download, Ban, Users, HardHat, Store, Receipt } from "lucide-react";
-import { fetchMyHalls, fetchHallBookings, updateBookingStatus, confirmBookingWithAdvance, setBookingFinalPrice, type HallBooking } from "@/lib/venue";
+import { fetchMyHalls, fetchHallBookings, updateBookingStatus, confirmBookingWithPricing, resolveHallBasePrice, type HallBooking, type PriceLine, type Hall } from "@/lib/venue";
 import { notifyUsers } from "@/lib/push";
 import { downloadCsv } from "@/lib/admin";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,8 +27,10 @@ function BookingsPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [detailsFor, setDetailsFor] = useState<HallBooking | null>(null);
   const [teamFor, setTeamFor] = useState<string | null>(null);
+  const [pricingFor, setPricingFor] = useState<HallBooking | null>(null);
   const { data: halls } = useQuery({ queryKey: ["venue-halls"], queryFn: fetchMyHalls });
   const hallIds = (halls ?? []).map((h) => h.id);
+  const hallById = new Map((halls ?? []).map((h) => [h.id, h]));
 
   const { data: bookings, isLoading } = useQuery({
     queryKey: ["venue-bookings", hallIds],
@@ -49,46 +51,22 @@ function BookingsPage() {
     }
   }
 
-  // Confirming now also requires an advance amount in the same step —
-  // a booking should never sit "confirmed" with nothing the customer
-  // can actually pay (migration 20260819150000).
-  async function confirmWithAdvance(b: HallBooking) {
-    const input = window.prompt(`Advance amount to collect for "${b.target_name}" (₹)`, b.advance_amount ? String(b.advance_amount) : "");
-    if (input === null) return;
-    const amt = Number(input);
-    if (!amt || amt <= 0) return toast.error("Enter a valid advance amount");
-    setBusyId(b.id);
+  // Owner prices the venue's base rate + every service the customer
+  // selected, and sets the advance — all in one step. The itemised
+  // total becomes the booking's final amount immediately, so the
+  // customer sees exactly what each thing costs as soon as this is
+  // saved (see confirmBookingWithPricing in src/lib/venue.ts).
+  async function savePricing(booking: HallBooking, lines: PriceLine[], advanceAmount: number) {
+    setBusyId(booking.id);
     try {
-      await confirmBookingWithAdvance(b.id, amt);
-      toast.success("Booking confirmed — customer can now pay the advance");
+      await confirmBookingWithPricing(booking, lines, advanceAmount);
+      const total = lines.reduce((s, l) => s + (Number(l.amount) || 0), 0);
+      notifyUsers([booking.user_id], "Your venue price is ready", `Total for "${booking.target_name}" is ₹${total.toLocaleString("en-IN")} — pay the advance to confirm.`, "/customer/bookings");
+      toast.success("Pricing saved — customer can now see the breakdown and pay");
       qc.invalidateQueries({ queryKey: ["venue-bookings"] });
+      setPricingFor(null);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to confirm");
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  // Sets (or updates) the whole final price once everything's agreed
-  // with the customer — the remaining balance becomes payable the
-  // moment this is saved.
-  async function setFinalPrice(b: HallBooking) {
-    const input = window.prompt(`Whole final price for "${b.target_name}" (₹) — the advance already paid will be subtracted for the customer automatically`, b.amount ? String(b.amount) : "");
-    if (input === null) return;
-    const amt = Number(input);
-    if (!amt || amt <= 0) return toast.error("Enter a valid amount");
-    if (amt < b.advance_paid_amount) return toast.error(`Final price can't be less than the ₹${b.advance_paid_amount.toLocaleString("en-IN")} advance already paid`);
-    setBusyId(b.id);
-    try {
-      await setBookingFinalPrice(b.id, amt);
-      // In-app notification is also written by the notify_final_price_set
-      // DB trigger (migration 20260822090000) — this adds the actual OS
-      // push on top, same pattern as the hire-request notifications.
-      notifyUsers([b.user_id], "Your venue price is ready", `Final price for "${b.target_name}" is ₹${amt.toLocaleString("en-IN")} — pay the remaining balance to confirm.`, "/customer/bookings");
-      toast.success("Final price set — customer can now pay the remaining balance");
-      qc.invalidateQueries({ queryKey: ["venue-bookings"] });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to save");
+      toast.error(e instanceof Error ? e.message : "Failed to save pricing");
     } finally {
       setBusyId(null);
     }
@@ -180,10 +158,10 @@ function BookingsPage() {
                     <>
                       <button
                         disabled={busyId === b.id}
-                        onClick={() => confirmWithAdvance(b)}
+                        onClick={() => setPricingFor(b)}
                         className="flex items-center gap-1.5 rounded-full bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
                       >
-                        {busyId === b.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} Confirm & set advance
+                        {busyId === b.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} Price & confirm
                       </button>
                       <button
                         disabled={busyId === b.id}
@@ -197,10 +175,10 @@ function BookingsPage() {
                   {b.status === "confirmed" && b.payment_status !== "paid" && (
                     <button
                       disabled={busyId === b.id}
-                      onClick={() => setFinalPrice(b)}
+                      onClick={() => setPricingFor(b)}
                       className="flex items-center gap-1.5 rounded-full border border-brand-violet text-brand-violet px-3.5 py-2 text-xs font-semibold hover:bg-brand-violet/10 disabled:opacity-50"
                     >
-                      <IndianRupee className="h-3.5 w-3.5" /> {b.amount ? "Update final price" : "Set final price"}
+                      <IndianRupee className="h-3.5 w-3.5" /> Edit pricing
                     </button>
                   )}
                   {b.status === "confirmed" && (
@@ -230,6 +208,116 @@ function BookingsPage() {
       )}
 
       {detailsFor && <BookingDetailsModal booking={detailsFor} onClose={() => setDetailsFor(null)} />}
+      {pricingFor && (
+        <PricingModal
+          booking={pricingFor}
+          hall={hallById.get(pricingFor.target_id)}
+          busy={busyId === pricingFor.id}
+          onClose={() => setPricingFor(null)}
+          onSave={(lines, advance) => savePricing(pricingFor, lines, advance)}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Owner's "price this booking" screen — the venue's own base rate
+ * (from guest-count tiers) plus one editable price per service the
+ * customer selected, each shown next to the requirement note the
+ * customer left for it. Saving computes the total and sets the
+ * advance in one step (see confirmBookingWithPricing). */
+function PricingModal({
+  booking, hall, busy, onClose, onSave,
+}: { booking: HallBooking; hall: Hall | undefined; busy: boolean; onClose: () => void; onSave: (lines: PriceLine[], advanceAmount: number) => void }) {
+  const requested = (booking.details?.requested_services as { category: string; name: string; requirement_note?: string | null }[] | undefined) ?? [];
+  const guestCount = Number(booking.details?.guest_count ?? 0);
+  const suggestedBase = hall ? resolveHallBasePrice(hall.price_per_day, hall.guest_pricing_tiers, guestCount) : 0;
+
+  // Pre-fill from an existing price_breakdown when editing an already-
+  // confirmed booking, so the owner isn't retyping everything.
+  const existing = (booking.details?.price_breakdown as PriceLine[] | undefined) ?? [];
+  const existingByLabel = new Map(existing.map((l) => [l.label, l.amount]));
+
+  const [basePrice, setBasePrice] = useState<string>(String(existingByLabel.get("Venue (base price)") ?? suggestedBase ?? ""));
+  const [servicePrices, setServicePrices] = useState<Record<number, string>>(() => {
+    const init: Record<number, string> = {};
+    requested.forEach((s, i) => {
+      const found = existing.find((l) => l.label === `${s.name} (${s.category})`);
+      init[i] = found ? String(found.amount) : "";
+    });
+    return init;
+  });
+  const [advance, setAdvance] = useState<string>(String(booking.advance_amount ?? hall?.advance_amount ?? ""));
+
+  const base = Number(basePrice) || 0;
+  const serviceTotal = requested.reduce((sum, _s, i) => sum + (Number(servicePrices[i]) || 0), 0);
+  const total = base + serviceTotal;
+  const advanceNum = Number(advance) || 0;
+  const belowAlreadyPaid = booking.advance_paid_amount > 0 && total < booking.advance_paid_amount;
+
+  function save() {
+    if (base <= 0) return toast.error("Enter the venue's base price");
+    if (advanceNum <= 0) return toast.error("Enter a valid advance amount");
+    if (advanceNum > total) return toast.error("Advance can't be more than the total");
+    if (belowAlreadyPaid) return toast.error(`Total can't be less than the ₹${booking.advance_paid_amount.toLocaleString("en-IN")} already paid`);
+    const lines: PriceLine[] = [{ label: "Venue (base price)", amount: base }];
+    requested.forEach((s, i) => {
+      const amt = Number(servicePrices[i]) || 0;
+      if (amt > 0) lines.push({ label: `${s.name} (${s.category})`, amount: amt, requirement_note: s.requirement_note ?? null });
+    });
+    onSave(lines, advanceNum);
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onClick={onClose}>
+      <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="font-display text-lg font-semibold">Price this booking</h3>
+          <button onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 hover:bg-accent"><X className="h-4 w-4" /></button>
+        </div>
+
+        <label className="block">
+          <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+            Venue base price {guestCount > 0 && `(for ${guestCount} guests)`}
+          </span>
+          <input type="number" className="pmodal-input mt-1" value={basePrice} onChange={(e) => setBasePrice(e.target.value)} placeholder="₹" />
+        </label>
+
+        {requested.length > 0 && (
+          <div className="mt-4 space-y-3">
+            <div className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Services the customer selected</div>
+            {requested.map((s, i) => (
+              <div key={`${s.category}-${s.name}-${i}`} className="rounded-xl border border-border bg-muted/20 p-3">
+                <div className="text-sm font-semibold">{s.name} <span className="font-normal text-muted-foreground">({s.category})</span></div>
+                {s.requirement_note && <p className="mt-0.5 text-xs text-muted-foreground">"{s.requirement_note}"</p>}
+                <input type="number" className="pmodal-input mt-2" placeholder="Price for this (₹)"
+                  value={servicePrices[i] ?? ""} onChange={(e) => setServicePrices((p) => ({ ...p, [i]: e.target.value }))} />
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-4 flex items-center justify-between rounded-xl bg-accent/40 px-3.5 py-2.5 text-sm font-semibold">
+          <span>Total</span>
+          <span>₹{total.toLocaleString("en-IN")}</span>
+        </div>
+
+        <label className="mt-4 block">
+          <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Advance to collect now</span>
+          <input type="number" className="pmodal-input mt-1" value={advance} onChange={(e) => setAdvance(e.target.value)} placeholder="₹" />
+        </label>
+        {advanceNum > 0 && total > 0 && (
+          <p className="mt-1 text-[11px] text-muted-foreground">Balance after advance: ₹{Math.max(total - advanceNum, 0).toLocaleString("en-IN")}</p>
+        )}
+
+        <button onClick={save} disabled={busy} className="mt-5 flex w-full items-center justify-center gap-2 rounded-full btn-brand btn-brand-hover px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-70">
+          {busy && <Loader2 className="h-4 w-4 animate-spin" />} Save & {booking.status === "pending" ? "confirm booking" : "update"}
+        </button>
+        <style>{`
+          .pmodal-input { width: 100%; border-radius: 10px; border: 1px solid var(--border); background: var(--background); padding: 8px 12px; font-size: 13px; outline: none; }
+          .pmodal-input:focus { border-color: var(--brand-violet); box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand-violet) 22%, transparent); }
+        `}</style>
+      </div>
     </div>
   );
 }
@@ -294,7 +382,8 @@ function HiredTeamPanel({ bookingId }: { bookingId: string }) {
 }
 
 function BookingDetailsModal({ booking, onClose }: { booking: HallBooking; onClose: () => void }) {
-  const requestedServices = (booking.details?.requested_services as { category: string; name: string }[] | undefined) ?? [];
+  const requestedServices = (booking.details?.requested_services as { category: string; name: string; requirement_note?: string | null }[] | undefined) ?? [];
+  const priceBreakdown = (booking.details?.price_breakdown as PriceLine[] | undefined) ?? [];
   const balancePending = booking.amount != null ? Math.max(booking.amount - booking.advance_paid_amount, 0) : null;
   const rows: [string, unknown][] = [
     ["Event name", booking.details?.event_name],
@@ -312,12 +401,14 @@ function BookingDetailsModal({ booking, onClose }: { booking: HallBooking; onClo
     // way to tell how much of the money had actually come in yet.
     ["Advance requested", booking.advance_amount != null ? `₹${booking.advance_amount.toLocaleString("en-IN")}` : "Not set yet"],
     ["Advance received", `₹${booking.advance_paid_amount.toLocaleString("en-IN")}`],
-    ["Final price", booking.amount != null ? `₹${booking.amount.toLocaleString("en-IN")}` : "Not set yet"],
+    ["Total price", booking.amount != null ? `₹${booking.amount.toLocaleString("en-IN")}` : "Not priced yet"],
     ["Balance pending", balancePending != null ? `₹${balancePending.toLocaleString("en-IN")}` : "—"],
     ["Payment status", booking.payment_status],
     [
-      "In-house services requested (informational — priced into the final amount you set, not billed separately)",
-      requestedServices.length > 0 ? requestedServices.map((s) => `${s.name} (${s.category})`).join(", ") : "None requested",
+      "Requested services (with customer's requirement for each)",
+      requestedServices.length > 0
+        ? requestedServices.map((s) => `${s.name} (${s.category})${s.requirement_note ? ` — "${s.requirement_note}"` : ""}`).join("; ")
+        : "None requested",
     ],
     ["Special instructions", booking.notes],
     ["Status", booking.status],
@@ -342,6 +433,23 @@ function BookingDetailsModal({ booking, onClose }: { booking: HallBooking; onClo
             <button onClick={onClose} className="rounded-full p-1.5 hover:bg-accent"><X className="h-4 w-4" /></button>
           </div>
         </div>
+        {priceBreakdown.length > 0 && (
+          <div className="mb-4 rounded-xl border border-border bg-muted/20 p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Itemised price</div>
+            <div className="space-y-1 text-sm">
+              {priceBreakdown.map((l, i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <span>{l.label}</span>
+                  <span className="font-medium">₹{l.amount.toLocaleString("en-IN")}</span>
+                </div>
+              ))}
+              <div className="flex items-center justify-between border-t border-border/60 pt-1 font-semibold">
+                <span>Total</span>
+                <span>₹{priceBreakdown.reduce((s, l) => s + l.amount, 0).toLocaleString("en-IN")}</span>
+              </div>
+            </div>
+          </div>
+        )}
         <dl className="grid grid-cols-1 gap-y-3">
           {rows.map(([label, value]) => (
             <div key={label} className="border-b border-border/60 pb-2">
