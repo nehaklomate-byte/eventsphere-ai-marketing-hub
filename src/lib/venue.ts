@@ -186,25 +186,39 @@ export async function updateBookingStatus(id: string, status: HallBooking["statu
   if (error) throw error;
 }
 
-/** Owner confirms a request and sets the advance to collect. Doing
- * both in one call keeps a booking from ever landing in "confirmed"
- * with no advance amount set (which would leave the customer with no
- * way to pay). See migration 20260819150000. */
-export async function confirmBookingWithAdvance(id: string, advanceAmount: number): Promise<void> {
-  const { error } = await supabase.from("customer_bookings" as never)
-    .update({ status: "confirmed", advance_amount: advanceAmount } as never)
-    .eq("id" as never, id as never);
-  if (error) throw error;
-}
+/** One line of the itemised price the owner builds for a booking —
+ * the venue's own base price, plus one line per service the customer
+ * ticked (each priced individually, alongside whatever requirement
+ * note the customer left for it). Shown to the customer exactly like
+ * this once the booking is confirmed. */
+export type PriceLine = { label: string; amount: number; requirement_note?: string | null };
 
-/** Owner sets (or updates) the whole final price for a confirmed
- * booking, once everything's been finalised with the customer outside
- * the app. The customer's remaining balance (amount - advance_paid_amount)
- * becomes payable the moment this is set. */
-export async function setBookingFinalPrice(id: string, amount: number): Promise<void> {
+/** Owner reviews a pending request, prices the venue's base rate plus
+ * every service the customer asked for (line by line), and sets the
+ * advance to collect — all in one step. The sum of `lines` becomes the
+ * booking's final `amount` immediately, so the customer sees the full
+ * itemised breakdown as soon as the venue confirms — no separate
+ * "set final price later" step needed for the common case. Doing this
+ * together also keeps a booking from ever landing in "confirmed" with
+ * no advance set (see migration 20260819150000). Safe to call again
+ * later (from "Edit pricing") to revise the lines/advance — it always
+ * just overwrites amount/advance_amount/price_breakdown for this
+ * booking, it doesn't touch anything else. */
+export async function confirmBookingWithPricing(
+  booking: Pick<HallBooking, "id" | "details">,
+  lines: PriceLine[],
+  advanceAmount: number,
+): Promise<void> {
+  const amount = lines.reduce((sum, l) => sum + (Number(l.amount) || 0), 0);
   const { error } = await supabase.from("customer_bookings" as never)
-    .update({ amount, final_price_set_at: new Date().toISOString() } as never)
-    .eq("id" as never, id as never);
+    .update({
+      status: "confirmed",
+      advance_amount: advanceAmount,
+      amount,
+      final_price_set_at: new Date().toISOString(),
+      details: { ...booking.details, price_breakdown: lines } as never,
+    } as never)
+    .eq("id" as never, booking.id as never);
   if (error) throw error;
 }
 
