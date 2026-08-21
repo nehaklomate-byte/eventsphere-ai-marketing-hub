@@ -15,7 +15,7 @@ export const Route = createFileRoute("/_authenticated/venue/profile")({
 });
 
 const FACILITY_OPTIONS = [
-  "AC", "Parking", "In-house catering", "Stage", "DJ / Sound system", "Generator backup",
+  "AC", "Parking", "Stage", "Generator backup",
   "Rooms for stay", "Wi-Fi", "Elevator", "Wheelchair access", "Swimming pool", "Garden / Lawn",
 ];
 
@@ -308,6 +308,9 @@ function VenueProfilePage() {
                   )}
                 </div>
 
+                {svc.in_house && (svc.options ?? []).length === 0 && !svc.price && (
+                  <p className="text-[11px] text-amber-600">Add at least one option or a price above — customers won't see this service until you do.</p>
+                )}
                 {svc.in_house && (
                   <div className="pl-1 space-y-2">
                     {(svc.options ?? []).length > 0 && (
@@ -623,15 +626,22 @@ function NumberInput({ value, onChange }: { value?: number | null; onChange: (v:
 function GuestPricingTiersEditor({ basePrice, tiers, onChange }: { basePrice: number | null | undefined; tiers: Hall["guest_pricing_tiers"]; onChange: (tiers: Hall["guest_pricing_tiers"]) => void }) {
   const [maxGuests, setMaxGuests] = useState("");
   const [price, setPrice] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const sorted = [...tiers].sort((a, b) => a.max_guests - b.max_guests);
 
   function add() {
     const mg = Number(maxGuests), p = Number(price);
     if (!mg || !p) return;
+    if (sorted.some((t) => t.max_guests === mg)) {
+      setError(`A tier up to ${mg} guests already exists — edit or remove it first instead of adding another.`);
+      return;
+    }
+    setError(null);
     onChange([...tiers, { max_guests: mg, price: p }]);
     setMaxGuests(""); setPrice("");
   }
   function remove(i: number) {
+    setError(null);
     onChange(sorted.filter((_, idx) => idx !== i));
   }
 
@@ -662,12 +672,13 @@ function GuestPricingTiersEditor({ basePrice, tiers, onChange }: { basePrice: nu
       )}
 
       <div className="flex flex-wrap items-end gap-2">
-        <div className="w-28"><Field label="Up to guests"><NumberInput value={maxGuests === "" ? null : Number(maxGuests)} onChange={(v) => setMaxGuests(v == null ? "" : String(v))} /></Field></div>
-        <div className="w-32"><Field label="Price (₹)"><NumberInput value={price === "" ? null : Number(price)} onChange={(v) => setPrice(v == null ? "" : String(v))} /></Field></div>
+        <div className="w-28"><Field label="Up to guests"><NumberInput value={maxGuests === "" ? null : Number(maxGuests)} onChange={(v) => { setMaxGuests(v == null ? "" : String(v)); setError(null); }} /></Field></div>
+        <div className="w-32"><Field label="Price (₹)"><NumberInput value={price === "" ? null : Number(price)} onChange={(v) => { setPrice(v == null ? "" : String(v)); setError(null); }} /></Field></div>
         <button type="button" onClick={add} className="rounded-xl border border-input px-3.5 py-2.5 text-sm font-semibold hover:bg-accent">Add tier</button>
       </div>
+      {error && <p className="text-xs text-destructive">{error}</p>}
       {sorted.length === 0 && basePrice != null && (
-        <p className="text-xs text-muted-foreground">Right now every booking is charged the flat ₹{basePrice.toLocaleString("en-IN")}, regardless of guest count.</p>
+        <p className="text-xs text-muted-foreground">No guest-based tiers yet — the starting price above (₹{basePrice.toLocaleString("en-IN")}) is shown to everyone until you add tiers.</p>
       )}
     </div>
   );
