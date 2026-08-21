@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import {
   ArrowLeft, MapPin, Star, Users, Wifi, Car, Utensils, Bed, Sparkles, ShieldCheck, Calendar,
   BadgeCheck, Loader2, Zap, Accessibility, ArrowUpDown, PartyPopper, ChevronRight, Send, Phone,
-  AlertCircle, CheckCircle2,
+  AlertCircle, CheckCircle2, Globe, Instagram, Facebook,
 } from "lucide-react";
 import { SiteLayout } from "@/components/SiteLayout";
 import { supabase } from "@/integrations/supabase/client";
@@ -293,6 +293,43 @@ function HallDetail() {
               )}
             </Card>
           )}
+
+          {/* CONNECT — website/social links the owner filled in. Each
+              one only appears if actually set; the whole card is
+              skipped if none are (per the "never show an empty
+              field/section" rule already used everywhere else here). */}
+          {(() => {
+            const instagram = typeof hall.extra.instagram === "string" ? hall.extra.instagram.trim() : "";
+            const facebook = typeof hall.extra.facebook === "string" ? hall.extra.facebook.trim() : "";
+            const website = hall.website?.trim();
+            if (!website && !instagram && !facebook) return null;
+            const igUrl = instagram ? (instagram.startsWith("http") ? instagram : `https://instagram.com/${instagram.replace(/^@/, "")}`) : null;
+            const fbUrl = facebook ? (facebook.startsWith("http") ? facebook : `https://${facebook}`) : null;
+            return (
+              <Card title="Connect" icon={Globe}>
+                <div className="flex flex-wrap gap-2">
+                  {website && (
+                    <a href={website.startsWith("http") ? website : `https://${website}`} target="_blank" rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-input px-3.5 py-1.5 text-sm hover:bg-accent">
+                      <Globe className="h-3.5 w-3.5" /> Website
+                    </a>
+                  )}
+                  {igUrl && (
+                    <a href={igUrl} target="_blank" rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-input px-3.5 py-1.5 text-sm hover:bg-accent">
+                      <Instagram className="h-3.5 w-3.5" /> Instagram
+                    </a>
+                  )}
+                  {fbUrl && (
+                    <a href={fbUrl} target="_blank" rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-input px-3.5 py-1.5 text-sm hover:bg-accent">
+                      <Facebook className="h-3.5 w-3.5" /> Facebook
+                    </a>
+                  )}
+                </div>
+              </Card>
+            );
+          })()}
 
           {/* POLICIES */}
           {(() => {
