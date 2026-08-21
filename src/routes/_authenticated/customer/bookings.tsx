@@ -1,12 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ReceiptText, Store, IndianRupee, Loader2, CheckCircle2, CalendarClock, X, MessageCircle, RotateCcw } from "lucide-react";
+import { ReceiptText, Store, IndianRupee, Loader2, CheckCircle2, CalendarClock, X, MessageCircle, RotateCcw, ListTree } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
 import { payForWorkerTask } from "@/lib/razorpay";
 import { requestRefund } from "@/lib/support";
+import type { PriceLine } from "@/lib/venue";
 import { PageShell, EmptyState, LoadingRows } from "./-ui";
 
 export const Route = createFileRoute("/_authenticated/customer/bookings")({
@@ -26,6 +27,7 @@ type Row = {
   amount: number; // hall: 0 until the venue owner sets the final price
   advance_amount: number; // hall only
   advance_paid_amount: number; // hall only
+  price_breakdown: PriceLine[]; // hall only — set by the venue owner alongside the price (src/lib/venue.ts)
   status: string;
   payment_status: string;
 };
@@ -47,6 +49,7 @@ async function fetchAllBookings(userId: string): Promise<Row[]> {
       amount: Number(b.amount ?? 0),
       advance_amount: Number((b as { advance_amount?: number | null }).advance_amount ?? 0),
       advance_paid_amount: Number((b as { advance_paid_amount?: number | null }).advance_paid_amount ?? 0),
+      price_breakdown: ((b.details as Record<string, unknown> | null)?.price_breakdown as PriceLine[] | undefined) ?? [],
       status: b.status, payment_status: b.payment_status,
     });
   }
@@ -54,7 +57,7 @@ async function fetchAllBookings(userId: string): Promise<Row[]> {
     rows.push({
       id: t.id, source: "worker_task", kind: "worker", name: `${t.task_name} — ${t.event_name}`,
       event_date: t.event_date, requested_event_date: null,
-      amount: Number(t.payment_amount ?? 0), advance_amount: 0, advance_paid_amount: 0,
+      amount: Number(t.payment_amount ?? 0), advance_amount: 0, advance_paid_amount: 0, price_breakdown: [],
       status: t.status, payment_status: t.payment_status ?? "pending",
     });
   }
@@ -62,7 +65,7 @@ async function fetchAllBookings(userId: string): Promise<Row[]> {
     rows.push({
       id: t.id, source: "vendor_task", kind: "vendor", name: `${t.task_name} — ${t.event_name}`,
       event_date: t.event_date, requested_event_date: null,
-      amount: Number(t.payment_amount ?? 0), advance_amount: 0, advance_paid_amount: 0,
+      amount: Number(t.payment_amount ?? 0), advance_amount: 0, advance_paid_amount: 0, price_breakdown: [],
       status: t.status, payment_status: t.payment_status ?? "pending",
     });
   }
@@ -78,6 +81,7 @@ function BookingsPage() {
   const qc = useQueryClient();
   const [payingId, setPayingId] = useState<string | null>(null);
   const [rescheduling, setRescheduling] = useState<Row | null>(null);
+  const [breakdownFor, setBreakdownFor] = useState<Row | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["c-bookings", user?.id],
@@ -180,6 +184,11 @@ function BookingsPage() {
                       b.payment_status === "partial" ? (b.amount > 0 ? `₹${(b.amount - b.advance_paid_amount).toLocaleString("en-IN")} pending` : "Awaiting final price") :
                       b.advance_amount > 0 ? `₹${b.advance_amount.toLocaleString("en-IN")} advance due` : "—"
                     ) : (b.amount > 0 ? `₹${b.amount.toLocaleString("en-IN")}` : "—")}
+                    {b.price_breakdown.length > 0 && (
+                      <button onClick={() => setBreakdownFor(b)} className="mt-1 flex w-full items-center justify-end gap-1 text-[11px] font-semibold text-brand-violet hover:underline">
+                        <ListTree className="h-3 w-3" /> View breakdown
+                      </button>
+                    )}
                   </td>
                   <td className="px-4 py-3 capitalize">{b.status.replace(/_/g, " ")}</td>
                   <td className="px-4 py-3 capitalize">{b.payment_status}</td>
@@ -224,7 +233,49 @@ function BookingsPage() {
       {rescheduling && (
         <RescheduleDialog row={rescheduling} onClose={() => setRescheduling(null)} onDone={() => { setRescheduling(null); refresh(); }} />
       )}
+      {breakdownFor && <BreakdownModal row={breakdownFor} onClose={() => setBreakdownFor(null)} />}
     </PageShell>
+  );
+}
+
+/** What the venue priced, line by line — base venue price plus every
+ * service the customer selected — shown to the customer exactly as
+ * the owner set it, alongside the advance/balance split. */
+function BreakdownModal({ row, onClose }: { row: Row; onClose: () => void }) {
+  const total = row.price_breakdown.reduce((s, l) => s + l.amount, 0);
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onClick={onClose}>
+      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="flex items-center gap-2 text-lg font-semibold"><ListTree className="h-5 w-5 text-brand-violet" /> Price breakdown</h3>
+          <button onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 hover:bg-accent"><X className="h-4 w-4" /></button>
+        </div>
+        <p className="mb-3 text-sm text-muted-foreground">{row.name}</p>
+        <div className="space-y-1.5 text-sm">
+          {row.price_breakdown.map((l, i) => (
+            <div key={i} className="rounded-lg bg-muted/30 px-3 py-2">
+              <div className="flex items-center justify-between">
+                <span className="font-medium">{l.label}</span>
+                <span>₹{l.amount.toLocaleString("en-IN")}</span>
+              </div>
+              {l.requirement_note && <p className="mt-0.5 text-xs text-muted-foreground">"{l.requirement_note}"</p>}
+            </div>
+          ))}
+          <div className="flex items-center justify-between border-t border-border pt-2 font-semibold">
+            <span>Total</span>
+            <span>₹{total.toLocaleString("en-IN")}</span>
+          </div>
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span>Advance {row.advance_paid_amount > 0 ? "paid" : "due"}</span>
+            <span>₹{(row.advance_paid_amount > 0 ? row.advance_paid_amount : row.advance_amount).toLocaleString("en-IN")}</span>
+          </div>
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span>Balance</span>
+            <span>₹{Math.max(total - row.advance_paid_amount, 0).toLocaleString("en-IN")}</span>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
