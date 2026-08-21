@@ -5,8 +5,8 @@ import { toast } from "sonner";
 import { IndianRupee, Loader2, Wallet, ArrowDownCircle, ArrowUpCircle, CheckCircle2, Download, Sparkles } from "lucide-react";
 import { useSession } from "@/lib/session";
 import {
-  fetchIncomingPayments, fetchPayouts, markPayoutPaid, downloadCsv, fetchProfileRevenue,
-  type IncomingPayment, type PayoutRow, type PayoutSource, type ProfileRevenueRow,
+  fetchIncomingPayments, fetchPayouts, markPayoutPaid, downloadCsv, fetchProfileRevenue, fetchInFlightHallBookings,
+  type IncomingPayment, type PayoutRow, type PayoutSource, type ProfileRevenueRow, type InFlightBookingRow,
 } from "@/lib/admin";
 
 export const Route = createFileRoute("/_authenticated/admin/earnings")({
@@ -31,11 +31,12 @@ function money(n: number) { return `₹${Number(n || 0).toLocaleString("en-IN")}
 function EarningsPage() {
   const { user } = useSession();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"incoming" | "profile" | "payouts">("incoming");
+  const [tab, setTab] = useState<"incoming" | "profile" | "payouts" | "inflight">("incoming");
 
   const incoming = useQuery({ queryKey: ["admin-incoming-payments"], queryFn: fetchIncomingPayments });
   const profileRevenue = useQuery({ queryKey: ["admin-profile-revenue"], queryFn: fetchProfileRevenue });
   const payouts = useQuery({ queryKey: ["admin-payouts"], queryFn: fetchPayouts });
+  const inFlight = useQuery({ queryKey: ["admin-inflight-bookings"], queryFn: fetchInFlightHallBookings });
 
   const totalIncoming = (incoming.data ?? []).reduce((s, p) => s + Number(p.amount || 0), 0);
   const totalCommission = (incoming.data ?? []).reduce((s, p) => s + Number(p.commission_amount || 0), 0);
@@ -70,6 +71,7 @@ function EarningsPage() {
         <StatCard icon={ArrowDownCircle} label="Total collected" value={money(totalIncoming)} tone="text-emerald-600" />
         <StatCard icon={IndianRupee} label="Booking commission" value={money(totalCommission)} tone="text-brand-violet" />
         <StatCard icon={ArrowUpCircle} label="Pending payouts" value={money(totalPendingPayoutAmount)} sub={`${pendingPayouts.length} unpaid`} tone="text-rose-600" />
+        <StatCard icon={Wallet} label="Bookings in progress" value={String((inFlight.data ?? []).length)} sub="advance/final price pending" tone="text-sky-600" />
         <StatCard icon={Sparkles} label="Link activation revenue" value={money(totalLinkActivation)} tone="text-amber-600" />
         <StatCard icon={Sparkles} label="Pro plan revenue" value={money(totalProPlan)} tone="text-amber-600" />
         <StatCard icon={IndianRupee} label="Overall platform revenue" value={money(totalPlatformRevenue)} tone="text-brand-violet" />
@@ -90,10 +92,10 @@ function EarningsPage() {
       </div>
 
       <div className="flex gap-1.5 rounded-full border border-border bg-card p-1 text-sm w-fit">
-        {(["incoming", "profile", "payouts"] as const).map((t) => (
+        {(["incoming", "profile", "payouts", "inflight"] as const).map((t) => (
           <button key={t} onClick={() => setTab(t)}
             className={`rounded-full px-4 py-1.5 font-semibold transition ${tab === t ? "bg-brand-violet text-white" : "text-muted-foreground hover:bg-accent"}`}>
-            {t === "incoming" ? "Booking payments" : t === "profile" ? "Profile & Pro-plan" : "Payouts owed"}
+            {t === "incoming" ? "Booking payments" : t === "profile" ? "Profile & Pro-plan" : t === "payouts" ? "Payouts owed" : "In progress"}
           </button>
         ))}
       </div>
@@ -102,9 +104,11 @@ function EarningsPage() {
         <IncomingTable rows={incoming.data ?? []} isLoading={incoming.isLoading} />
       ) : tab === "profile" ? (
         <ProfileRevenueTable rows={profileRevenue.data ?? []} isLoading={profileRevenue.isLoading} />
-      ) : (
+      ) : tab === "payouts" ? (
         <PayoutsTable rows={payouts.data ?? []} isLoading={payouts.isLoading} adminUserId={user?.id ?? ""}
           onPaid={() => qc.invalidateQueries({ queryKey: ["admin-payouts"] })} />
+      ) : (
+        <InFlightTable rows={inFlight.data ?? []} isLoading={inFlight.isLoading} />
       )}
     </div>
   );
@@ -208,6 +212,47 @@ function ProfileRevenueTable({ rows, isLoading }: { rows: ProfileRevenueRow[]; i
                   </Link>
                 )}
               </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function InFlightTable({ rows, isLoading }: { rows: InFlightBookingRow[]; isLoading: boolean }) {
+  const STAGE_LABEL: Record<InFlightBookingRow["stage"], string> = {
+    awaiting_advance: "Waiting on advance",
+    awaiting_final_price: "Advance received — needs final price",
+    awaiting_balance: "Waiting on balance payment",
+  };
+  const STAGE_STYLE: Record<InFlightBookingRow["stage"], string> = {
+    awaiting_advance: "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300",
+    awaiting_final_price: "bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-300",
+    awaiting_balance: "bg-violet-100 text-violet-800 dark:bg-violet-950/40 dark:text-violet-300",
+  };
+  if (isLoading) return <div className="py-10 text-center text-muted-foreground"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></div>;
+  if (rows.length === 0) return <div className="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground">No hall bookings mid-flow right now — everything's either not yet confirmed or fully paid.</div>;
+  return (
+    <div className="rounded-2xl border border-border bg-card overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-border text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <th className="px-5 py-3">Venue</th>
+            <th className="px-5 py-3">Stage</th>
+            <th className="px-5 py-3">Advance</th>
+            <th className="px-5 py-3">Final price</th>
+            <th className="px-5 py-3">Confirmed on</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.id} className="border-b border-border last:border-0">
+              <td className="px-5 py-3 font-medium">{r.venueName}</td>
+              <td className="px-5 py-3"><span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${STAGE_STYLE[r.stage]}`}>{STAGE_LABEL[r.stage]}</span></td>
+              <td className="px-5 py-3">{r.advanceAmount ? `${money(r.advanceAmount)} requested (${money(r.advancePaid)} paid)` : "—"}</td>
+              <td className="px-5 py-3">{r.finalAmount != null ? money(r.finalAmount) : "Not set yet"}</td>
+              <td className="px-5 py-3 text-muted-foreground text-xs">{new Date(r.createdAt).toLocaleDateString("en-IN")}</td>
             </tr>
           ))}
         </tbody>
