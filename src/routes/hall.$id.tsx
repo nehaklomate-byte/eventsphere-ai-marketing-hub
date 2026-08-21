@@ -430,9 +430,18 @@ function iconFor(label: string) {
   return FACILITY_ICONS.find(([re]) => re.test(label))?.[1] ?? CheckCircle2;
 }
 
+// Words that describe a paid in-house SERVICE, not a free amenity.
+// Some venues toggled these on under the old Amenities list (before it
+// wrongly included "In-house catering" / "DJ / Sound system") — that
+// stored data is left alone, but it must never render as a free
+// amenity, since these are handled properly (with their own pricing)
+// by the separate service_offerings system.
+const SERVICE_LIKE_AMENITY_WORDS = /catering|\bdj\b|decor|photog|videog|sound|anchor|florist|bartend|rental|transport/i;
+
 export function facilityList(f: Record<string, boolean>, parkingSlots: number | null, numRooms: number | null) {
   const items = Object.entries(f ?? {})
     .filter(([, on]) => !!on)
+    .filter(([label]) => !SERVICE_LIKE_AMENITY_WORDS.test(label))
     .map(([label]) => ({ key: label, label, icon: iconFor(label) }));
 
   const has = (re: RegExp) => items.some((i) => re.test(i.label));
@@ -476,7 +485,12 @@ type ServiceOfferingMap = Record<string, {
 }>;
 
 function ServiceOfferings({ serviceOfferings, eventId }: { serviceOfferings: ServiceOfferingMap; eventId?: string }) {
-  const inHouse = Object.entries(serviceOfferings).filter(([, v]) => v.in_house);
+  const inHouseAll = Object.entries(serviceOfferings).filter(([, v]) => v.in_house);
+  // A category the owner switched on but hasn't priced or configured
+  // yet has nothing real to show — never render it as "Included"
+  // (reads as free) or with no price at all. It simply doesn't appear
+  // to customers until the owner finishes configuring it.
+  const inHouse = inHouseAll.filter(([, v]) => (v.options ?? []).length > 0 || (v.price ?? 0) > 0);
   const notOffered = VENDOR_CATEGORIES.filter((c) => !serviceOfferings[c]?.in_house);
   if (inHouse.length === 0 && notOffered.length === 0) return null;
 
@@ -508,7 +522,7 @@ function ServiceOfferings({ serviceOfferings, eventId }: { serviceOfferings: Ser
                 ) : (
                   <div className="flex items-center justify-between">
                     <span>{cat}</span>
-                    <span className="font-semibold">{v.price ? `₹${v.price.toLocaleString("en-IN")}` : "Included"}</span>
+                    <span className="font-semibold">₹{(v.price as number).toLocaleString("en-IN")}</span>
                   </div>
                 )}
               </div>
