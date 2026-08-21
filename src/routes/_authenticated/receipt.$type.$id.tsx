@@ -69,18 +69,48 @@ async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData 
 
   if (type === "hall") {
     const { data, error } = await supabase.from("customer_bookings" as never)
-      .select("id,target_name,event_date,amount,commission_amount,paid_at,razorpay_payment_id,razorpay_order_id,details")
+      .select("id,target_name,event_date,amount,commission_amount,paid_at,razorpay_payment_id,razorpay_order_id,details,snapshot")
       .eq("id" as never, id as never).maybeSingle();
     if (error) throw error;
     if (!data) return null;
     const d = data as unknown as Record<string, unknown>;
     const details = (d.details as Record<string, unknown>) ?? {};
-    const selectedServices = (details.selected_services as { name: string; line_amount: number }[]) ?? [];
-    const addOnsTotal = selectedServices.reduce((s, x) => s + (x.line_amount ?? 0), 0);
-    const baseAmount = Number(d.amount ?? 0) - addOnsTotal;
-    const lineItems = selectedServices.length > 0
-      ? [{ name: "Venue (base price)", amount: baseAmount }, ...selectedServices.map((x) => ({ name: x.name, amount: x.line_amount }))]
-      : null;
+    const snapshot = d.snapshot as {
+      venue_base_price_used: number | null;
+      applicable_guest_tier: { max_guests: number; price: number } | null;
+      requested_services: { category: string; name: string; price: number | null; per_guest: boolean | null }[];
+      guest_count: number | null;
+    } | null;
+
+    let lineItems: { name: string; amount: number }[] | null = null;
+    if (snapshot) {
+      // Frozen at the moment the venue owner set the final price —
+      // never recalculated from current venue/service data, even if
+      // the venue changed prices since. See 20260821090000_hall_booking_snapshot.sql.
+      const venueLine = snapshot.applicable_guest_tier?.price ?? snapshot.venue_base_price_used ?? null;
+      const serviceLines = (snapshot.requested_services ?? [])
+        .filter((s) => s.price != null)
+        .map((s) => ({
+          name: s.per_guest && snapshot.guest_count ? `${s.name} (${snapshot.guest_count} × ₹${s.price})` : s.name,
+          amount: s.per_guest && snapshot.guest_count ? (s.price as number) * snapshot.guest_count : (s.price as number),
+        }));
+      if (venueLine != null || serviceLines.length > 0) {
+        lineItems = [
+          ...(venueLine != null ? [{ name: "Venue (base price)", amount: venueLine }] : []),
+          ...serviceLines,
+        ];
+      }
+    } else {
+      // Booking made before the snapshot system existed — fall back to
+      // the older (pre-19-Aug) selected_services shape if present.
+      const selectedServices = (details.selected_services as { name: string; line_amount: number }[]) ?? [];
+      const addOnsTotal = selectedServices.reduce((s, x) => s + (x.line_amount ?? 0), 0);
+      const baseAmount = Number(d.amount ?? 0) - addOnsTotal;
+      lineItems = selectedServices.length > 0
+        ? [{ name: "Venue (base price)", amount: baseAmount }, ...selectedServices.map((x) => ({ name: x.name, amount: x.line_amount }))]
+        : null;
+    }
+
     return {
       receiptNo: `HB-${id.slice(0, 8).toUpperCase()}`,
       itemLabel: "Venue booking",
