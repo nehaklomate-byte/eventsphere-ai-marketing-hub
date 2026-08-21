@@ -295,6 +295,7 @@ function HiredTeamPanel({ bookingId }: { bookingId: string }) {
 
 function BookingDetailsModal({ booking, onClose }: { booking: HallBooking; onClose: () => void }) {
   const requestedServices = (booking.details?.requested_services as { category: string; name: string }[] | undefined) ?? [];
+  const balancePending = booking.amount != null ? Math.max(booking.amount - booking.advance_paid_amount, 0) : null;
   const rows: [string, unknown][] = [
     ["Event name", booking.details?.event_name],
     ["Organizer type", booking.details?.organizer_type],
@@ -305,11 +306,18 @@ function BookingDetailsModal({ booking, onClose }: { booking: HallBooking; onClo
     ["Event date", booking.event_date],
     ["Event end date", booking.details?.event_end_date ?? booking.event_end_date],
     ["Expected guests", booking.details?.guest_count],
-    ["Amount", booking.amount],
+    // Full money picture — previously only the raw `amount` (final
+    // price) was shown here with no ₹ formatting and no mention of the
+    // advance/balance split, so an owner glancing at this modal had no
+    // way to tell how much of the money had actually come in yet.
+    ["Advance requested", booking.advance_amount != null ? `₹${booking.advance_amount.toLocaleString("en-IN")}` : "Not set yet"],
+    ["Advance received", `₹${booking.advance_paid_amount.toLocaleString("en-IN")}`],
+    ["Final price", booking.amount != null ? `₹${booking.amount.toLocaleString("en-IN")}` : "Not set yet"],
+    ["Balance pending", balancePending != null ? `₹${balancePending.toLocaleString("en-IN")}` : "—"],
     ["Payment status", booking.payment_status],
     [
-      "In-house services requested",
-      requestedServices.length > 0 ? requestedServices.map((s) => `${s.name} (${s.category})`).join(", ") : null,
+      "In-house services requested (informational — priced into the final amount you set, not billed separately)",
+      requestedServices.length > 0 ? requestedServices.map((s) => `${s.name} (${s.category})`).join(", ") : "None requested",
     ],
     ["Special instructions", booking.notes],
     ["Status", booking.status],
