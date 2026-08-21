@@ -389,11 +389,8 @@ function HallDetail() {
               ) : (
                 <div className="text-sm text-muted-foreground">Contact venue for pricing</div>
               )}
-              {hall.advance_amount != null && hall.advance_amount > 0 && (
-                <p className="mt-3 text-xs text-muted-foreground">Advance to confirm: ₹{hall.advance_amount.toLocaleString("en-IN")}</p>
-              )}
             </div>
-            <ServiceOfferings serviceOfferings={hall.service_offerings} eventId={event_id} />
+            <ServiceOfferings serviceOfferings={hall.service_offerings} />
             <div className="mt-6">
               <BookingAndEnquiry hallId={hall.id} hallName={hall.name} pricePerDay={hall.price_per_day} guestPricingTiers={hall.guest_pricing_tiers} blockedDates={hall.blocked_dates} advanceAmount={hall.advance_amount} serviceOfferings={hall.service_offerings} eventId={event_id} sourceSlug={ref} />
             </div>
@@ -521,65 +518,27 @@ type ServiceOfferingMap = Record<string, {
   options: { id: string; name: string; price: number; per_guest: boolean; items?: string[] }[];
 }>;
 
-function ServiceOfferings({ serviceOfferings, eventId }: { serviceOfferings: ServiceOfferingMap; eventId?: string }) {
+function ServiceOfferings({ serviceOfferings }: { serviceOfferings: ServiceOfferingMap }) {
   const inHouseAll = Object.entries(serviceOfferings).filter(([, v]) => v.in_house);
   // A category the owner switched on but hasn't priced or configured
   // yet has nothing real to show — never render it as "Included"
   // (reads as free) or with no price at all. It simply doesn't appear
   // to customers until the owner finishes configuring it.
   const inHouse = inHouseAll.filter(([, v]) => (v.options ?? []).length > 0 || (v.price ?? 0) > 0);
-  const notOffered = VENDOR_CATEGORIES.filter((c) => !serviceOfferings[c]?.in_house);
-  if (inHouse.length === 0 && notOffered.length === 0) return null;
+  if (inHouse.length === 0) return null;
 
+  // Names only, no prices — the owner sets one whole final price for
+  // the booking after reviewing it, not itemised per facility, so
+  // showing per-item prices here would be misleading about how billing
+  // actually works.
   return (
-    <div className="mt-5 border-t border-border pt-4 space-y-3 text-sm">
-      {inHouse.length > 0 && (
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">This venue also provides</div>
-          <div className="space-y-2">
-            {inHouse.map(([cat, v]) => (
-              <div key={cat}>
-                {(v.options ?? []).length > 0 ? (
-                  <>
-                    <div className="font-medium">{cat} — choose what you like</div>
-                    <div className="mt-0.5 space-y-1.5 text-xs text-muted-foreground">
-                      {v.options.map((o) => (
-                        <div key={o.id}>
-                          <div className="flex items-center justify-between">
-                            <span>{o.name}</span>
-                            <span className="font-semibold text-foreground">₹{o.price.toLocaleString("en-IN")}{o.per_guest ? "/guest" : ""}</span>
-                          </div>
-                          {o.items && o.items.length > 0 && (
-                            <div className="mt-0.5 pl-3 text-[11px]">Includes: {o.items.join(", ")}</div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex items-center justify-between">
-                    <span>{cat}</span>
-                    <span className="font-semibold">₹{(v.price as number).toLocaleString("en-IN")}</span>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {notOffered.length > 0 && (
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Book separately</div>
-          <div className="flex flex-wrap gap-1.5">
-            {notOffered.map((cat) => (
-              <Link key={cat} to="/marketplace" search={{ tab: "vendor", q: cat, event_id: eventId } as never}
-                className="rounded-full border border-input px-2.5 py-1 text-xs font-semibold text-brand-violet hover:bg-accent">
-                {cat}
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
+    <div className="mt-5 border-t border-border pt-4 text-sm">
+      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">This venue can also arrange</div>
+      <div className="flex flex-wrap gap-1.5">
+        {inHouse.map(([cat]) => (
+          <span key={cat} className="rounded-full border border-input px-2.5 py-1 text-xs font-medium">{cat}</span>
+        ))}
+      </div>
     </div>
   );
 }
@@ -626,8 +585,6 @@ const bookingSchema = z.object({
   contact_email: emailSchema,
   event_date: z.string().min(1, "Pick a start date").refine((v) => v >= TODAY_ISO, "Pick a date from today onwards — past dates can't be booked"),
   event_end_date: z.string().optional(),
-  start_time: z.string().min(1, "Pick a start time"),
-  end_time: z.string().min(1, "Pick an end time"),
   guest_count: z.string().regex(/^\d+$/, "Enter guest count"),
   special_instructions: z.string().max(1000).optional(),
 });
@@ -637,7 +594,7 @@ function BookingForm({
 }: { hallId: string; hallName: string; pricePerDay: number | null; guestPricingTiers: { max_guests: number; price: number }[]; blockedDates: string[]; advanceAmount: number | null; serviceOfferings: ServiceOfferingMap; eventId?: string; sourceSlug?: string }) {
   const [state, setState] = useState({
     event_name: "", organizer_type: "", organizer_type_other: "", event_type: "", event_type_other: "",
-    contact_person: "", contact_phone: "", contact_email: "", event_date: "", event_end_date: "", start_time: "", end_time: "",
+    contact_person: "", contact_phone: "", contact_email: "", event_date: "", event_end_date: "",
     guest_count: "", special_instructions: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -718,8 +675,6 @@ function BookingForm({
         contact_person: d.contact_person,
         contact_phone: d.contact_phone,
         contact_email: d.contact_email,
-        start_time: d.start_time,
-        end_time: d.end_time,
         guest_count: Number(d.guest_count),
         // Which in-house options the customer is interested in — no
         // price attached (the venue owner still sets the final price
@@ -814,12 +769,6 @@ function BookingForm({
             This venue is already booked on {clashDate} — please pick different dates.
           </p>
         )}
-        <Row label="Start time" error={errors.start_time}>
-          <input type="time" className="input" value={state.start_time} onChange={(e) => set("start_time", e.target.value)} />
-        </Row>
-        <Row label="End time" error={errors.end_time}>
-          <input type="time" className="input" value={state.end_time} onChange={(e) => set("end_time", e.target.value)} />
-        </Row>
       </div>
 
       <Row label="Expected guests" error={errors.guest_count}>
