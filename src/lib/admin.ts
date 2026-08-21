@@ -430,6 +430,17 @@ export type EventPartyRow = {
   paymentStatus: string;         // customer_bookings/worker_tasks/vendor_tasks payment_status
   payoutStatus: "pending" | "paid" | "n/a"; // has the platform actually paid this role out yet
   razorpayPaymentId: string | null;
+  // Frozen commercial detail at the moment the price was set — venue
+  // rows only for now (see 20260821090000_hall_booking_snapshot.sql).
+  // Lets admin see exactly what was agreed without reconstructing it
+  // from the venue's current (possibly since-changed) profile data.
+  snapshot?: {
+    venue_base_price_used: number | null;
+    applicable_guest_tier: { max_guests: number; price: number } | null;
+    guest_count: number | null;
+    amenities: string[];
+    requested_services: { category: string; name: string; price: number | null; per_guest: boolean | null }[];
+  } | null;
 };
 
 export type EventFinancialRow = {
@@ -458,7 +469,7 @@ export async function fetchEventFinancials(): Promise<EventFinancialRow[]> {
     // somewhere, so those become their own standalone card below
     // instead of silently disappearing from this page.
     supabase.from("customer_bookings" as never)
-      .select("id, customer_event_id, target_name, amount, commission_amount, payment_status, razorpay_payment_id, event_date, details" as never)
+      .select("id, customer_event_id, target_name, amount, commission_amount, payment_status, razorpay_payment_id, event_date, details, snapshot" as never)
       .eq("kind" as never, "hall" as never),
     supabase.from("vendor_tasks" as never)
       .select("id, customer_event_id, task_name, event_name, event_date, payment_amount, commission_amount, payment_status, razorpay_payment_id, vendor:vendors(business_name)" as never),
@@ -474,7 +485,7 @@ export async function fetchEventFinancials(): Promise<EventFinancialRow[]> {
   if (workers.error) throw workers.error;
 
   type EventRow = { id: string; name: string; event_type: string | null; event_date: string | null; user_id: string };
-  type HallRow = { id: string; customer_event_id: string | null; target_name: string; amount: number; commission_amount: number; payment_status: string; razorpay_payment_id: string | null; event_date: string | null; details: { event_name?: string } | null };
+  type HallRow = { id: string; customer_event_id: string | null; target_name: string; amount: number; commission_amount: number; payment_status: string; razorpay_payment_id: string | null; event_date: string | null; details: { event_name?: string } | null; snapshot: EventPartyRow["snapshot"] };
   type TaskRow = { id: string; customer_event_id: string | null; task_name: string; event_name: string | null; event_date: string | null; payment_amount: number | null; commission_amount: number | null; payment_status: string; razorpay_payment_id: string | null };
   type VendorTaskRow = TaskRow & { vendor: { business_name: string } | null };
   type WorkerTaskRow = TaskRow & { worker: { full_name: string } | null };
@@ -491,17 +502,17 @@ export async function fetchEventFinancials(): Promise<EventFinancialRow[]> {
   const { data: profs } = userIds.length ? await supabase.from("profiles").select("id,full_name").in("id", userIds) : { data: [] as { id: string; full_name: string | null }[] };
   const nameById = new Map((profs ?? []).map((p) => [p.id, p.full_name] as const));
 
-  function toParty(role: EventPartyRow["role"], id: string, name: string, amount: number, commission: number, paymentStatus: string, payoutStatus: string | undefined, razorpayPaymentId: string | null): EventPartyRow {
+  function toParty(role: EventPartyRow["role"], id: string, name: string, amount: number, commission: number, paymentStatus: string, payoutStatus: string | undefined, razorpayPaymentId: string | null, snapshot?: EventPartyRow["snapshot"]): EventPartyRow {
     return {
       id, role, name, amount: amount || 0, commission: commission || 0, payout: Math.max((amount || 0) - (commission || 0), 0),
-      paymentStatus, payoutStatus: paymentStatus !== "paid" ? "n/a" : (payoutStatus === "paid" ? "paid" : "pending"), razorpayPaymentId,
+      paymentStatus, payoutStatus: paymentStatus !== "paid" ? "n/a" : (payoutStatus === "paid" ? "paid" : "pending"), razorpayPaymentId, snapshot,
     };
   }
 
   const hallByEvent = new Map<string, EventPartyRow[]>();
   const standaloneVenue: { key: string; party: EventPartyRow; eventDate: string | null; eventName: string | null }[] = [];
   for (const r of (halls.data as unknown as HallRow[]) ?? []) {
-    const party = toParty("venue", r.id, r.target_name, r.amount, r.commission_amount, r.payment_status, venuePayoutStatus.get(r.id), r.razorpay_payment_id);
+    const party = toParty("venue", r.id, r.target_name, r.amount, r.commission_amount, r.payment_status, venuePayoutStatus.get(r.id), r.razorpay_payment_id, r.snapshot);
     if (r.customer_event_id) {
       const arr = hallByEvent.get(r.customer_event_id) ?? [];
       arr.push(party);
