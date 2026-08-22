@@ -11,13 +11,17 @@ export const Route = createFileRoute("/hall-book/$id")({
     ref: typeof search.ref === "string" ? search.ref : undefined,
     mode: search.mode === "enquiry" ? "enquiry" as const : "booking" as const,
   }),
-  head: ({ params }) => ({
-    meta: [
-      { title: `Book venue — EventOrbit Nova` },
-      { name: "description", content: "Send a booking request or enquiry to this verified venue on EventOrbit Nova." },
-    ],
-    links: [{ rel: "canonical", href: `/hall-book/${params.id}` }],
-  }),
+  head: ({ params, loaderData }) => {
+    const hall = loaderData?.hall;
+    return {
+      meta: [
+        { title: hall ? `Book ${hall.name} — EventOrbit Nova` : "Book venue — EventOrbit Nova" },
+        { name: "description", content: hall ? `Send a booking request or enquiry to ${hall.name} on EventOrbit Nova.` : "Send a booking request or enquiry to this verified venue on EventOrbit Nova." },
+        { property: "og:title", content: hall ? hall.name : "Book a venue on EventOrbit Nova" },
+      ],
+      links: [{ rel: "canonical", href: `/hall-book/${params.id}` }],
+    };
+  },
   loader: async ({ params }) => {
     const { data, error } = await supabase.from("halls")
       .select("*")
