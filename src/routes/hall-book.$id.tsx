@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { BookingAndEnquiry } from "@/components/HallBookingForm";
 import { normalize } from "./hall.$id";
 
-export const Route = createFileRoute("/hall/$id/book")({
+export const Route = createFileRoute("/hall-book/$id")({
   validateSearch: (search: Record<string, unknown>) => ({
     event_id: typeof search.event_id === "string" ? search.event_id : undefined,
     ref: typeof search.ref === "string" ? search.ref : undefined,
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/hall/$id/book")({
       { title: `Book venue — EventOrbit Nova` },
       { name: "description", content: "Send a booking request or enquiry to this verified venue on EventOrbit Nova." },
     ],
-    links: [{ rel: "canonical", href: `/hall/${params.id}/book` }],
+    links: [{ rel: "canonical", href: `/hall-book/${params.id}` }],
   }),
   loader: async ({ params }) => {
     const { data, error } = await supabase.from("halls")
