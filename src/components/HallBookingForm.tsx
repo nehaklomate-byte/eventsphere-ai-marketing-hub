@@ -34,7 +34,7 @@ const EVENT_TYPES = [
 /* ============================================================
  * Book Now (real booking, full event details) + Ask a Question
  *
- * Lives on its own dedicated page (/hall/$id/book) instead of the
+ * Lives on its own dedicated page (/hall-book/$id) instead of the
  * venue profile's sidebar — the profile page only links here via a
  * "Book Now" button so the form gets a full, uncramped page instead
  * of a narrow sidebar column.
