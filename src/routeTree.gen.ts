@@ -29,6 +29,7 @@ import { Route as WorkerIdRouteImport } from './routes/worker.$id'
 import { Route as VendorIdRouteImport } from './routes/vendor.$id'
 import { Route as JoinOrganizationTokenRouteImport } from './routes/join-organization/$token'
 import { Route as HallIdRouteImport } from './routes/hall.$id'
+import { Route as HallIdBookRouteImport } from './routes/hall.$id.book'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedWorkerRouteRouteImport } from './routes/_authenticated/worker/route'
@@ -199,6 +200,11 @@ const JoinOrganizationTokenRoute = JoinOrganizationTokenRouteImport.update({
 const HallIdRoute = HallIdRouteImport.update({
   id: '/hall/$id',
   path: '/hall/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HallIdBookRoute = HallIdBookRouteImport.update({
+  id: '/hall/$id/book',
+  path: '/hall/$id/book',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BlogSlugRoute = BlogSlugRouteImport.update({
@@ -650,6 +656,7 @@ export interface FileRoutesByFullPath {
   '/auth/callback': typeof AuthCallbackRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/hall/$id': typeof HallIdRoute
+  '/hall/$id/book': typeof HallIdBookRoute
   '/join-organization/$token': typeof JoinOrganizationTokenRoute
   '/vendor/$id': typeof VendorIdRoute
   '/worker/$id': typeof WorkerIdRoute
@@ -736,6 +743,7 @@ export interface FileRoutesByTo {
   '/auth/callback': typeof AuthCallbackRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/hall/$id': typeof HallIdRoute
+  '/hall/$id/book': typeof HallIdBookRoute
   '/join-organization/$token': typeof JoinOrganizationTokenRoute
   '/vendor/$id': typeof VendorIdRoute
   '/worker/$id': typeof WorkerIdRoute
@@ -831,6 +839,7 @@ export interface FileRoutesById {
   '/auth/callback': typeof AuthCallbackRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/hall/$id': typeof HallIdRoute
+  '/hall/$id/book': typeof HallIdBookRoute
   '/join-organization/$token': typeof JoinOrganizationTokenRoute
   '/vendor/$id': typeof VendorIdRoute
   '/worker/$id': typeof WorkerIdRoute
@@ -926,6 +935,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/blog/$slug'
     | '/hall/$id'
+    | '/hall/$id/book'
     | '/join-organization/$token'
     | '/vendor/$id'
     | '/worker/$id'
@@ -1012,6 +1022,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/blog/$slug'
     | '/hall/$id'
+    | '/hall/$id/book'
     | '/join-organization/$token'
     | '/vendor/$id'
     | '/worker/$id'
@@ -1106,6 +1117,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/blog/$slug'
     | '/hall/$id'
+    | '/hall/$id/book'
     | '/join-organization/$token'
     | '/vendor/$id'
     | '/worker/$id'
@@ -1194,6 +1206,7 @@ export interface RootRouteChildren {
   AuthCallbackRoute: typeof AuthCallbackRoute
   BlogSlugRoute: typeof BlogSlugRoute
   HallIdRoute: typeof HallIdRoute
+  HallIdBookRoute: typeof HallIdBookRoute
   JoinOrganizationTokenRoute: typeof JoinOrganizationTokenRoute
   VendorIdRoute: typeof VendorIdRoute
   WorkerIdRoute: typeof WorkerIdRoute
@@ -1340,6 +1353,13 @@ declare module '@tanstack/react-router' {
       path: '/hall/$id'
       fullPath: '/hall/$id'
       preLoaderRoute: typeof HallIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hall/$id/book': {
+      id: '/hall/$id/book'
+      path: '/hall/$id/book'
+      fullPath: '/hall/$id/book'
+      preLoaderRoute: typeof HallIdBookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blog/$slug': {
@@ -2138,6 +2158,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthCallbackRoute: AuthCallbackRoute,
   BlogSlugRoute: BlogSlugRoute,
   HallIdRoute: HallIdRoute,
+  HallIdBookRoute: HallIdBookRoute,
   JoinOrganizationTokenRoute: JoinOrganizationTokenRoute,
   VendorIdRoute: VendorIdRoute,
   WorkerIdRoute: WorkerIdRoute,
