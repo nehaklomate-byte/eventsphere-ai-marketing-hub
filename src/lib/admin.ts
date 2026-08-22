@@ -403,8 +403,14 @@ export async function fetchPayouts(): Promise<PayoutRow[]> {
     supabase.from("vendor_payouts" as never)
       .select("id, amount, status, payout_reference, paid_at, created_at, notes, vendor_task_id, vendor_tasks:vendor_task_id(event_name, task_name), vendors:vendor_id(business_name, payout_upi_id)" as never)
       .order("created_at" as never, { ascending: false }),
+    // NOTE: venue_payouts.hall_owner_id and profiles.id both reference
+    // auth.users(id) independently — there is no direct FK from
+    // venue_payouts to profiles, so a PostgREST embed like
+    // `profiles:hall_owner_id(...)` can't resolve and errors out
+    // (silently emptying this whole screen). Fetch profiles separately
+    // by id instead and merge client-side.
     supabase.from("venue_payouts" as never)
-      .select("id, amount, status, payout_reference, paid_at, created_at, notes, booking_id, customer_bookings:booking_id(target_name), profiles:hall_owner_id(full_name, payout_upi_id)" as never)
+      .select("id, amount, status, payout_reference, paid_at, created_at, notes, booking_id, hall_owner_id, customer_bookings:booking_id(target_name)" as never)
       .order("created_at" as never, { ascending: false }),
   ]);
   if (workers.error) throw workers.error;
@@ -414,7 +420,16 @@ export async function fetchPayouts(): Promise<PayoutRow[]> {
   type Base = { id: string; amount: number; status: "pending" | "paid" | "cancelled" | "clawback_required"; payout_reference: string | null; paid_at: string | null; created_at: string; notes: string | null };
   type WorkerRow = Base & { worker_tasks: { event_name: string; task_name: string } | null; workers: { full_name: string; payout_upi_id: string | null } | null };
   type VendorRow = Base & { vendor_tasks: { event_name: string; task_name: string } | null; vendors: { business_name: string; payout_upi_id: string | null } | null };
-  type VenueRow = Base & { customer_bookings: { target_name: string } | null; profiles: { full_name: string; payout_upi_id: string | null } | null };
+  type VenueRow = Base & { hall_owner_id: string; customer_bookings: { target_name: string } | null };
+
+  const venueRows = (venues.data as unknown as VenueRow[]) ?? [];
+  const ownerIds = [...new Set(venueRows.map((r) => r.hall_owner_id).filter(Boolean))];
+  const ownerProfiles = ownerIds.length
+    ? await supabase.from("profiles" as never).select("id, full_name, payout_upi_id" as never).in("id" as never, ownerIds as never)
+    : { data: [] as unknown, error: null };
+  if (ownerProfiles.error) throw ownerProfiles.error;
+  type ProfileRow = { id: string; full_name: string | null; payout_upi_id: string | null };
+  const profileById = new Map(((ownerProfiles.data as unknown as ProfileRow[]) ?? []).map((p) => [p.id, p]));
 
   const out: PayoutRow[] = [];
   for (const r of (workers.data as unknown as WorkerRow[]) ?? []) {
@@ -423,8 +438,9 @@ export async function fetchPayouts(): Promise<PayoutRow[]> {
   for (const r of (vendors.data as unknown as VendorRow[]) ?? []) {
     out.push({ id: r.id, source: "vendor", title: r.vendor_tasks ? `${r.vendor_tasks.event_name} — ${r.vendor_tasks.task_name}` : "Vendor task", amount: r.amount, status: r.status, payout_reference: r.payout_reference, paid_at: r.paid_at, created_at: r.created_at, recipientName: r.vendors?.business_name ?? "Vendor", recipientUpiId: r.vendors?.payout_upi_id ?? null, notes: r.notes });
   }
-  for (const r of (venues.data as unknown as VenueRow[]) ?? []) {
-    out.push({ id: r.id, source: "venue", title: r.customer_bookings ? r.customer_bookings.target_name : "Hall booking", amount: r.amount, status: r.status, payout_reference: r.payout_reference, paid_at: r.paid_at, created_at: r.created_at, recipientName: r.profiles?.full_name ?? "Venue owner", recipientUpiId: r.profiles?.payout_upi_id ?? null, notes: r.notes });
+  for (const r of venueRows) {
+    const profile = profileById.get(r.hall_owner_id);
+    out.push({ id: r.id, source: "venue", title: r.customer_bookings ? r.customer_bookings.target_name : "Hall booking", amount: r.amount, status: r.status, payout_reference: r.payout_reference, paid_at: r.paid_at, created_at: r.created_at, recipientName: profile?.full_name ?? "Venue owner", recipientUpiId: profile?.payout_upi_id ?? null, notes: r.notes });
   }
   return out.sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
