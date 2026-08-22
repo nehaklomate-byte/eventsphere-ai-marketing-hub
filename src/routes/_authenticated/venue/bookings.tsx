@@ -28,6 +28,7 @@ function BookingsPage() {
   const [detailsFor, setDetailsFor] = useState<HallBooking | null>(null);
   const [teamFor, setTeamFor] = useState<string | null>(null);
   const [pricingFor, setPricingFor] = useState<HallBooking | null>(null);
+  const [pricingError, setPricingError] = useState<string | null>(null);
   const { data: halls } = useQuery({ queryKey: ["venue-halls"], queryFn: fetchMyHalls });
   const hallIds = (halls ?? []).map((h) => h.id);
   const hallById = new Map((halls ?? []).map((h) => [h.id, h]));
@@ -58,6 +59,7 @@ function BookingsPage() {
   // saved (see confirmBookingWithPricing in src/lib/venue.ts).
   async function savePricing(booking: HallBooking, lines: PriceLine[], advanceAmount: number) {
     setBusyId(booking.id);
+    setPricingError(null);
     try {
       await confirmBookingWithPricing(booking, lines, advanceAmount);
       const total = lines.reduce((s, l) => s + (Number(l.amount) || 0), 0);
@@ -66,7 +68,12 @@ function BookingsPage() {
       qc.invalidateQueries({ queryKey: ["venue-bookings"] });
       setPricingFor(null);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to save pricing");
+      const msg = e instanceof Error ? e.message : "Failed to save pricing";
+      toast.error(msg);
+      setPricingError(msg); // shown inline in the modal too — a toast alone is
+      // easy to miss (auto-dismisses, and can render off-screen on some
+      // mobile browsers), which is what made this look like "the button
+      // does nothing" when it was actually failing with a real reason.
     } finally {
       setBusyId(null);
     }
@@ -213,7 +220,8 @@ function BookingsPage() {
           booking={pricingFor}
           hall={hallById.get(pricingFor.target_id)}
           busy={busyId === pricingFor.id}
-          onClose={() => setPricingFor(null)}
+          error={pricingError}
+          onClose={() => { setPricingFor(null); setPricingError(null); }}
           onSave={(lines, advance) => savePricing(pricingFor, lines, advance)}
         />
       )}
@@ -227,8 +235,8 @@ function BookingsPage() {
  * customer left for it. Saving computes the total and sets the
  * advance in one step (see confirmBookingWithPricing). */
 function PricingModal({
-  booking, hall, busy, onClose, onSave,
-}: { booking: HallBooking; hall: Hall | undefined; busy: boolean; onClose: () => void; onSave: (lines: PriceLine[], advanceAmount: number) => void }) {
+  booking, hall, busy, error, onClose, onSave,
+}: { booking: HallBooking; hall: Hall | undefined; busy: boolean; error: string | null; onClose: () => void; onSave: (lines: PriceLine[], advanceAmount: number) => void }) {
   const requested = (booking.details?.requested_services as { category: string; name: string; requirement_note?: string | null }[] | undefined) ?? [];
   const guestCount = Number(booking.details?.guest_count ?? 0);
   const suggestedBase = hall ? resolveHallBasePrice(hall.price_per_day, hall.guest_pricing_tiers, guestCount) : 0;
@@ -248,18 +256,21 @@ function PricingModal({
     return init;
   });
   const [advance, setAdvance] = useState<string>(String(booking.advance_amount ?? hall?.advance_amount ?? ""));
+  const [localError, setLocalError] = useState<string | null>(null);
 
   const base = Number(basePrice) || 0;
   const serviceTotal = requested.reduce((sum, _s, i) => sum + (Number(servicePrices[i]) || 0), 0);
   const total = base + serviceTotal;
   const advanceNum = Number(advance) || 0;
   const belowAlreadyPaid = booking.advance_paid_amount > 0 && total < booking.advance_paid_amount;
+  const shownError = localError || error;
 
   function save() {
-    if (base <= 0) return toast.error("Enter the venue's base price");
-    if (advanceNum <= 0) return toast.error("Enter a valid advance amount");
-    if (advanceNum > total) return toast.error("Advance can't be more than the total");
-    if (belowAlreadyPaid) return toast.error(`Total can't be less than the ₹${booking.advance_paid_amount.toLocaleString("en-IN")} already paid`);
+    setLocalError(null);
+    if (base <= 0) { const m = "Enter the venue's base price"; setLocalError(m); toast.error(m); return; }
+    if (advanceNum <= 0) { const m = "Enter a valid advance amount"; setLocalError(m); toast.error(m); return; }
+    if (advanceNum > total) { const m = "Advance can't be more than the total"; setLocalError(m); toast.error(m); return; }
+    if (belowAlreadyPaid) { const m = `Total can't be less than the ₹${booking.advance_paid_amount.toLocaleString("en-IN")} already paid`; setLocalError(m); toast.error(m); return; }
     const lines: PriceLine[] = [{ label: "Venue (base price)", amount: base }];
     requested.forEach((s, i) => {
       const amt = Number(servicePrices[i]) || 0;
@@ -308,6 +319,12 @@ function PricingModal({
         </label>
         {advanceNum > 0 && total > 0 && (
           <p className="mt-1 text-[11px] text-muted-foreground">Balance after advance: ₹{Math.max(total - advanceNum, 0).toLocaleString("en-IN")}</p>
+        )}
+
+        {shownError && (
+          <div role="alert" className="mt-3 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+            <span className="font-semibold">Could not save:</span> {shownError}
+          </div>
         )}
 
         <button onClick={save} disabled={busy} className="mt-5 flex w-full items-center justify-center gap-2 rounded-full btn-brand btn-brand-hover px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-70">
