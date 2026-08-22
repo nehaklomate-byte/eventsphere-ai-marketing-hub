@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Building2, Upload, Loader2, X, Save, Eye, EyeOff, Wallet, FileCheck, MapPin } from "lucide-react";
+import { Building2, Upload, Loader2, X, Save, Eye, EyeOff, Wallet, FileCheck, MapPin, Pencil, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchMyHalls, createHall, updateHall, type Hall } from "@/lib/venue";
 import { VENDOR_CATEGORIES } from "@/lib/vendor";
@@ -70,6 +70,20 @@ function VenueProfilePage() {
     const current = (form.service_offerings as Hall["service_offerings"]) ?? {};
     const existing = current[category] ?? { in_house: true, price: null, options: [] };
     set("service_offerings", { ...current, [category]: { ...existing, options: existing.options.filter((o) => o.id !== optionId) } } as never);
+  }
+
+  // Edit an existing option in place (name/price/per_guest/items) — the
+  // previous version only supported adding a brand-new option or
+  // removing one entirely; this lets the owner fix a typo or update a
+  // price without deleting and re-adding it (which would also lose its
+  // position in the list).
+  function editServiceOption(category: string, optionId: string, patch: Partial<{ name: string; price: number; per_guest: boolean; items?: string[] }>) {
+    const current = (form.service_offerings as Hall["service_offerings"]) ?? {};
+    const existing = current[category] ?? { in_house: true, price: null, options: [] };
+    set("service_offerings", {
+      ...current,
+      [category]: { ...existing, options: existing.options.map((o) => (o.id === optionId ? { ...o, ...patch } : o)) },
+    } as never);
   }
 
   // A custom category the owner typed in themselves (not one of the
@@ -333,18 +347,12 @@ function VenueProfilePage() {
                     {(svc.options ?? []).length > 0 && (
                       <div className="space-y-1">
                         {svc.options.map((o) => (
-                          <div key={o.id} className="rounded-lg bg-background px-3 py-1.5 text-xs">
-                            <div className="flex items-center justify-between gap-2">
-                              <span>{o.name}</span>
-                              <span className="flex items-center gap-2">
-                                <span className="font-semibold">₹{o.price.toLocaleString("en-IN")}{o.per_guest ? " / guest" : ""}</span>
-                                <button type="button" onClick={() => removeServiceOption(cat, o.id)} className="text-muted-foreground hover:text-destructive"><X className="h-3.5 w-3.5" /></button>
-                              </span>
-                            </div>
-                            {o.items && o.items.length > 0 && (
-                              <div className="mt-0.5 text-[11px] text-muted-foreground">Includes: {o.items.join(", ")}</div>
-                            )}
-                          </div>
+                          <ServiceOptionRow
+                            key={o.id}
+                            option={o}
+                            onSave={(patch) => editServiceOption(cat, o.id, patch)}
+                            onRemove={() => removeServiceOption(cat, o.id)}
+                          />
                         ))}
                       </div>
                     )}
@@ -703,6 +711,81 @@ function GuestPricingTiersEditor({ basePrice, tiers, onChange }: { basePrice: nu
       {error && <p className="text-xs text-destructive">{error}</p>}
       {sorted.length === 0 && basePrice != null && (
         <p className="text-xs text-muted-foreground">No guest-based tiers yet — the starting price above (₹{basePrice.toLocaleString("en-IN")}) is shown to everyone until you add tiers.</p>
+      )}
+    </div>
+  );
+}
+
+// A single saved option shown read-only, with an edit pencil that
+// swaps it into the same name/price/per-guest/items fields as
+// ServiceOptionInput (pre-filled) so the owner can fix a typo or
+// update a price in place instead of deleting and re-adding it.
+function ServiceOptionRow({
+  option, onSave, onRemove,
+}: {
+  option: { id: string; name: string; price: number; per_guest: boolean; items?: string[] };
+  onSave: (patch: { name: string; price: number; per_guest: boolean; items?: string[] }) => void;
+  onRemove: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(option.name);
+  const [price, setPrice] = useState(String(option.price));
+  const [perGuest, setPerGuest] = useState(option.per_guest);
+  const [itemsText, setItemsText] = useState((option.items ?? []).join(", "));
+
+  function save() {
+    const n = name.trim();
+    const p = Number(price);
+    if (!n || !price || Number.isNaN(p) || p <= 0) return;
+    const items = itemsText.split(",").map((x) => x.trim()).filter(Boolean);
+    onSave({ name: n, price: p, per_guest: perGuest, items: items.length > 0 ? items : undefined });
+    setEditing(false);
+  }
+
+  function cancel() {
+    setName(option.name);
+    setPrice(String(option.price));
+    setPerGuest(option.per_guest);
+    setItemsText((option.items ?? []).join(", "));
+    setEditing(false);
+  }
+
+  if (editing) {
+    return (
+      <div className="rounded-lg bg-background border border-brand-violet/40 px-3 py-2 space-y-1.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <input value={name} onChange={(e) => setName(e.target.value)} className="min-w-[14rem] flex-1 rounded-lg border border-input bg-background px-3 py-1.5 text-xs outline-none focus:border-brand-violet" />
+          <input value={price} onChange={(e) => setPrice(e.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" className="w-24 rounded-lg border border-input bg-background px-3 py-1.5 text-xs outline-none focus:border-brand-violet" />
+          <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <input type="checkbox" checked={perGuest} onChange={(e) => setPerGuest(e.target.checked)} /> per guest
+          </label>
+        </div>
+        <input
+          value={itemsText}
+          onChange={(e) => setItemsText(e.target.value)}
+          placeholder="What's included (comma-separated)"
+          className="w-full rounded-lg border border-input bg-background px-3 py-1.5 text-xs outline-none focus:border-brand-violet"
+        />
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={save} className="inline-flex items-center gap-1 rounded-full bg-brand-violet text-white px-3 py-1.5 text-[11px] font-semibold hover:opacity-90"><Check className="h-3 w-3" /> Save</button>
+          <button type="button" onClick={cancel} className="rounded-full border border-input px-3 py-1.5 text-[11px] font-semibold hover:bg-accent">Cancel</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg bg-background px-3 py-1.5 text-xs">
+      <div className="flex items-center justify-between gap-2">
+        <span>{option.name}</span>
+        <span className="flex items-center gap-2">
+          <span className="font-semibold">₹{option.price.toLocaleString("en-IN")}{option.per_guest ? " / guest" : ""}</span>
+          <button type="button" onClick={() => setEditing(true)} className="text-muted-foreground hover:text-brand-violet" title="Edit"><Pencil className="h-3.5 w-3.5" /></button>
+          <button type="button" onClick={onRemove} className="text-muted-foreground hover:text-destructive" title="Remove"><X className="h-3.5 w-3.5" /></button>
+        </span>
+      </div>
+      {option.items && option.items.length > 0 && (
+        <div className="mt-0.5 text-[11px] text-muted-foreground">Includes: {option.items.join(", ")}</div>
       )}
     </div>
   );
