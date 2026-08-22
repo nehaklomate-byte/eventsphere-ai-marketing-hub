@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Loader2, Send, Phone, AlertCircle, CheckCircle2 } from "lucide-react";
+import {
+  Loader2, Send, Phone, AlertCircle, CheckCircle2, PartyPopper, User,
+  CalendarDays, MessageSquare, ChevronDown, Sparkles, Info,
+} from "lucide-react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { emailSchema, phoneSchema } from "@/lib/validation";
@@ -50,18 +53,18 @@ export function BookingAndEnquiry({
   const [mode, setMode] = useState<"booking" | "enquiry">(initialMode);
   return (
     <div>
-      <div className="mb-4 grid grid-cols-2 gap-2">
+      <div className="mb-6 grid grid-cols-2 gap-2 rounded-full bg-muted/40 p-1.5">
         <button
           type="button"
           onClick={() => setMode("booking")}
-          className={`rounded-full px-4 py-2 text-sm font-semibold transition ${mode === "booking" ? "bg-brand-violet text-white" : "border border-input text-muted-foreground hover:bg-accent"}`}
+          className={`rounded-full px-4 py-2.5 text-sm font-semibold transition ${mode === "booking" ? "bg-brand-violet text-white shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
         >
           Book Now
         </button>
         <button
           type="button"
           onClick={() => setMode("enquiry")}
-          className={`rounded-full px-4 py-2 text-sm font-semibold transition ${mode === "enquiry" ? "bg-brand-violet text-white" : "border border-input text-muted-foreground hover:bg-accent"}`}
+          className={`rounded-full px-4 py-2.5 text-sm font-semibold transition ${mode === "enquiry" ? "bg-brand-violet text-white shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
         >
           Ask a Question
         </button>
@@ -69,6 +72,24 @@ export function BookingAndEnquiry({
       {mode === "booking"
         ? <BookingForm hallId={hallId} hallName={hallName} pricePerDay={pricePerDay} guestPricingTiers={guestPricingTiers} blockedDates={blockedDates} advanceAmount={advanceAmount} serviceOfferings={serviceOfferings} eventId={eventId} sourceSlug={sourceSlug} />
         : <EnquiryForm hallId={hallId} sourceSlug={sourceSlug} />}
+    </div>
+  );
+}
+
+// Groups related fields under a labelled header with an icon, so a long
+// form reads as a handful of clear steps instead of one dense wall of
+// inputs. Purely presentational — no effect on form state or submission.
+function Section({ icon, title, subtitle, children }: { icon: React.ReactNode; title: string; subtitle?: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 space-y-4">
+      <div className="flex items-start gap-2.5">
+        <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-violet/10 text-brand-violet">{icon}</span>
+        <div>
+          <div className="font-display text-sm font-semibold">{title}</div>
+          {subtitle && <div className="mt-0.5 text-xs text-muted-foreground">{subtitle}</div>}
+        </div>
+      </div>
+      {children}
     </div>
   );
 }
@@ -130,6 +151,10 @@ function BookingForm({
   })();
 
   const set = (k: string, v: string) => setState((s) => ({ ...s, [k]: v }));
+  // Services open one at a time in an accordion — first one open by
+  // default so the section doesn't look empty, rest collapsed so a venue
+  // with many categories doesn't turn into a wall of checkboxes.
+  const [openCategory, setOpenCategory] = useState<string | null>(inHouseServices[0]?.[0] ?? null);
   const [requestedOptions, setRequestedOptions] = useState<Record<string, boolean>>({});
   // Per-service requirement, e.g. under "Decoration" a customer might type
   // "Theme: Royal Rajasthani, red & gold" — kept separate per option so the
@@ -232,120 +257,148 @@ function BookingForm({
     );
   }
 
+  const requestedCount = Object.values(requestedOptions).filter(Boolean).length;
+
   return (
-    <form onSubmit={submit} noValidate className="space-y-3">
-      <h3 className="font-display text-base font-semibold">Request to book</h3>
+    <form onSubmit={submit} noValidate className="space-y-4">
+      <div>
+        <h3 className="font-display text-lg font-semibold">Request to book</h3>
+        <p className="mt-0.5 text-xs text-muted-foreground">Tell the venue about your event — they'll come back with pricing.</p>
+      </div>
       {err && <div role="alert" className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive"><AlertCircle className="h-3.5 w-3.5 mt-0.5" />{err}</div>}
 
-      <Row label="Event name" error={errors.event_name}>
-        <input className="input" value={state.event_name} onChange={(e) => set("event_name", e.target.value)} placeholder="e.g., Priya & Rohan's Wedding" />
-      </Row>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Row label="Who's organizing?" error={errors.organizer_type}>
-          <select className="input" value={state.organizer_type} onChange={(e) => set("organizer_type", e.target.value)}>
-            <option value="" disabled>Select…</option>
-            {ORGANIZER_TYPES.map((o) => <option key={o} value={o}>{o}</option>)}
-          </select>
+      <Section icon={<PartyPopper className="h-4 w-4" />} title="Event details">
+        <Row label="Event name" error={errors.event_name}>
+          <input className="input" value={state.event_name} onChange={(e) => set("event_name", e.target.value)} placeholder="e.g., Priya & Rohan's Wedding" />
         </Row>
-        {state.organizer_type === "Other" && (
-          <Row label="Please specify">
-            <input className="input" value={state.organizer_type_other} onChange={(e) => set("organizer_type_other", e.target.value)} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <Row label="Who's organizing?" error={errors.organizer_type}>
+            <select className="input" value={state.organizer_type} onChange={(e) => set("organizer_type", e.target.value)}>
+              <option value="" disabled>Select…</option>
+              {ORGANIZER_TYPES.map((o) => <option key={o} value={o}>{o}</option>)}
+            </select>
           </Row>
-        )}
-
-        <Row label="Event type" error={errors.event_type}>
-          <select className="input" value={state.event_type} onChange={(e) => set("event_type", e.target.value)}>
-            <option value="" disabled>Select…</option>
-            {EVENT_TYPES.map((o) => <option key={o} value={o}>{o}</option>)}
-          </select>
-        </Row>
-        {state.event_type === "Other" && (
-          <Row label="Please specify">
-            <input className="input" value={state.event_type_other} onChange={(e) => set("event_type_other", e.target.value)} />
+          <Row label="Event type" error={errors.event_type}>
+            <select className="input" value={state.event_type} onChange={(e) => set("event_type", e.target.value)}>
+              <option value="" disabled>Select…</option>
+              {EVENT_TYPES.map((o) => <option key={o} value={o}>{o}</option>)}
+            </select>
           </Row>
+          {state.organizer_type === "Other" && (
+            <Row label="Please specify who's organizing">
+              <input className="input" value={state.organizer_type_other} onChange={(e) => set("organizer_type_other", e.target.value)} />
+            </Row>
+          )}
+          {state.event_type === "Other" && (
+            <Row label="Please specify event type">
+              <input className="input" value={state.event_type_other} onChange={(e) => set("event_type_other", e.target.value)} />
+            </Row>
+          )}
+        </div>
+      </Section>
+
+      <Section icon={<User className="h-4 w-4" />} title="Your contact details" subtitle="So the venue can reach you about this request">
+        <Row label="Contact person" error={errors.contact_person}>
+          <input className="input" value={state.contact_person} onChange={(e) => set("contact_person", e.target.value)} placeholder="Full name" />
+        </Row>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <Row label="Mobile number" error={errors.contact_phone}>
+            <input type="tel" className="input" value={state.contact_phone} onChange={(e) => set("contact_phone", e.target.value)} placeholder="10-digit mobile" />
+          </Row>
+          <Row label="Email" error={errors.contact_email}>
+            <input type="email" className="input" value={state.contact_email} onChange={(e) => set("contact_email", e.target.value)} placeholder="you@example.com" />
+          </Row>
+        </div>
+      </Section>
+
+      <Section icon={<CalendarDays className="h-4 w-4" />} title="Date & guests">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <Row label="Event start date" error={errors.event_date}>
+            <input type="date" className="input" min={TODAY_ISO} value={state.event_date} onChange={(e) => set("event_date", e.target.value)} />
+          </Row>
+          <Row label="Event end date" hint="Optional — leave blank for a single-day event" error={errors.event_end_date}>
+            <input type="date" className="input" min={state.event_date || TODAY_ISO} value={state.event_end_date} onChange={(e) => set("event_end_date", e.target.value)} />
+          </Row>
+        </div>
+        {clashDate && (
+          <p className="flex items-center gap-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/30 px-3 py-2 text-xs font-medium text-rose-700 dark:text-rose-300">
+            <AlertCircle className="h-3.5 w-3.5 shrink-0" /> This venue is already booked on {clashDate} — please pick different dates.
+          </p>
         )}
-      </div>
-
-      <Row label="Contact person" error={errors.contact_person}>
-        <input className="input" value={state.contact_person} onChange={(e) => set("contact_person", e.target.value)} placeholder="Full name" />
-      </Row>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Row label="Mobile number" error={errors.contact_phone}>
-          <input type="tel" className="input" value={state.contact_phone} onChange={(e) => set("contact_phone", e.target.value)} placeholder="10-digit mobile" />
+        <Row label="Expected guests" error={errors.guest_count}>
+          <input type="number" className="input" value={state.guest_count} onChange={(e) => set("guest_count", e.target.value)} placeholder="e.g., 250" />
         </Row>
-        <Row label="Email" error={errors.contact_email}>
-          <input type="email" className="input" value={state.contact_email} onChange={(e) => set("contact_email", e.target.value)} placeholder="you@example.com" />
-        </Row>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Row label="Event start date" error={errors.event_date}>
-          <input type="date" className="input" min={TODAY_ISO} value={state.event_date} onChange={(e) => set("event_date", e.target.value)} />
-        </Row>
-        <Row label="Event end date (optional — leave blank for a single-day event)" error={errors.event_end_date}>
-          <input type="date" className="input" min={state.event_date || TODAY_ISO} value={state.event_end_date} onChange={(e) => set("event_end_date", e.target.value)} />
-        </Row>
-      </div>
-      {clashDate && (
-        <p className="rounded-lg bg-rose-50 dark:bg-rose-950/30 px-3 py-2 text-xs font-medium text-rose-700 dark:text-rose-300">
-          This venue is already booked on {clashDate} — please pick different dates.
-        </p>
-      )}
-
-      <Row label="Expected guests" error={errors.guest_count}>
-        <input type="number" className="input" value={state.guest_count} onChange={(e) => set("guest_count", e.target.value)} placeholder="e.g., 250" />
-      </Row>
-
-      <Row label="Anything else? (optional)" error={errors.special_instructions}>
-        <textarea rows={3} className="input" value={state.special_instructions} onChange={(e) => set("special_instructions", e.target.value)} placeholder="Any requirement not covered by a service below — e.g. a specific decoration idea the venue doesn't list" />
-      </Row>
+      </Section>
 
       {inHouseServices.length > 0 && (
-        <div className="rounded-xl border border-border bg-muted/20 p-3 space-y-2">
-          <div className="text-xs font-semibold text-muted-foreground">Interested in any of these in-house services?</div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {inHouseServices.map(([cat, svc]) => (
-              <div key={cat} className="space-y-1">
-                <div className="text-xs font-semibold">{cat}</div>
-                {svc.options.length === 0 ? (
-                  <span className="rounded-full bg-background border border-border px-2.5 py-1 text-xs text-muted-foreground">Ask about pricing</span>
-                ) : (
-                  <div className="space-y-1">
-                    {svc.options.map((o) => (
-                      <div key={o.id} className="rounded-lg bg-background border border-border px-2.5 py-1.5 text-xs">
-                        <label className="flex items-start gap-2 cursor-pointer">
-                          <input type="checkbox" className="mt-0.5" checked={!!requestedOptions[o.id]} onChange={() => toggleOption(o.id)} />
-                          <span>
-                            <span className="font-medium">{o.name}</span>
-                            {o.items && o.items.length > 0 && <span className="block text-[11px] text-muted-foreground">Includes: {o.items.join(", ")}</span>}
-                          </span>
-                        </label>
-                        {requestedOptions[o.id] && (
-                          <textarea
-                            rows={2}
-                            className="input mt-1.5"
-                            placeholder={`Any specific requirement for ${o.name}? (theme, colours, must-haves…)`}
-                            value={serviceNotes[o.id] || ""}
-                            onChange={(e) => setServiceNotes((n) => ({ ...n, [o.id]: e.target.value }))}
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
+        <Section
+          icon={<Sparkles className="h-4 w-4" />}
+          title="In-house services"
+          subtitle={requestedCount > 0 ? `${requestedCount} selected — the venue will price each one` : "Optional — tap a category to see what's on offer"}
+        >
+          <div className="space-y-2">
+            {inHouseServices.map(([cat, svc]) => {
+              const open = openCategory === cat;
+              const selectedInCat = svc.options.filter((o) => requestedOptions[o.id]).length;
+              return (
+                <div key={cat} className="rounded-xl border border-border overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setOpenCategory(open ? null : cat)}
+                    className="flex w-full items-center justify-between gap-2 bg-muted/30 px-3.5 py-2.5 text-left hover:bg-muted/50 transition"
+                  >
+                    <span className="text-sm font-medium">
+                      {cat}
+                      {selectedInCat > 0 && <span className="ml-2 rounded-full bg-brand-violet/15 px-2 py-0.5 text-[11px] font-semibold text-brand-violet">{selectedInCat} selected</span>}
+                    </span>
+                    <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
+                  </button>
+                  {open && (
+                    <div className="p-3 space-y-2 bg-background">
+                      {svc.options.length === 0 ? (
+                        <span className="inline-block rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground">Ask about pricing when you submit</span>
+                      ) : (
+                        svc.options.map((o) => (
+                          <div key={o.id} className={`rounded-lg border px-3 py-2 text-sm transition ${requestedOptions[o.id] ? "border-brand-violet/40 bg-brand-violet/5" : "border-border"}`}>
+                            <label className="flex items-start gap-2.5 cursor-pointer">
+                              <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--brand-violet)]" checked={!!requestedOptions[o.id]} onChange={() => toggleOption(o.id)} />
+                              <span>
+                                <span className="font-medium">{o.name}</span>
+                                {o.items && o.items.length > 0 && <span className="block text-xs text-muted-foreground mt-0.5">Includes: {o.items.join(", ")}</span>}
+                              </span>
+                            </label>
+                            {requestedOptions[o.id] && (
+                              <textarea
+                                rows={2}
+                                className="input mt-2"
+                                placeholder={`Any specific requirement for ${o.name}? (theme, colours, must-haves…)`}
+                                value={serviceNotes[o.id] || ""}
+                                onChange={(e) => setServiceNotes((n) => ({ ...n, [o.id]: e.target.value }))}
+                              />
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
-          <p className="text-[11px] text-muted-foreground">Tick what you're interested in and add any specific requirement under it. The venue will price each one and share an itemised total with you.</p>
-        </div>
+        </Section>
       )}
 
-      <div className="rounded-xl bg-accent/40 px-3.5 py-2.5 text-sm text-muted-foreground">
+      <Section icon={<MessageSquare className="h-4 w-4" />} title="Anything else?" subtitle="Optional">
+        <textarea rows={3} className="input" value={state.special_instructions} onChange={(e) => set("special_instructions", e.target.value)} placeholder="Any requirement not covered above — e.g. a specific decoration idea the venue doesn't list" />
+        {errors.special_instructions && <p className="text-[11px] font-medium text-destructive">{errors.special_instructions}</p>}
+      </Section>
+
+      <div className="flex items-start gap-2 rounded-xl bg-accent/40 px-3.5 py-2.5 text-sm text-muted-foreground">
+        <Info className="h-4 w-4 shrink-0 mt-0.5 text-brand-violet" />
         No payment is needed to send this request. The venue will review it, price each service you selected, and share an itemised total — you'll pay the advance once they confirm.
       </div>
 
-      <button type="submit" disabled={submitting || !!clashDate} className="w-full inline-flex items-center justify-center gap-2 rounded-full btn-brand btn-brand-hover px-4 py-2.5 text-sm font-semibold disabled:opacity-70">
+      <button type="submit" disabled={submitting || !!clashDate} className="w-full inline-flex items-center justify-center gap-2 rounded-full btn-brand btn-brand-hover px-4 py-3 text-sm font-semibold disabled:opacity-70">
         {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Request booking
       </button>
       <style>{`
@@ -449,11 +502,12 @@ function EnquiryForm({ hallId, sourceSlug }: { hallId: string; sourceSlug?: stri
   );
 }
 
-function Row({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+function Row({ label, hint, error, children }: { label: string; hint?: string; error?: string; children: React.ReactNode }) {
   return (
     <label className="block">
       <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</span>
-      <div className="mt-1">{children}</div>
+      {hint && <span className="block text-[11px] text-muted-foreground normal-case tracking-normal font-normal mt-0.5">{hint}</span>}
+      <div className="mt-1.5">{children}</div>
       {error && <p className="mt-1 text-[11px] font-medium text-destructive">{error}</p>}
     </label>
   );
