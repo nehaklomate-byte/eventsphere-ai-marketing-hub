@@ -115,6 +115,7 @@ export type HallBooking = {
   status: "pending" | "confirmed" | "in_progress" | "completed" | "cancelled" | "reschedule_requested";
   payment_status: "pending" | "paid" | "failed" | "refunded" | "partial";
   notes: string | null;
+  decline_reason: string | null; // set when the owner declines/cancels — shown to the customer (migration 20260822100000)
   details: Record<string, unknown>;
   created_at: string;
 };
@@ -184,6 +185,22 @@ export async function fetchHallBookings(hallIds: string[]): Promise<HallBooking[
 export async function updateBookingStatus(id: string, status: HallBooking["status"]): Promise<void> {
   const { data, error } = await supabase.from("customer_bookings" as never)
     .update({ status } as never)
+    .eq("id" as never, id as never)
+    .select()
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("Update was blocked — please refresh and try again.");
+}
+
+/** Owner declines a pending request, or cancels a booking they'd
+ * already confirmed — either way the customer sees the reason (this
+ * is what fills in decline_reason, which the notify_hall_booking_declined
+ * trigger turns into an in-app notification — see migration
+ * 20260822100000). Reason is required so the customer always gets a
+ * real explanation instead of a bare "cancelled" status. */
+export async function declineHallBooking(id: string, reason: string): Promise<void> {
+  const { data, error } = await supabase.from("customer_bookings" as never)
+    .update({ status: "cancelled", decline_reason: reason } as never)
     .eq("id" as never, id as never)
     .select()
     .maybeSingle();
