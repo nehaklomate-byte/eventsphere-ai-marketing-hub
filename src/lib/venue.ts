@@ -182,8 +182,13 @@ export async function fetchHallBookings(hallIds: string[]): Promise<HallBooking[
 }
 
 export async function updateBookingStatus(id: string, status: HallBooking["status"]): Promise<void> {
-  const { error } = await supabase.from("customer_bookings" as never).update({ status } as never).eq("id" as never, id as never);
+  const { data, error } = await supabase.from("customer_bookings" as never)
+    .update({ status } as never)
+    .eq("id" as never, id as never)
+    .select()
+    .maybeSingle();
   if (error) throw error;
+  if (!data) throw new Error("Update was blocked — please refresh and try again.");
 }
 
 /** One line of the itemised price the owner builds for a booking —
@@ -210,7 +215,7 @@ export async function confirmBookingWithPricing(
   advanceAmount: number,
 ): Promise<void> {
   const amount = lines.reduce((sum, l) => sum + (Number(l.amount) || 0), 0);
-  const { error } = await supabase.from("customer_bookings" as never)
+  const { data, error } = await supabase.from("customer_bookings" as never)
     .update({
       status: "confirmed",
       advance_amount: advanceAmount,
@@ -218,8 +223,15 @@ export async function confirmBookingWithPricing(
       final_price_set_at: new Date().toISOString(),
       details: { ...booking.details, price_breakdown: lines } as never,
     } as never)
-    .eq("id" as never, booking.id as never);
+    .eq("id" as never, booking.id as never)
+    .select()
+    .maybeSingle();
   if (error) throw error;
+  // An update that silently matches zero rows (RLS denies it, or the
+  // booking no longer exists) still returns no `error` from PostgREST —
+  // so without this check the UI happily shows "saved" while nothing
+  // actually changed and the booking stays stuck on "pending".
+  if (!data) throw new Error("Could not confirm this booking — please refresh and try again.");
 }
 
 // ============================================================
