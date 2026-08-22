@@ -564,8 +564,15 @@ function PayoutSection() {
     mutationFn: async (value: string) => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Not signed in");
-      const { error } = await supabase.from("profiles").update({ payout_upi_id: value }).eq("id", userData.user.id);
+      // IMPORTANT: PostgREST does not raise an error when RLS blocks an
+      // update — it just matches zero rows and returns success with no
+      // data. Without .select() + checking the returned row, a blocked
+      // save looked identical to a real one ("saved" toast shown, but
+      // payout_upi_id never actually changed) — same class of bug
+      // already guarded against in worker/vendor profile.tsx.
+      const { data, error } = await supabase.from("profiles").update({ payout_upi_id: value }).eq("id", userData.user.id).select().maybeSingle();
       if (error) throw error;
+      if (!data) throw new Error("Save was blocked — please refresh and try again.");
     },
     onSuccess: () => { toast.success("Payout details saved"); qc.invalidateQueries({ queryKey: ["venue-owner-payout"] }); },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Could not save"),
