@@ -72,6 +72,17 @@ function VenueProfilePage() {
     set("service_offerings", { ...current, [category]: { ...existing, options: existing.options.filter((o) => o.id !== optionId) } } as never);
   }
 
+  // A custom category the owner typed in themselves (not one of the
+  // fixed VENDOR_CATEGORIES) can be fully deleted — unlike the fixed
+  // list, there's no reason to keep an unwanted custom entry sitting
+  // around toggled off.
+  function removeService(category: string) {
+    const current = (form.service_offerings as Hall["service_offerings"]) ?? {};
+    const next = { ...current };
+    delete next[category];
+    set("service_offerings", next as never);
+  }
+
   function setExtra(key: string, value: unknown) {
     const current = (form.additional_info as Record<string, unknown>) ?? {};
     set("additional_info", { ...current, [key]: value } as never);
@@ -286,8 +297,9 @@ function VenueProfilePage() {
           For each service you provide in-house, add the actual choices — menu items for Caterer, decoration packages for Decorator, and so on — so the customer picks exactly what they want instead of one fixed price. Leave a category OFF if you don't provide it — customers get a "book separately" link to hire a vendor for it instead.
         </p>
         <div className="space-y-3">
-          {VENDOR_CATEGORIES.map((cat) => {
+          {Array.from(new Set([...VENDOR_CATEGORIES, ...Object.keys(serviceOfferings)])).map((cat) => {
             const svc = serviceOfferings[cat] ?? { in_house: false, price: null, options: [] };
+            const isCustom = !(VENDOR_CATEGORIES as readonly string[]).includes(cat);
             return (
               <div key={cat} className="rounded-xl border border-border bg-muted/20 px-3.5 py-2.5 space-y-2.5">
                 <div className="flex flex-wrap items-center gap-3">
@@ -300,11 +312,16 @@ function VenueProfilePage() {
                   >
                     {svc.in_house ? "Provided in-house" : "Not provided"}
                   </button>
-                  <span className="text-sm font-medium flex-1 min-w-[120px]">{cat}</span>
+                  <span className="text-sm font-medium flex-1 min-w-[120px]">{cat}{isCustom && <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">(custom)</span>}</span>
                   {svc.in_house && (svc.options ?? []).length === 0 && (
                     <div className="w-40">
                       <NumberInput value={svc.price} onChange={(v) => setServicePrice(cat, v)} />
                     </div>
+                  )}
+                  {isCustom && (
+                    <button type="button" onClick={() => removeService(cat)} className="text-muted-foreground hover:text-destructive shrink-0" title="Remove this custom service">
+                      <X className="h-4 w-4" />
+                    </button>
                   )}
                 </div>
 
@@ -343,6 +360,13 @@ function VenueProfilePage() {
             );
           })}
         </div>
+        <CustomServiceInput
+          onAdd={(name) => {
+            const current = (form.service_offerings as Hall["service_offerings"]) ?? {};
+            if (current[name]) return; // already exists, don't overwrite
+            set("service_offerings", { ...current, [name]: { in_house: true, price: null, options: [] } } as never);
+          }}
+        />
       </Section>
 
       {/* Additional details */}
@@ -748,6 +772,31 @@ function CustomFacilityInput({ onAdd }: { onAdd: (name: string) => void }) {
         className="min-w-[16rem] flex-1 rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet"
       />
       <button type="button" onClick={add} className="rounded-full border border-input px-4 py-2 text-xs font-semibold hover:bg-accent">Add amenity</button>
+    </div>
+  );
+}
+
+// Same "type your own, hit Add" pattern as CustomFacilityInput above —
+// for a service category not in the fixed VENDOR_CATEGORIES list (e.g.
+// "Mehendi Artist", "Fireworks", "Valet Parking").
+function CustomServiceInput({ onAdd }: { onAdd: (name: string) => void }) {
+  const [value, setValue] = useState("");
+  function add() {
+    const name = value.trim();
+    if (!name) return;
+    onAdd(name);
+    setValue("");
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
+        placeholder="Add a service not listed above — e.g. Mehendi Artist, Fireworks"
+        className="min-w-[16rem] flex-1 rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet"
+      />
+      <button type="button" onClick={add} className="rounded-full border border-input px-4 py-2 text-xs font-semibold hover:bg-accent">Add service</button>
     </div>
   );
 }
