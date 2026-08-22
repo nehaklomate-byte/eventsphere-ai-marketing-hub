@@ -9,7 +9,7 @@ export const Route = createFileRoute("/_authenticated/receipt/$type/$id")({
   component: ReceiptPage,
 });
 
-type ReceiptType = "hall" | "worker" | "vendor" | "profile";
+type ReceiptType = "hall" | "worker" | "vendor" | "profile" | "venue-payout";
 
 type ReceiptData = {
   receiptNo: string;
@@ -26,9 +26,53 @@ type ReceiptData = {
   advancePaid: number | null; // hall bookings only — the two-stage advance→balance model (migration 20260819150000)
   advanceRazorpayPaymentId: string | null;
   balanceRazorpayPaymentId: string | null;
+  // venue-payout receipts only (migration 20260823090000): this is a
+  // receipt for what the PLATFORM sent the venue owner for one payment
+  // event (advance or balance) of one booking — not for what the
+  // customer paid overall. payoutReference is the admin's own UPI
+  // transfer reference, not a Razorpay id.
+  payoutStage: "advance" | "balance" | "full" | null;
+  payoutReference: string | null;
+  recipientUpiId: string | null;
 };
 
+const PAYOUT_STAGE_LABEL: Record<"advance" | "balance" | "full", string> = { advance: "Advance", balance: "Balance", full: "Full settlement" };
+
 async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData | null> {
+  if (type === "venue-payout") {
+    // `id` here is the venue_payouts row id, NOT the booking id — each
+    // payment event (advance / balance) for a booking is its own
+    // payout row with its own gross/commission/net, so this receipt is
+    // scoped to exactly one of those events and never mixes in the
+    // other stage or another booking.
+    const { data, error } = await supabase.from("venue_payouts" as never)
+      .select("id,booking_id,amount,gross_amount,commission_amount,status,payout_reference,paid_at,stage,hall_owner_id,customer_bookings:booking_id(target_name,event_date,details)" as never)
+      .eq("id" as never, id as never).maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    const d = data as unknown as Record<string, unknown>;
+    const booking = d.customer_bookings as { target_name: string; event_date: string | null; details: { event_name?: string } | null } | null;
+    const { data: owner } = await supabase.from("profiles" as never).select("full_name, payout_upi_id" as never).eq("id" as never, d.hall_owner_id as never).maybeSingle();
+    const ownerRow = owner as unknown as { full_name: string | null; payout_upi_id: string | null } | null;
+    const stage = (d.stage as "advance" | "balance" | "full") ?? "full";
+
+    return {
+      receiptNo: `VP-${id.slice(0, 8).toUpperCase()}`,
+      itemLabel: `${booking?.target_name ?? "Hall booking"} — ${PAYOUT_STAGE_LABEL[stage]} payout`,
+      counterpartyLabel: ownerRow?.full_name ?? "Venue owner",
+      eventName: booking?.details?.event_name ?? null,
+      eventDate: booking?.event_date ?? null,
+      amount: Number(d.gross_amount ?? 0),
+      commission: Number(d.commission_amount ?? 0),
+      paidAt: d.status === "paid" ? (d.paid_at as string | null) : null,
+      razorpayPaymentId: null,
+      razorpayOrderId: null,
+      lineItems: null,
+      advancePaid: null, advanceRazorpayPaymentId: null, balanceRazorpayPaymentId: null,
+      payoutStage: stage, payoutReference: d.payout_reference as string | null, recipientUpiId: ownerRow?.payout_upi_id ?? null,
+    };
+  }
+
   if (type === "profile") {
     const { data, error } = await supabase.from("public_profile_payments" as never)
       .select("id,role,entity_id,feature_type,amount,status,razorpay_payment_id,razorpay_order_id,created_at")
@@ -40,7 +84,7 @@ async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData 
       return {
         receiptNo: `PP-${id.slice(0, 8).toUpperCase()}`, itemLabel: "", counterpartyLabel: "",
         eventName: null, eventDate: null, amount: 0, commission: 0, paidAt: null, razorpayPaymentId: null, razorpayOrderId: null, lineItems: null,
-        advancePaid: null, advanceRazorpayPaymentId: null, balanceRazorpayPaymentId: null,
+        advancePaid: null, advanceRazorpayPaymentId: null, balanceRazorpayPaymentId: null, payoutStage: null, payoutReference: null, recipientUpiId: null,
       };
     }
 
@@ -68,7 +112,7 @@ async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData 
       razorpayPaymentId: d.razorpay_payment_id as string | null,
       razorpayOrderId: d.razorpay_order_id as string | null,
       lineItems: null,
-      advancePaid: null, advanceRazorpayPaymentId: null, balanceRazorpayPaymentId: null,
+      advancePaid: null, advanceRazorpayPaymentId: null, balanceRazorpayPaymentId: null, payoutStage: null, payoutReference: null, recipientUpiId: null,
     };
   }
 
@@ -102,6 +146,7 @@ async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData 
       advancePaid: Number(d.advance_paid_amount ?? 0) > 0 ? Number(d.advance_paid_amount) : null,
       advanceRazorpayPaymentId: d.advance_razorpay_payment_id as string | null,
       balanceRazorpayPaymentId: d.razorpay_payment_id as string | null,
+      payoutStage: null, payoutReference: null, recipientUpiId: null,
     };
   }
 
@@ -126,7 +171,7 @@ async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData 
       razorpayPaymentId: d.razorpay_payment_id as string | null,
       razorpayOrderId: d.razorpay_order_id as string | null,
       lineItems: items.length > 0 ? items : null,
-      advancePaid: null, advanceRazorpayPaymentId: null, balanceRazorpayPaymentId: null,
+      advancePaid: null, advanceRazorpayPaymentId: null, balanceRazorpayPaymentId: null, payoutStage: null, payoutReference: null, recipientUpiId: null,
     };
   }
 
@@ -150,13 +195,13 @@ async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData 
     razorpayPaymentId: d.razorpay_payment_id as string | null,
     razorpayOrderId: d.razorpay_order_id as string | null,
     lineItems: items.length > 0 ? items : null,
-    advancePaid: null, advanceRazorpayPaymentId: null, balanceRazorpayPaymentId: null,
+    advancePaid: null, advanceRazorpayPaymentId: null, balanceRazorpayPaymentId: null, payoutStage: null, payoutReference: null, recipientUpiId: null,
   };
 }
 
 function ReceiptPage() {
   const { type, id } = Route.useParams();
-  const receiptType = (type === "worker" || type === "vendor" || type === "profile" ? type : "hall") as ReceiptType;
+  const receiptType = (type === "worker" || type === "vendor" || type === "profile" || type === "venue-payout" ? type : "hall") as ReceiptType;
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["receipt", receiptType, id],
@@ -201,15 +246,30 @@ function ReceiptPage() {
           {data.eventName && (<><dt className="text-muted-foreground">Event</dt><dd className="text-right font-medium">{data.eventName}</dd></>)}
           {data.eventDate && (<><dt className="text-muted-foreground">Event date</dt><dd className="text-right font-medium">{new Date(data.eventDate).toLocaleDateString("en-IN", { dateStyle: "long" })}</dd></>)}
 
-          <dt className="text-muted-foreground">Razorpay order ID</dt>
-          <dd className="text-right font-mono text-xs">{data.razorpayOrderId ?? "—"}</dd>
-
-          <dt className="text-muted-foreground">Razorpay payment ID</dt>
-          <dd className="text-right font-mono text-xs">{data.balanceRazorpayPaymentId ?? data.razorpayPaymentId ?? "—"}</dd>
-          {data.advancePaid != null && (
+          {data.payoutStage ? (
             <>
-              <dt className="text-muted-foreground">Advance payment ID</dt>
-              <dd className="text-right font-mono text-xs">{data.advanceRazorpayPaymentId ?? "—"}</dd>
+              <dt className="text-muted-foreground">Payment stage</dt>
+              <dd className="text-right font-medium">{data.payoutStage === "advance" ? "Advance" : data.payoutStage === "balance" ? "Balance" : "Full settlement"}</dd>
+
+              <dt className="text-muted-foreground">Pay via UPI</dt>
+              <dd className="text-right font-mono text-xs">{data.recipientUpiId ?? "—"}</dd>
+
+              <dt className="text-muted-foreground">Payout reference</dt>
+              <dd className="text-right font-mono text-xs">{data.payoutReference ?? "—"}</dd>
+            </>
+          ) : (
+            <>
+              <dt className="text-muted-foreground">Razorpay order ID</dt>
+              <dd className="text-right font-mono text-xs">{data.razorpayOrderId ?? "—"}</dd>
+
+              <dt className="text-muted-foreground">Razorpay payment ID</dt>
+              <dd className="text-right font-mono text-xs">{data.balanceRazorpayPaymentId ?? data.razorpayPaymentId ?? "—"}</dd>
+              {data.advancePaid != null && (
+                <>
+                  <dt className="text-muted-foreground">Advance payment ID</dt>
+                  <dd className="text-right font-mono text-xs">{data.advanceRazorpayPaymentId ?? "—"}</dd>
+                </>
+              )}
             </>
           )}
         </dl>
@@ -229,13 +289,18 @@ function ReceiptPage() {
               <div className="flex justify-between text-muted-foreground"><span>Balance paid now</span><span>₹{(data.amount - data.advancePaid).toLocaleString("en-IN")}</span></div>
             </div>
           )}
-          <div className="flex justify-between"><span className="text-muted-foreground">Amount paid{data.advancePaid != null ? " (total)" : ""}</span><span className="font-semibold">₹{data.amount.toLocaleString("en-IN")}</span></div>
-          {data.commission > 0 && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">{data.payoutStage ? "Collected from customer (this stage)" : `Amount paid${data.advancePaid != null ? " (total)" : ""}`}</span>
+            <span className="font-semibold">₹{data.amount.toLocaleString("en-IN")}</span>
+          </div>
+          {data.commission > 0 ? (
             <>
               <div className="flex justify-between text-muted-foreground"><span>Platform fee</span><span>− ₹{data.commission.toLocaleString("en-IN")}</span></div>
               <div className="flex justify-between font-semibold"><span>Net to {data.counterpartyLabel}</span><span>₹{netPayout.toLocaleString("en-IN")}</span></div>
             </>
-          )}
+          ) : data.payoutStage === "balance" ? (
+            <div className="flex justify-between text-muted-foreground"><span>Platform fee</span><span>₹0 — already collected on the advance</span></div>
+          ) : null}
         </div>
 
         <p className="mt-8 text-center text-[11px] text-muted-foreground">This is a system-generated receipt from EventOrbit Nova and does not require a signature.</p>
