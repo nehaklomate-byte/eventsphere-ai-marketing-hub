@@ -30,6 +30,7 @@ type Row = {
   price_breakdown: PriceLine[]; // hall only — set by the venue owner alongside the price (src/lib/venue.ts)
   status: string;
   payment_status: string;
+  decline_reason: string | null; // hall only — why the venue owner declined/cancelled (src/lib/venue.ts)
 };
 
 /** Everything the customer booked — venue bookings AND the vendors/workers
@@ -51,6 +52,7 @@ async function fetchAllBookings(userId: string): Promise<Row[]> {
       advance_paid_amount: Number((b as { advance_paid_amount?: number | null }).advance_paid_amount ?? 0),
       price_breakdown: ((b.details as Record<string, unknown> | null)?.price_breakdown as PriceLine[] | undefined) ?? [],
       status: b.status, payment_status: b.payment_status,
+      decline_reason: (b as { decline_reason?: string | null }).decline_reason ?? null,
     });
   }
   for (const t of workerTasks.data ?? []) {
@@ -59,6 +61,7 @@ async function fetchAllBookings(userId: string): Promise<Row[]> {
       event_date: t.event_date, requested_event_date: null,
       amount: Number(t.payment_amount ?? 0), advance_amount: 0, advance_paid_amount: 0, price_breakdown: [],
       status: t.status, payment_status: t.payment_status ?? "pending",
+      decline_reason: (t as { rejection_reason?: string | null }).rejection_reason ?? null,
     });
   }
   for (const t of vendorTasks.data ?? []) {
@@ -67,6 +70,7 @@ async function fetchAllBookings(userId: string): Promise<Row[]> {
       event_date: t.event_date, requested_event_date: null,
       amount: Number(t.payment_amount ?? 0), advance_amount: 0, advance_paid_amount: 0, price_breakdown: [],
       status: t.status, payment_status: t.payment_status ?? "pending",
+      decline_reason: (t as { rejection_reason?: string | null }).rejection_reason ?? null,
     });
   }
   return rows.sort((a, b) => (b.event_date ?? "").localeCompare(a.event_date ?? ""));
@@ -190,7 +194,12 @@ function BookingsPage() {
                       </button>
                     )}
                   </td>
-                  <td className="px-4 py-3 capitalize">{b.status.replace(/_/g, " ")}</td>
+                  <td className="px-4 py-3 capitalize">
+                    {b.status.replace(/_/g, " ")}
+                    {(b.status === "cancelled" || b.status === "rejected") && b.decline_reason && (
+                      <div className="mt-0.5 text-[11px] normal-case text-rose-600">{b.decline_reason}</div>
+                    )}
+                  </td>
                   <td className="px-4 py-3 capitalize">{b.payment_status}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
