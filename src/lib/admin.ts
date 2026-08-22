@@ -383,6 +383,15 @@ export type PayoutRow = {
   recipientName: string;
   recipientUpiId: string | null; // null = they haven't set it yet, admin has nowhere to send this
   notes: string | null; // set by the refund-sync trigger when auto-cancelled/clawback_required
+  // Hall bookings only (migration 20260823090000): a booking can have
+  // an 'advance' payout row AND a separate 'balance' row, so `stage`
+  // is what tells them apart in the UI — never merge these, they're
+  // two different payment events for the same booking. grossAmount/
+  // commissionAmount are the stage's OWN numbers (not re-derived from
+  // the booking), so the receipt for this exact row is self-contained.
+  stage: "advance" | "balance" | "full" | null;
+  grossAmount: number | null;
+  commissionAmount: number | null;
 };
 
 /** What the platform owes out to workers, vendors, and venue owners —
@@ -410,7 +419,7 @@ export async function fetchPayouts(): Promise<PayoutRow[]> {
     // (silently emptying this whole screen). Fetch profiles separately
     // by id instead and merge client-side.
     supabase.from("venue_payouts" as never)
-      .select("id, amount, status, payout_reference, paid_at, created_at, notes, booking_id, hall_owner_id, customer_bookings:booking_id(target_name)" as never)
+      .select("id, amount, status, payout_reference, paid_at, created_at, notes, booking_id, hall_owner_id, stage, gross_amount, commission_amount, customer_bookings:booking_id(target_name)" as never)
       .order("created_at" as never, { ascending: false }),
   ]);
   if (workers.error) throw workers.error;
@@ -420,7 +429,9 @@ export async function fetchPayouts(): Promise<PayoutRow[]> {
   type Base = { id: string; amount: number; status: "pending" | "paid" | "cancelled" | "clawback_required"; payout_reference: string | null; paid_at: string | null; created_at: string; notes: string | null };
   type WorkerRow = Base & { worker_tasks: { event_name: string; task_name: string } | null; workers: { full_name: string; payout_upi_id: string | null } | null };
   type VendorRow = Base & { vendor_tasks: { event_name: string; task_name: string } | null; vendors: { business_name: string; payout_upi_id: string | null } | null };
-  type VenueRow = Base & { hall_owner_id: string; customer_bookings: { target_name: string } | null };
+  type VenueRow = Base & { hall_owner_id: string; stage: "advance" | "balance" | "full"; gross_amount: number | null; commission_amount: number | null; customer_bookings: { target_name: string } | null };
+
+  const STAGE_LABEL: Record<"advance" | "balance" | "full", string> = { advance: "Advance", balance: "Balance", full: "Full settlement" };
 
   const venueRows = (venues.data as unknown as VenueRow[]) ?? [];
   const ownerIds = [...new Set(venueRows.map((r) => r.hall_owner_id).filter(Boolean))];
@@ -433,14 +444,23 @@ export async function fetchPayouts(): Promise<PayoutRow[]> {
 
   const out: PayoutRow[] = [];
   for (const r of (workers.data as unknown as WorkerRow[]) ?? []) {
-    out.push({ id: r.id, source: "worker", title: r.worker_tasks ? `${r.worker_tasks.event_name} — ${r.worker_tasks.task_name}` : "Worker task", amount: r.amount, status: r.status, payout_reference: r.payout_reference, paid_at: r.paid_at, created_at: r.created_at, recipientName: r.workers?.full_name ?? "Worker", recipientUpiId: r.workers?.payout_upi_id ?? null, notes: r.notes });
+    out.push({ id: r.id, source: "worker", title: r.worker_tasks ? `${r.worker_tasks.event_name} — ${r.worker_tasks.task_name}` : "Worker task", amount: r.amount, status: r.status, payout_reference: r.payout_reference, paid_at: r.paid_at, created_at: r.created_at, recipientName: r.workers?.full_name ?? "Worker", recipientUpiId: r.workers?.payout_upi_id ?? null, notes: r.notes, stage: null, grossAmount: null, commissionAmount: null });
   }
   for (const r of (vendors.data as unknown as VendorRow[]) ?? []) {
-    out.push({ id: r.id, source: "vendor", title: r.vendor_tasks ? `${r.vendor_tasks.event_name} — ${r.vendor_tasks.task_name}` : "Vendor task", amount: r.amount, status: r.status, payout_reference: r.payout_reference, paid_at: r.paid_at, created_at: r.created_at, recipientName: r.vendors?.business_name ?? "Vendor", recipientUpiId: r.vendors?.payout_upi_id ?? null, notes: r.notes });
+    out.push({ id: r.id, source: "vendor", title: r.vendor_tasks ? `${r.vendor_tasks.event_name} — ${r.vendor_tasks.task_name}` : "Vendor task", amount: r.amount, status: r.status, payout_reference: r.payout_reference, paid_at: r.paid_at, created_at: r.created_at, recipientName: r.vendors?.business_name ?? "Vendor", recipientUpiId: r.vendors?.payout_upi_id ?? null, notes: r.notes, stage: null, grossAmount: null, commissionAmount: null });
   }
   for (const r of venueRows) {
     const profile = profileById.get(r.hall_owner_id);
-    out.push({ id: r.id, source: "venue", title: r.customer_bookings ? r.customer_bookings.target_name : "Hall booking", amount: r.amount, status: r.status, payout_reference: r.payout_reference, paid_at: r.paid_at, created_at: r.created_at, recipientName: profile?.full_name ?? "Venue owner", recipientUpiId: profile?.payout_upi_id ?? null, notes: r.notes });
+    const bookingName = r.customer_bookings ? r.customer_bookings.target_name : "Hall booking";
+    // Stage suffix keeps a booking's advance and balance payouts from
+    // ever reading as the same line — each is its own row, own amount,
+    // own "mark as paid", own receipt.
+    out.push({
+      id: r.id, source: "venue", title: `${bookingName} — ${STAGE_LABEL[r.stage] ?? "Full settlement"}`,
+      amount: r.amount, status: r.status, payout_reference: r.payout_reference, paid_at: r.paid_at, created_at: r.created_at,
+      recipientName: profile?.full_name ?? "Venue owner", recipientUpiId: profile?.payout_upi_id ?? null, notes: r.notes,
+      stage: r.stage ?? "full", grossAmount: r.gross_amount, commissionAmount: r.commission_amount,
+    });
   }
   return out.sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
@@ -532,8 +552,17 @@ export async function fetchEventFinancials(): Promise<EventFinancialRow[]> {
   type VendorTaskRow = TaskRow & { vendor: { business_name: string } | null };
   type WorkerTaskRow = TaskRow & { worker: { full_name: string } | null };
 
+  // A hall booking can now have TWO venue_payouts rows (advance +
+  // balance, migration 20260823090000) — pick the most "unresolved"
+  // one to represent the booking here rather than whichever happened
+  // to be read last, so a booking with a paid advance but a still-
+  // pending balance correctly shows as pending, not paid.
+  const PAYOUT_STATUS_RANK: Record<string, number> = { pending: 0, clawback_required: 1, cancelled: 2, paid: 3 };
   const venuePayoutStatus = new Map<string, string>();
-  for (const p of ((venuePayouts.data as unknown as { booking_id: string; status: string }[]) ?? [])) venuePayoutStatus.set(p.booking_id, p.status);
+  for (const p of ((venuePayouts.data as unknown as { booking_id: string; status: string }[]) ?? [])) {
+    const current = venuePayoutStatus.get(p.booking_id);
+    if (!current || (PAYOUT_STATUS_RANK[p.status] ?? 3) < (PAYOUT_STATUS_RANK[current] ?? 3)) venuePayoutStatus.set(p.booking_id, p.status);
+  }
   const vendorPayoutStatus = new Map<string, string>();
   for (const p of ((vendorPayouts.data as unknown as { vendor_task_id: string; status: string }[]) ?? [])) vendorPayoutStatus.set(p.vendor_task_id, p.status);
   const workerPayoutStatus = new Map<string, string>();
