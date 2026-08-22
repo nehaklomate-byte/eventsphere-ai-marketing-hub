@@ -296,6 +296,7 @@ function PayoutsTable({ rows, isLoading, adminUserId, onPaid }: { rows: PayoutRo
               <th className="px-5 py-3">Amount</th>
               <th className="px-5 py-3">Status</th>
               <th className="px-5 py-3">Reference</th>
+              <th className="px-5 py-3">Receipt</th>
               <th className="px-5 py-3"></th>
             </tr>
           </thead>
@@ -306,6 +307,8 @@ function PayoutsTable({ rows, isLoading, adminUserId, onPaid }: { rows: PayoutRo
                   <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold capitalize ${SOURCE_STYLE[r.source]}`}>{r.source}</span>
                   <div className="mt-1 font-medium">{r.recipientName}</div>
                 </td>
+                {/* title already carries " — Advance"/" — Balance"/" — Full settlement" for venue
+                    rows (see fetchPayouts), so two payouts for the same booking never read as one line. */}
                 <td className="px-5 py-3 font-medium">{r.title}</td>
                 <td className="px-5 py-3">
                   {r.recipientUpiId ? (
@@ -327,6 +330,14 @@ function PayoutsTable({ rows, isLoading, adminUserId, onPaid }: { rows: PayoutRo
                   )}
                 </td>
                 <td className="px-5 py-3 text-muted-foreground text-xs">{r.payout_reference || "—"}</td>
+                <td className="px-5 py-3">
+                  {r.source === "venue" && r.status === "paid" && (
+                    <Link to="/receipt/$type/$id" params={{ type: "venue-payout", id: r.id }} target="_blank"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-brand-violet hover:underline">
+                      <Download className="h-3.5 w-3.5" /> View
+                    </Link>
+                  )}
+                </td>
                 <td className="px-5 py-3">
                   {r.status === "pending" && (
                     <button onClick={() => { setMarking(r); setReference(""); }} className="rounded-full border border-input px-3 py-1.5 text-xs font-semibold hover:bg-accent">
