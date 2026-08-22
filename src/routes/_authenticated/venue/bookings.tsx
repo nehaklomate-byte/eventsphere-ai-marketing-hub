@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CalendarCheck, Check, X, Loader2, IndianRupee, Eye, Download, Ban, Users, HardHat, Store, Receipt } from "lucide-react";
-import { fetchMyHalls, fetchHallBookings, updateBookingStatus, confirmBookingWithPricing, resolveHallBasePrice, type HallBooking, type PriceLine, type Hall } from "@/lib/venue";
+import { fetchMyHalls, fetchHallBookings, updateBookingStatus, declineHallBooking, confirmBookingWithPricing, resolveHallBasePrice, type HallBooking, type PriceLine, type Hall } from "@/lib/venue";
 import { notifyUsers } from "@/lib/push";
 import { downloadCsv } from "@/lib/admin";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +29,9 @@ function BookingsPage() {
   const [teamFor, setTeamFor] = useState<string | null>(null);
   const [pricingFor, setPricingFor] = useState<HallBooking | null>(null);
   const [pricingError, setPricingError] = useState<string | null>(null);
+  const [declineFor, setDeclineFor] = useState<HallBooking | null>(null);
+  const [declineReason, setDeclineReason] = useState("");
+  const [declineError, setDeclineError] = useState<string | null>(null);
   const { data: halls } = useQuery({ queryKey: ["venue-halls"], queryFn: fetchMyHalls });
   const hallIds = (halls ?? []).map((h) => h.id);
   const hallById = new Map((halls ?? []).map((h) => [h.id, h]));
@@ -74,6 +77,27 @@ function BookingsPage() {
       // easy to miss (auto-dismisses, and can render off-screen on some
       // mobile browsers), which is what made this look like "the button
       // does nothing" when it was actually failing with a real reason.
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  // Let the customer know exactly why their request was declined or
+  // their booking cancelled, instead of just seeing "cancelled" with
+  // no explanation (see declineHallBooking in src/lib/venue.ts and
+  // the notify_hall_booking_declined trigger).
+  async function decline(booking: HallBooking, reason: string) {
+    setDeclineError(null);
+    if (!reason.trim()) { setDeclineError("Please add a reason so the customer understands"); return; }
+    setBusyId(booking.id);
+    try {
+      await declineHallBooking(booking.id, reason.trim());
+      toast.success(booking.status === "pending" ? "Request declined" : "Booking cancelled");
+      qc.invalidateQueries({ queryKey: ["venue-bookings"] });
+      setDeclineFor(null);
+      setDeclineReason("");
+    } catch (e) {
+      setDeclineError(e instanceof Error ? e.message : "Failed to update");
     } finally {
       setBusyId(null);
     }
@@ -139,6 +163,9 @@ function BookingsPage() {
                     <span className="capitalize">Payment: {b.payment_status}</span>
                   </div>
                   {b.notes && <p className="mt-2 text-sm text-foreground/80">{b.notes}</p>}
+                  {b.status === "cancelled" && b.decline_reason && (
+                    <p className="mt-2 text-sm text-rose-600">Reason given: {b.decline_reason}</p>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap gap-2">
@@ -172,7 +199,7 @@ function BookingsPage() {
                       </button>
                       <button
                         disabled={busyId === b.id}
-                        onClick={() => setStatus(b.id, "cancelled")}
+                        onClick={() => { setDeclineFor(b); setDeclineReason(""); setDeclineError(null); }}
                         className="flex items-center gap-1.5 rounded-full bg-rose-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
                       >
                         <X className="h-3.5 w-3.5" /> Decline
@@ -199,7 +226,7 @@ function BookingsPage() {
                       </button>
                       <button
                         disabled={busyId === b.id}
-                        onClick={() => setStatus(b.id, "cancelled")}
+                        onClick={() => { setDeclineFor(b); setDeclineReason(""); setDeclineError(null); }}
                         className="flex items-center gap-1.5 rounded-full border border-rose-300 px-3.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 disabled:opacity-50"
                       >
                         <Ban className="h-3.5 w-3.5" /> Cancel booking
@@ -215,6 +242,39 @@ function BookingsPage() {
       )}
 
       {detailsFor && <BookingDetailsModal booking={detailsFor} onClose={() => setDetailsFor(null)} />}
+      {declineFor && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onClick={() => setDeclineFor(null)}>
+          <div className="w-full max-w-md rounded-2xl bg-card p-6 shadow-elegant" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold">{declineFor.status === "pending" ? "Decline this request" : "Cancel this booking"}</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              This is shared with the customer so they understand why — please give a real reason.
+            </p>
+            <textarea
+              value={declineReason}
+              onChange={(e) => setDeclineReason(e.target.value)}
+              rows={4}
+              className="mt-3 w-full rounded-xl border border-input bg-background p-3 text-sm"
+              placeholder="e.g. Dates already booked for another event"
+            />
+            {declineError && (
+              <div role="alert" className="mt-2 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                {declineError}
+              </div>
+            )}
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setDeclineFor(null)} className="rounded-full border border-border px-4 py-2 text-sm font-medium">Never mind</button>
+              <button
+                disabled={busyId === declineFor.id}
+                onClick={() => decline(declineFor, declineReason)}
+                className="inline-flex items-center gap-2 rounded-full bg-rose-600 text-white px-4 py-2 text-sm font-semibold hover:bg-rose-700 disabled:opacity-50"
+              >
+                {busyId === declineFor.id && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                {declineFor.status === "pending" ? "Decline request" : "Cancel booking"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {pricingFor && (
         <PricingModal
           booking={pricingFor}
@@ -429,6 +489,7 @@ function BookingDetailsModal({ booking, onClose }: { booking: HallBooking; onClo
     ],
     ["Special instructions", booking.notes],
     ["Status", booking.status],
+    ...(booking.status === "cancelled" && booking.decline_reason ? [["Decline/cancel reason", booking.decline_reason] as [string, unknown]] : []),
   ];
 
   function printThis() {
