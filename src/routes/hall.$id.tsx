@@ -392,7 +392,7 @@ function HallDetail() {
             <ServiceOfferings serviceOfferings={hall.service_offerings} />
             <div className="mt-6 space-y-2.5">
               <Link
-                to="/hall/$id/book"
+                to="/hall-book/$id"
                 params={{ id: hall.id }}
                 search={{ event_id, ref, mode: "booking" }}
                 className="w-full inline-flex items-center justify-center gap-2 rounded-full btn-brand btn-brand-hover px-4 py-3 text-sm font-semibold"
@@ -400,7 +400,7 @@ function HallDetail() {
                 Book Now
               </Link>
               <Link
-                to="/hall/$id/book"
+                to="/hall-book/$id"
                 params={{ id: hall.id }}
                 search={{ event_id, ref, mode: "enquiry" }}
                 className="w-full inline-flex items-center justify-center gap-2 rounded-full border border-input px-4 py-3 text-sm font-semibold hover:bg-accent"
@@ -508,7 +508,7 @@ export function facilityList(f: Record<string, boolean>, parkingSlots: number | 
  * separately (from the vendor marketplace) — see venue's "Services"
  * profile section for the in_house/price/options setup per category.
  * The full booking/enquiry form now lives on its own page
- * (/hall/$id/book, see HallBookingForm.tsx) — this summary chip list
+ * (/hall-book/$id, see HallBookingForm.tsx) — this summary chip list
  * is all that stays here.
  * ============================================================ */
 function ServiceOfferings({ serviceOfferings }: { serviceOfferings: ServiceOfferingMap }) {
