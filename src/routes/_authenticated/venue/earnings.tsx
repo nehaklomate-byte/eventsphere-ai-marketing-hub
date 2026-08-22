@@ -19,7 +19,16 @@ type PayoutRow = {
   created_at: string;
   target_name: string;
   event_date: string | null;
+  // A booking can now show up as TWO rows here — its advance and its
+  // balance (migration 20260823090000) — each with its own gross/
+  // commission/net, so they're never confused with each other or with
+  // another booking. `stage` is what tells them apart in the table.
+  stage: "advance" | "balance" | "full";
+  gross_amount: number | null;
+  commission_amount: number | null;
 };
+
+const STAGE_LABEL: Record<PayoutRow["stage"], string> = { advance: "Advance", balance: "Balance", full: "Full settlement" };
 
 // Same pattern as worker/vendor earnings: a customer paying for a
 // booking (customer_bookings.payment_status = 'paid') only means the
@@ -30,7 +39,7 @@ type PayoutRow = {
 async function fetchMyPayouts(userId: string): Promise<PayoutRow[]> {
   const { data: payouts, error } = await supabase
     .from("venue_payouts" as never)
-    .select("id,booking_id,amount,status,payout_reference,paid_at,created_at")
+    .select("id,booking_id,amount,status,payout_reference,paid_at,created_at,stage,gross_amount,commission_amount")
     .eq("hall_owner_id" as never, userId as never)
     .order("created_at" as never, { ascending: false });
   if (error) throw error;
@@ -91,6 +100,7 @@ function EarningsPage() {
                   <th className="px-5 py-3 text-left font-semibold">Event date</th>
                   <th className="px-5 py-3 text-left font-semibold">Status</th>
                   <th className="px-5 py-3 text-left font-semibold">Reference</th>
+                  <th className="px-5 py-3 text-right font-semibold">Customer paid / Commission</th>
                   <th className="px-5 py-3 text-right font-semibold">Amount (net)</th>
                   <th className="px-5 py-3 text-right font-semibold">Receipt</th>
                 </tr>
@@ -98,7 +108,10 @@ function EarningsPage() {
               <tbody>
                 {payouts.map((p) => (
                   <tr key={p.id} className="border-t border-border">
-                    <td className="px-5 py-3 font-medium">{p.target_name}</td>
+                    <td className="px-5 py-3 font-medium">
+                      {p.target_name}
+                      <span className="ml-1.5 rounded-full bg-brand-violet/10 text-brand-violet px-2 py-0.5 text-[10px] font-semibold align-middle">{STAGE_LABEL[p.stage]}</span>
+                    </td>
                     <td className="px-5 py-3 text-muted-foreground">{p.event_date ? new Date(`${p.event_date}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}</td>
                     <td className="px-5 py-3">
                       <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${p.status === "paid" ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20" : "bg-amber-500/10 text-amber-700 border-amber-500/20"}`}>
@@ -106,10 +119,14 @@ function EarningsPage() {
                       </span>
                     </td>
                     <td className="px-5 py-3 text-muted-foreground font-mono text-xs">{p.payout_reference ?? "—"}</td>
+                    <td className="px-5 py-3 text-right text-muted-foreground text-xs">
+                      ₹{Number(p.gross_amount ?? 0).toLocaleString("en-IN")}
+                      {p.commission_amount ? <span> (− ₹{Number(p.commission_amount).toLocaleString("en-IN")})</span> : null}
+                    </td>
                     <td className="px-5 py-3 text-right font-semibold">₹{Number(p.amount || 0).toLocaleString("en-IN")}</td>
                     <td className="px-5 py-3 text-right">
                       {p.status === "paid" ? (
-                        <Link to="/receipt/$type/$id" params={{ type: "hall", id: p.booking_id }} target="_blank"
+                        <Link to="/receipt/$type/$id" params={{ type: "venue-payout", id: p.id }} target="_blank"
                           className="inline-flex items-center gap-1 text-xs font-semibold text-brand-violet hover:underline">
                           <Download className="h-3.5 w-3.5" /> Download
                         </Link>
