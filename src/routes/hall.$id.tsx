@@ -55,15 +55,24 @@ export const Route = createFileRoute("/hall/$id")({
     event_id: typeof search.event_id === "string" ? search.event_id : undefined,
     ref: typeof search.ref === "string" ? search.ref : undefined,
   }),
-  head: ({ params }) => ({
-    meta: [
-      { title: `Venue details — EventOrbit Nova` },
-      { name: "description", content: "Verified venue on EventOrbit Nova. See capacity, facilities, pricing and availability." },
-      { property: "og:title", content: "Venue on EventOrbit Nova" },
-      { property: "og:url", content: `/hall/${params.id}` },
-    ],
-    links: [{ rel: "canonical", href: `/hall/${params.id}` }],
-  }),
+  head: ({ params, loaderData }) => {
+    const hall = loaderData?.hall;
+    const title = hall ? `${hall.name} — EventOrbit Nova` : "Venue details — EventOrbit Nova";
+    const description = hall
+      ? `Book ${hall.name}${hall.city ? ` in ${hall.city}` : ""} on EventOrbit Nova — verified capacity, facilities, pricing and availability.`
+      : "Verified venue on EventOrbit Nova. See capacity, facilities, pricing and availability.";
+    return {
+      meta: [
+        { title },
+        { name: "description", content: description },
+        { property: "og:title", content: hall ? hall.name : "Venue on EventOrbit Nova" },
+        { property: "og:description", content: description },
+        ...(hall?.cover_url ? [{ property: "og:image", content: hall.cover_url }] : []),
+        { property: "og:url", content: `/hall/${params.id}` },
+      ],
+      links: [{ rel: "canonical", href: `/hall/${params.id}` }],
+    };
+  },
   loader: async ({ params }) => {
     const { data, error } = await supabase.from("halls")
       .select("*")
