@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CalendarCheck, Check, X, Loader2, IndianRupee, Eye, Download, Ban, Users, HardHat, Store, Receipt } from "lucide-react";
-import { fetchMyHalls, fetchHallBookings, updateBookingStatus, declineHallBooking, confirmBookingWithPricing, resolveHallBasePrice, type HallBooking, type PriceLine, type Hall } from "@/lib/venue";
+import { fetchMyHalls, fetchHallBookings, updateBookingStatus, declineHallBooking, confirmBookingWithPricing, resolveHallBasePrice, resolveRescheduleRequest, type HallBooking, type PriceLine, type Hall } from "@/lib/venue";
 import { notifyUsers } from "@/lib/push";
 import { downloadCsv } from "@/lib/admin";
 import { supabase } from "@/integrations/supabase/client";
@@ -50,6 +50,25 @@ function BookingsPage() {
       qc.invalidateQueries({ queryKey: ["venue-bookings"] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to update");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function respondToReschedule(booking: HallBooking, accept: boolean) {
+    setBusyId(booking.id);
+    try {
+      await resolveRescheduleRequest(booking, accept);
+      if (accept) {
+        notifyUsers([booking.user_id], "Reschedule approved", `"${booking.target_name}" is now confirmed for ${booking.requested_event_date}.`, "/customer/bookings");
+        toast.success(`Moved to ${booking.requested_event_date}.`);
+      } else {
+        notifyUsers([booking.user_id], "Reschedule declined", `The venue couldn't move "${booking.target_name}" — it stays on ${booking.event_date}.`, "/customer/bookings");
+        toast.success("Kept the original date — the customer's been notified.");
+      }
+      qc.invalidateQueries({ queryKey: ["venue-bookings"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not update the date");
     } finally {
       setBusyId(null);
     }
@@ -165,6 +184,24 @@ function BookingsPage() {
                   {b.notes && <p className="mt-2 text-sm text-foreground/80">{b.notes}</p>}
                   {b.status === "cancelled" && b.decline_reason && (
                     <p className="mt-2 text-sm text-rose-600">Reason given: {b.decline_reason}</p>
+                  )}
+                  {b.status === "reschedule_requested" && b.requested_event_date && (
+                    <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-orange-200 dark:border-orange-900 bg-orange-50 dark:bg-orange-950/20 px-4 py-3">
+                      <p className="text-sm">
+                        Customer wants to move this from <span className="font-semibold">{b.event_date}</span> to{" "}
+                        <span className="font-semibold">{b.requested_event_date}</span>.
+                      </p>
+                      <div className="flex gap-2">
+                        <button disabled={busyId === b.id} onClick={() => respondToReschedule(b, true)}
+                          className="flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
+                          {busyId === b.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} Accept new date
+                        </button>
+                        <button disabled={busyId === b.id} onClick={() => respondToReschedule(b, false)}
+                          className="flex items-center gap-1.5 rounded-full border border-input px-3 py-1.5 text-xs font-semibold hover:bg-accent disabled:opacity-50">
+                          <X className="h-3.5 w-3.5" /> Keep original date
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
 
