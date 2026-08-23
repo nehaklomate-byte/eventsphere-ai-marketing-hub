@@ -119,10 +119,16 @@ function HireWorkersPage() {
                   </div>
                 )}
               </div>
-              <button onClick={() => setHireTarget(w)}
-                className="mt-4 inline-flex items-center justify-center gap-1.5 rounded-full btn-brand btn-brand-hover px-3.5 py-2 text-xs font-semibold text-white">
-                <Send className="h-3.5 w-3.5" /> Send booking request
-              </button>
+              <div className="mt-4 flex gap-2">
+                <Link to="/worker/$id" params={{ id: w.id }} target="_blank"
+                  className="flex-1 inline-flex items-center justify-center rounded-full border border-input px-3.5 py-2 text-xs font-semibold hover:bg-accent">
+                  View full profile
+                </Link>
+                <button onClick={() => setHireTarget(w)}
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-full btn-brand btn-brand-hover px-3.5 py-2 text-xs font-semibold text-white">
+                  <Send className="h-3.5 w-3.5" /> Send request
+                </button>
+              </div>
             </article>
           ))}
         </div>
@@ -248,9 +254,11 @@ function HirePanel({ worker, bookings, userId, onClose }: {
   const [form, setForm] = useState({
     event_name: "", task_name: "", booking_id: activeBookings[0]?.id ?? "", event_date: activeBookings[0]?.event_date ?? "", start_time: "", end_time: "", pay_amount: "", advance_amount: "",
   });
+  const [formError, setFormError] = useState<string | null>(null);
 
   const mutation = useMutation({
     mutationFn: async () => {
+      setFormError(null);
       if (!form.task_name.trim() || !form.event_date) {
         throw new Error("Task and date are required.");
       }
@@ -282,7 +290,11 @@ function HirePanel({ worker, bookings, userId, onClose }: {
       notifyUsers([worker.owner_id], "New booking request", `You've been requested for "${form.task_name.trim()}" — check Jobs to accept.`, "/worker/jobs");
     },
     onSuccess: () => { toast.success("Booking request sent!"); qc.invalidateQueries({ queryKey: ["verified-workers"] }); onClose(); },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to send request"),
+    onError: (e) => {
+      const msg = e instanceof Error ? e.message : "Failed to send request";
+      toast.error(msg);
+      setFormError(msg);
+    },
   });
 
   return (
@@ -332,6 +344,11 @@ function HirePanel({ worker, bookings, userId, onClose }: {
               className="w-full rounded-xl border border-input bg-background pl-9 pr-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
           </div>
         </div>
+        {formError && (
+          <div role="alert" className="mt-3 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+            <span className="font-semibold">Could not send:</span> {formError}
+          </div>
+        )}
         <button onClick={() => mutation.mutate()} disabled={mutation.isPending}
           className="mt-5 flex w-full items-center justify-center gap-2 rounded-full btn-brand btn-brand-hover px-4 py-2.5 text-sm font-semibold disabled:opacity-70">
           {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Briefcase className="h-4 w-4" />} Send booking request
