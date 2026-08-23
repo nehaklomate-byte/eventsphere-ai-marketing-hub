@@ -17,6 +17,8 @@ import {
 import { listFactors, enrollTotp, verifyEnrollment, unenroll } from "@/lib/mfa";
 import { ProfileHistoryPanel } from "@/components/ProfileHistoryPanel";
 import { submitComplaint } from "@/lib/support";
+import { AttachmentUpload, type Attachment } from "@/components/AttachmentUpload";
+import { EmojiPicker } from "@/components/EmojiPicker";
 
 const TABS = ["basic", "security", "privacy", "notifications", "support"] as const;
 type Tab = (typeof TABS)[number];
@@ -416,6 +418,7 @@ function PrivacyTab({ profile, userId, onSaved }: { profile: AccountProfile; use
 function SupportTab({ userId }: { userId: string }) {
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
 
@@ -424,8 +427,8 @@ function SupportTab({ userId }: { userId: string }) {
     setBusy(true);
     try {
       const { data: prof } = await supabase.from("profiles").select("primary_role").eq("id", userId).maybeSingle();
-      await submitComplaint({ userId, role: (prof as { primary_role?: string } | null)?.primary_role ?? "", subject: subject.trim(), description: description.trim() });
-      setSent(true); setSubject(""); setDescription("");
+      await submitComplaint({ userId, role: (prof as { primary_role?: string } | null)?.primary_role ?? "", subject: subject.trim(), description: description.trim(), attachments });
+      setSent(true); setSubject(""); setDescription(""); setAttachments([]);
       toast.success("Complaint submitted — our team will follow up.");
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not submit"); }
     finally { setBusy(false); }
@@ -439,6 +442,12 @@ function SupportTab({ userId }: { userId: string }) {
       </F>
       <F label="Description">
         <textarea className="input min-h-[120px]" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What happened? Include names/dates if relevant." />
+      </F>
+      <div className="flex items-center gap-2">
+        <EmojiPicker onSelect={(e) => setDescription((d) => d + e)} />
+      </div>
+      <F label="Screenshots / documents (optional)">
+        <AttachmentUpload pathPrefix={`complaints/${userId}`} value={attachments} onChange={setAttachments} maxFiles={5} />
       </F>
       <button onClick={submit} disabled={busy} className="inline-flex items-center gap-2 rounded-full btn-brand btn-brand-hover px-5 py-2.5 text-sm font-semibold disabled:opacity-70">
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <AlertTriangle className="h-4 w-4" />} Submit complaint
