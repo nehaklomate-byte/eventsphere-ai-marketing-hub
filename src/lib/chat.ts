@@ -26,6 +26,7 @@ export type Message = {
   id: string;
   conversation_id: string;
   sender_id: string;
+  sender_name: string;
   body: string;
   created_at: string;
   attachments: { url: string; name: string; type: string; size: number }[];
@@ -108,7 +109,30 @@ export async function fetchMessages(conversationId: string): Promise<Message[]> 
     .eq("conversation_id" as never, conversationId as never)
     .order("created_at" as never, { ascending: true });
   if (error) throw error;
-  return (data as unknown as Message[]) ?? [];
+  const rows = (data as unknown as Omit<Message, "sender_name">[]) ?? [];
+  return attachSenderNames(rows);
+}
+
+/** WhatsApp-style sender labels — batch-fetches profiles for whoever
+ * sent messages in this list so the bubble can show who said it. */
+async function attachSenderNames<T extends { sender_id: string }>(rows: T[]): Promise<(T & { sender_name: string })[]> {
+  if (rows.length === 0) return [];
+  const senderIds = Array.from(new Set(rows.map((r) => r.sender_id)));
+  const { data: profs } = await supabase.from("profiles" as never).select("id, full_name, business_name" as never).in("id" as never, senderIds as never);
+  const nameById = new Map(((profs as unknown as { id: string; full_name: string | null; business_name?: string | null }[]) ?? []).map((p) => [p.id, p.full_name || p.business_name || "Someone"]));
+  return rows.map((r) => ({ ...r, sender_name: nameById.get(r.sender_id) ?? "Someone" }));
+}
+
+/** Each conversation participant's last_read_at — used to show a
+ * WhatsApp-style "Seen" mark on messages I sent once the other person
+ * has read past them. */
+export async function fetchConversationReadState(conversationId: string): Promise<{ user_id: string; last_read_at: string | null }[]> {
+  const { data, error } = await supabase
+    .from("conversation_participants" as never)
+    .select("user_id, last_read_at" as never)
+    .eq("conversation_id" as never, conversationId as never);
+  if (error) throw error;
+  return (data as unknown as { user_id: string; last_read_at: string | null }[]) ?? [];
 }
 
 export async function sendMessage(conversationId: string, senderId: string, body: string, attachments: Message["attachments"] = []): Promise<Message> {
@@ -123,7 +147,8 @@ export async function sendMessage(conversationId: string, senderId: string, body
   // badge, toast) is handled separately by a DB trigger on this insert.
   notifyOtherParticipants(conversationId, senderId, body).catch(() => {});
 
-  return data as unknown as Message;
+  const [withName] = await attachSenderNames([data as unknown as Omit<Message, "sender_name">]);
+  return withName;
 }
 
 async function notifyOtherParticipants(conversationId: string, senderId: string, body: string): Promise<void> {
@@ -161,7 +186,9 @@ export function subscribeToMessages(conversationId: string, onMessage: (m: Messa
     .on(
       "postgres_changes" as never,
       { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${conversationId}` } as never,
-      (payload: { new: Message }) => onMessage(payload.new),
+      (payload: { new: Omit<Message, "sender_name"> }) => {
+        attachSenderNames([payload.new]).then(([m]) => onMessage(m));
+      },
     )
     .subscribe();
   return () => { supabase.removeChannel(channel); };
@@ -170,4 +197,19 @@ export function subscribeToMessages(conversationId: string, onMessage: (m: Messa
 export async function totalUnreadCount(userId: string): Promise<number> {
   const conversations = await fetchMyConversations(userId);
   return conversations.reduce((sum, c) => sum + c.unread_count, 0);
+}
+
+/** Live-updates "Seen" ticks: fires whenever any participant's
+ * last_read_at changes in this conversation (i.e. the other person
+ * opened/scrolled the chat). */
+export function subscribeToReadReceipts(conversationId: string, onChange: (row: { user_id: string; last_read_at: string | null }) => void): () => void {
+  const channel = supabase
+    .channel(`read-receipts:${conversationId}`)
+    .on(
+      "postgres_changes" as never,
+      { event: "UPDATE", schema: "public", table: "conversation_participants", filter: `conversation_id=eq.${conversationId}` } as never,
+      (payload: { new: { user_id: string; last_read_at: string | null } }) => onChange(payload.new),
+    )
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
 }
