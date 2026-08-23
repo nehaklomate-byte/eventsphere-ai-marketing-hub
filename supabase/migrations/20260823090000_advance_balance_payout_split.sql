@@ -83,6 +83,7 @@ where cb.id = vp.booking_id and vp.gross_amount is null;
 -- (booking, stage), since a booking can have an advance payout AND a
 -- balance payout.
 alter table public.venue_payouts drop constraint if exists venue_payouts_booking_id_key;
+alter table public.venue_payouts drop constraint if exists venue_payouts_booking_stage_key;
 alter table public.venue_payouts add constraint venue_payouts_booking_stage_key unique (booking_id, stage);
 
 -- 3) The trigger itself — now handles three moments instead of one.
