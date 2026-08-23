@@ -535,6 +535,9 @@ export type JobPosting = {
   pay_type: "hourly" | "daily" | "per_event";
   status: "open" | "closed" | "cancelled";
   created_at: string;
+  // Reference photos/documents for the job (venue layout, uniform
+  // reference, etc.) — migration 20260823110000_attachments_support.sql.
+  attachments: { url: string; name: string; type: string; size: number }[];
 };
 
 export type JobApplication = {
@@ -561,7 +564,7 @@ export async function fetchOrgPostings(orgId: string): Promise<JobPosting[]> {
 
 export async function createJobPosting(
   orgId: string,
-  patch: Omit<JobPosting, "id" | "org_id" | "vendor_id" | "hall_id" | "posted_by" | "slots_filled" | "status" | "created_at">
+  patch: Omit<JobPosting, "id" | "org_id" | "vendor_id" | "hall_id" | "posted_by" | "slots_filled" | "status" | "created_at" | "attachments"> & { attachments?: JobPosting["attachments"] }
 ): Promise<JobPosting> {
   const { data: userData } = await supabase.auth.getUser();
   const { data, error } = await supabase
