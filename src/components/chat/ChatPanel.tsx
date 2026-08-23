@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Send, Loader2, MessageCircle, X } from "lucide-react";
+import { Send, Loader2, MessageCircle, X, Check, CheckCheck } from "lucide-react";
 import { toast } from "sonner";
 import {
-  fetchMessages, sendMessage, markConversationRead, subscribeToMessages, type Message,
+  fetchMessages, sendMessage, markConversationRead, subscribeToMessages, subscribeToReadReceipts,
+  fetchConversationReadState, type Message,
 } from "@/lib/chat";
 import { AttachmentUpload, AttachmentGallery, type Attachment } from "@/components/AttachmentUpload";
 import { EmojiPicker } from "@/components/EmojiPicker";
@@ -20,6 +21,9 @@ export function ChatPanel({ conversationId, userId, otherLabel, onClose }: {
   const [draft, setDraft] = useState("");
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
   const [sending, setSending] = useState(false);
+  // last_read_at of the OTHER participant — everything I sent at or
+  // before this timestamp has been seen, WhatsApp-style.
+  const [otherLastReadAt, setOtherLastReadAt] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const { data: messages = [], isLoading } = useQuery({
@@ -29,11 +33,19 @@ export function ChatPanel({ conversationId, userId, otherLabel, onClose }: {
 
   useEffect(() => {
     markConversationRead(conversationId, userId).catch(() => {});
-    const unsubscribe = subscribeToMessages(conversationId, (m) => {
+    fetchConversationReadState(conversationId).then((rows) => {
+      const other = rows.find((r) => r.user_id !== userId);
+      setOtherLastReadAt(other?.last_read_at ?? null);
+    }).catch(() => {});
+
+    const unsubscribeMessages = subscribeToMessages(conversationId, (m) => {
       qc.setQueryData<Message[]>(["messages", conversationId], (prev) => (prev ?? []).some((x) => x.id === m.id) ? prev! : [...(prev ?? []), m]);
       if (m.sender_id !== userId) markConversationRead(conversationId, userId).catch(() => {});
     });
-    return unsubscribe;
+    const unsubscribeReads = subscribeToReadReceipts(conversationId, (row) => {
+      if (row.user_id !== userId) setOtherLastReadAt(row.last_read_at);
+    });
+    return () => { unsubscribeMessages(); unsubscribeReads(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId]);
 
@@ -74,15 +86,27 @@ export function ChatPanel({ conversationId, userId, otherLabel, onClose }: {
               <div><MessageCircle className="mx-auto mb-2 h-6 w-6 opacity-40" />No messages yet — say hello.</div>
             </div>
           ) : (
-            messages.map((m) => {
+            messages.map((m, idx) => {
               const mine = m.sender_id === userId;
+              // Only label the sender when it changes from the previous
+              // bubble — same WhatsApp behaviour, avoids repeating the
+              // name on every line of a back-to-back run of messages.
+              const prevSender = idx > 0 ? messages[idx - 1].sender_id : null;
+              const showSenderLabel = !mine && m.sender_id !== prevSender;
+              const seen = mine && otherLastReadAt && new Date(m.created_at) <= new Date(otherLastReadAt);
               return (
                 <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm ${mine ? "bg-gradient-brand text-white" : "bg-accent text-foreground"}`}>
-                    {m.body && <div className="whitespace-pre-wrap break-words">{m.body}</div>}
-                    {m.attachments?.length > 0 && <AttachmentGallery attachments={m.attachments} />}
-                    <div className={`mt-1 text-[10px] ${mine ? "text-white/70" : "text-muted-foreground"}`}>
-                      {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  <div className="max-w-[75%]">
+                    {showSenderLabel && (
+                      <div className="mb-0.5 px-1 text-[11px] font-semibold text-brand-violet">{m.sender_name}</div>
+                    )}
+                    <div className={`rounded-2xl px-3.5 py-2 text-sm ${mine ? "bg-gradient-brand text-white" : "bg-accent text-foreground"}`}>
+                      {m.body && <div className="whitespace-pre-wrap break-words">{m.body}</div>}
+                      {m.attachments?.length > 0 && <AttachmentGallery attachments={m.attachments} />}
+                      <div className={`mt-1 flex items-center gap-1 text-[10px] ${mine ? "text-white/70" : "text-muted-foreground"}`}>
+                        <span>{new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                        {mine && (seen ? <CheckCheck className="h-3 w-3" /> : <Check className="h-3 w-3" />)}
+                      </div>
                     </div>
                   </div>
                 </div>
