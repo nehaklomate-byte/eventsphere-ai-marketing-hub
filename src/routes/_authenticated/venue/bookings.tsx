@@ -535,7 +535,20 @@ function BookingDetailsModal({ booking, onClose }: { booking: HallBooking; onClo
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4 print:static print:bg-white" onClick={onClose}>
+      {/* Scopes window.print() to ONLY this modal's content. Without
+          this, window.print() prints the whole page as the browser
+          sees it — the modal is just an overlay, so the full bookings
+          table sitting underneath printed too (every booking, not the
+          one the owner opened this for). */}
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          #booking-detail-print-area, #booking-detail-print-area * { visibility: visible; }
+          #booking-detail-print-area { position: absolute; left: 0; top: 0; width: 100%; }
+        }
+      `}</style>
       <div
+        id="booking-detail-print-area"
         className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card p-6 print:max-h-none print:border-0 print:shadow-none"
         onClick={(e) => e.stopPropagation()}
       >
