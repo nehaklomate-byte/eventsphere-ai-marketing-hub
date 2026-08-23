@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import {
   fetchMessages, sendMessage, markConversationRead, subscribeToMessages, type Message,
 } from "@/lib/chat";
+import { AttachmentUpload, AttachmentGallery, type Attachment } from "@/components/AttachmentUpload";
+import { EmojiPicker } from "@/components/EmojiPicker";
 
 /**
  * Drop this in wherever a booking/task/enquiry has a "Message" button.
@@ -16,6 +18,7 @@ export function ChatPanel({ conversationId, userId, otherLabel, onClose }: {
 }) {
   const qc = useQueryClient();
   const [draft, setDraft] = useState("");
+  const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -38,14 +41,17 @@ export function ChatPanel({ conversationId, userId, otherLabel, onClose }: {
 
   async function submit() {
     const body = draft.trim();
-    if (!body) return;
+    if (!body && pendingAttachments.length === 0) return; // a photo-only message is fine, an empty one isn't
+    const attachments = pendingAttachments;
     setSending(true);
     setDraft("");
+    setPendingAttachments([]);
     try {
-      await sendMessage(conversationId, userId, body);
+      await sendMessage(conversationId, userId, body, attachments);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to send");
       setDraft(body);
+      setPendingAttachments(attachments);
     } finally { setSending(false); }
   }
 
@@ -73,7 +79,8 @@ export function ChatPanel({ conversationId, userId, otherLabel, onClose }: {
               return (
                 <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                   <div className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm ${mine ? "bg-gradient-brand text-white" : "bg-accent text-foreground"}`}>
-                    <div className="whitespace-pre-wrap break-words">{m.body}</div>
+                    {m.body && <div className="whitespace-pre-wrap break-words">{m.body}</div>}
+                    {m.attachments?.length > 0 && <AttachmentGallery attachments={m.attachments} />}
                     <div className={`mt-1 text-[10px] ${mine ? "text-white/70" : "text-muted-foreground"}`}>
                       {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </div>
@@ -85,18 +92,29 @@ export function ChatPanel({ conversationId, userId, otherLabel, onClose }: {
           <div ref={bottomRef} />
         </div>
 
-        <div className="flex items-center gap-2 border-t border-border p-3">
-          <input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } }}
-            placeholder="Type a message…"
-            className="flex-1 rounded-full border border-input bg-background px-4 py-2.5 text-sm outline-none focus:border-brand-violet"
-          />
-          <button onClick={submit} disabled={sending || !draft.trim()}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full btn-brand btn-brand-hover disabled:opacity-50">
-            {sending ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Send className="h-4 w-4 text-white" />}
-          </button>
+        <div className="border-t border-border p-3">
+          {pendingAttachments.length > 0 && (
+            <div className="mb-2">
+              <AttachmentUpload pathPrefix={`chat/${conversationId}`} value={pendingAttachments} onChange={setPendingAttachments} maxFiles={6} />
+            </div>
+          )}
+          <div className="flex items-center gap-1.5">
+            {pendingAttachments.length === 0 && (
+              <AttachmentUpload pathPrefix={`chat/${conversationId}`} value={pendingAttachments} onChange={setPendingAttachments} maxFiles={6} compact />
+            )}
+            <EmojiPicker compact onSelect={(e) => setDraft((d) => d + e)} />
+            <input
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } }}
+              placeholder="Type a message…"
+              className="flex-1 rounded-full border border-input bg-background px-4 py-2.5 text-sm outline-none focus:border-brand-violet"
+            />
+            <button onClick={submit} disabled={sending || (!draft.trim() && pendingAttachments.length === 0)}
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full btn-brand btn-brand-hover disabled:opacity-50">
+              {sending ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Send className="h-4 w-4 text-white" />}
+            </button>
+          </div>
         </div>
       </div>
     </div>
