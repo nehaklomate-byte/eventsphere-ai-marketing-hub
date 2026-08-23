@@ -130,7 +130,7 @@ function ReviewDialog({ row, adminUserId, onClose, onDone }: { row: RefundRow; a
   async function act(status: "approved" | "rejected" | "processed") {
     setBusy(true);
     try {
-      await updateRefundStatus(row.id, status, { adminNotes: notes, razorpayRefundId: refundId, adminUserId });
+      await updateRefundStatus(row.id, status, { adminNotes: notes, razorpayRefundId: refundId, adminUserId, requestedBy: row.requested_by, entityName: row.entity_name, amount: row.amount });
       toast.success(status === "rejected" ? "Refund rejected" : status === "processed" ? "Marked as processed" : "Refund approved");
       onDone();
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not update"); }
