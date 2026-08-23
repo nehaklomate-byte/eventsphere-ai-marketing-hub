@@ -11,6 +11,7 @@ import {
   WORKER_CATEGORIES, statusTone, type OpenPosting, type MyApplication, type WorkerRow,
 } from "@/lib/worker";
 import { EmptyState } from "./index";
+import { AttachmentGallery } from "@/components/AttachmentUpload";
 
 export const Route = createFileRoute("/_authenticated/worker/board")({
   head: () => ({ meta: [{ title: "Job Board — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
@@ -100,6 +101,7 @@ function BoardPage() {
                       {p.pay_amount != null && <div className="flex items-center gap-2 pt-1 text-sm font-semibold text-foreground"><Wallet className="h-3.5 w-3.5" /> ₹{Number(p.pay_amount).toLocaleString("en-IN")} <span className="font-normal text-muted-foreground text-xs">({p.pay_type.replace("_", " ")})</span></div>}
                     </div>
                     {p.description && <p className="mt-3 text-xs text-muted-foreground border-t border-border pt-3 line-clamp-3">{p.description}</p>}
+                    {p.attachments?.length > 0 && <AttachmentGallery attachments={p.attachments} />}
                     <div className="mt-4 pt-3 border-t border-border">
                       {applied ? (
                         <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">Already applied</span>
