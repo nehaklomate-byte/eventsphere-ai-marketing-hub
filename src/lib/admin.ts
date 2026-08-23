@@ -896,12 +896,36 @@ export async function fetchRefunds(): Promise<RefundRow[]> {
   return rows.map((r) => ({ ...r, requested_by_name: r.requested_by ? names[r.requested_by] ?? "Someone" : "Admin" }));
 }
 
-/** Admin approves/rejects a refund request, or logs one directly. */
-export async function updateRefundStatus(id: string, status: "approved" | "rejected" | "processed", opts: { adminNotes?: string; razorpayRefundId?: string; adminUserId: string }): Promise<void> {
+/** Admin approves/rejects a refund request, or logs one directly.
+ * Also notifies the person who requested it — previously this only
+ * updated the refunds row, so the requester never found out their
+ * refund had moved (they'd have to keep checking the page manually). */
+export async function updateRefundStatus(
+  id: string,
+  status: "approved" | "rejected" | "processed",
+  opts: { adminNotes?: string; razorpayRefundId?: string; adminUserId: string; requestedBy?: string | null; entityName?: string | null; amount?: number }
+): Promise<void> {
   const patch: Record<string, unknown> = { status, admin_notes: opts.adminNotes || null, processed_by: opts.adminUserId };
   if (status === "processed") { patch.processed_at = new Date().toISOString(); patch.razorpay_refund_id = opts.razorpayRefundId || null; }
   const { error } = await supabase.from("refunds" as never).update(patch as never).eq("id" as never, id as never);
   if (error) throw error;
+
+  if (opts.requestedBy) {
+    const label = opts.entityName ? ` for ${opts.entityName}` : "";
+    const amountText = typeof opts.amount === "number" ? ` (₹${opts.amount.toLocaleString("en-IN")})` : "";
+    const title = status === "approved" ? "Refund approved" : status === "rejected" ? "Refund rejected" : "Refund processed";
+    const body =
+      status === "approved" ? `Your refund request${label}${amountText} has been approved. It will be processed shortly.`
+      : status === "rejected" ? `Your refund request${label}${amountText} was rejected.${opts.adminNotes ? ` Reason: ${opts.adminNotes}` : ""}`
+      : `Your refund${label}${amountText} has been processed and sent.${opts.razorpayRefundId ? ` Reference: ${opts.razorpayRefundId}` : ""}`;
+    const { error: notifyError } = await supabase.from("platform_notifications" as never).insert({
+      user_id: opts.requestedBy, title, body, type: status === "rejected" ? "warning" : "success",
+    } as never);
+    // Don't fail the whole approval if the notification insert has a
+    // problem — the refund status change itself already succeeded and
+    // is the important part; just surface it in the console.
+    if (notifyError) console.error("Refund status updated but notification failed:", notifyError);
+  }
 }
 
 /** Admin logs a refund that wasn't requested through the app (e.g. a
