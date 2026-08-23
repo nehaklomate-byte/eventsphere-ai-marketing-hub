@@ -120,6 +120,12 @@ function JobsPage() {
                 )}
               </div>
 
+              {t.customer_requirements && (
+                <p className="mt-3 rounded-lg border border-brand-violet/20 bg-brand-violet/5 px-3 py-2 text-xs">
+                  <span className="font-semibold text-foreground">Customer asked for: </span>
+                  <span className="text-muted-foreground">{t.customer_requirements}</span>
+                </p>
+              )}
               {t.description && <p className="mt-3 text-xs text-muted-foreground border-t border-border pt-3">{t.description}</p>}
 
               {(t.check_in_photo_url || t.check_out_photo_url || (t.completion_photo_urls && t.completion_photo_urls.length > 0)) && (
