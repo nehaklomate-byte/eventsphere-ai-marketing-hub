@@ -56,6 +56,7 @@ export type WorkerTask = {
   event_name: string;
   task_name: string;
   description: string | null;
+  customer_requirements: string | null; // free text the customer typed at booking time (migration 20260823110000) — distinct from `description`, which is an auto-generated selection summary
   venue: string | null;
   venue_address: string | null;
   event_date: string;
