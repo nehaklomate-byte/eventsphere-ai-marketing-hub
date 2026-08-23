@@ -22,10 +22,12 @@ export async function requestRefund(opts: {
 export async function submitComplaint(opts: {
   userId: string; role: string; subject: string; description: string;
   relatedSourceType?: RefundSourceType; relatedSourceId?: string;
+  attachments?: { url: string; name: string; type: string; size: number }[];
 }): Promise<void> {
   const { error } = await supabase.from("complaints" as never).insert({
     raised_by: opts.userId, raised_by_role: opts.role, subject: opts.subject, description: opts.description,
     related_source_type: opts.relatedSourceType || null, related_source_id: opts.relatedSourceId || null,
+    attachments: opts.attachments ?? [],
     status: "open",
   } as never);
   if (error) throw error;
