@@ -2,8 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { AlertTriangle, Loader2, Paperclip } from "lucide-react";
 import { fetchComplaints, updateComplaintStatus, type ComplaintRow } from "@/lib/admin";
+import { AttachmentGallery } from "@/components/AttachmentUpload";
 
 export const Route = createFileRoute("/_authenticated/admin/complaints")({
   head: () => ({ meta: [{ title: "Complaints — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
@@ -57,7 +58,10 @@ function ComplaintsPage() {
             <button key={c.id} onClick={() => setOpen(c)} className="block w-full rounded-2xl border border-border bg-card p-5 text-left hover:bg-accent/40">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="font-semibold">{c.subject}</div>
-                <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold capitalize ${STATUS_STYLE[c.status]}`}>{c.status.replace("_", " ")}</span>
+                <div className="flex items-center gap-2">
+                  {c.attachments?.length > 0 && <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground"><Paperclip className="h-3 w-3" /> {c.attachments.length}</span>}
+                  <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold capitalize ${STATUS_STYLE[c.status]}`}>{c.status.replace("_", " ")}</span>
+                </div>
               </div>
               <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{c.description}</p>
               <div className="mt-2 text-xs text-muted-foreground">
@@ -93,6 +97,7 @@ function ComplaintDialog({ row, onClose, onDone }: { row: ComplaintRow; onClose:
         <h3 className="font-semibold">{row.subject}</h3>
         <div className="mt-1 text-xs text-muted-foreground">{row.raised_by_name}{row.raised_by_role ? ` · ${row.raised_by_role}` : ""} · {new Date(row.created_at).toLocaleString("en-IN")}</div>
         <p className="mt-3 whitespace-pre-wrap text-sm">{row.description}</p>
+        {row.attachments?.length > 0 && <AttachmentGallery attachments={row.attachments} />}
         <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Admin notes / resolution"
           className="mt-3 w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet min-h-[90px]" />
         <div className="mt-4 flex flex-wrap justify-end gap-2">
