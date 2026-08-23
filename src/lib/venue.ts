@@ -116,6 +116,7 @@ export type HallBooking = {
   payment_status: "pending" | "paid" | "failed" | "refunded" | "partial";
   notes: string | null;
   decline_reason: string | null; // set when the owner declines/cancels — shown to the customer (migration 20260822100000)
+  requested_event_date: string | null; // customer's requested new date while status = 'reschedule_requested' (src/routes/_authenticated/customer/bookings.tsx)
   details: Record<string, unknown>;
   created_at: string;
 };
@@ -208,6 +209,27 @@ export async function declineHallBooking(id: string, reason: string): Promise<vo
   if (!data) throw new Error("Update was blocked — please refresh and try again.");
 }
 
+/** Owner responds to a customer's reschedule request (status =
+ * 'reschedule_requested', requested_event_date set by
+ * src/routes/_authenticated/customer/bookings.tsx). Nothing anywhere
+ * else ever reads requested_event_date — until this function existed
+ * a reschedule request just sat there forever with no way to action
+ * it. Accepting moves event_date to the requested date and clears the
+ * request; declining clears the request and keeps the original date —
+ * either way the booking goes back to 'confirmed'. */
+export async function resolveRescheduleRequest(booking: HallBooking, accept: boolean): Promise<void> {
+  const patch = accept
+    ? { status: "confirmed", event_date: booking.requested_event_date, requested_event_date: null }
+    : { status: "confirmed", requested_event_date: null };
+  const { data, error } = await supabase.from("customer_bookings" as never)
+    .update(patch as never)
+    .eq("id" as never, booking.id as never)
+    .select()
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("Update was blocked — please refresh and try again.");
+}
+
 /** One line of the itemised price the owner builds for a booking —
  * the venue's own base price, plus one line per service the customer
  * ticked (each priced individually, alongside whatever requirement
@@ -278,7 +300,7 @@ export async function fetchHallPostings(hallId: string): Promise<JobPosting[]> {
 
 export async function createHallJobPosting(
   hallId: string,
-  patch: Omit<JobPosting, "id" | "org_id" | "vendor_id" | "hall_id" | "posted_by" | "slots_filled" | "status" | "created_at">
+  patch: Omit<JobPosting, "id" | "org_id" | "vendor_id" | "hall_id" | "posted_by" | "slots_filled" | "status" | "created_at" | "attachments"> & { attachments?: JobPosting["attachments"] }
 ): Promise<JobPosting> {
   const { data: userData } = await supabase.auth.getUser();
   const { data, error } = await supabase
