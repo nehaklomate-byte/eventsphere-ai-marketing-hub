@@ -211,7 +211,7 @@ function VendorHireCard({ vendor, eventId, sourceSlug }: { vendor: Vendor; event
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
   const [packages, setPackages] = useState<{ id: string; name: string; price: number; description: string | null }[]>([]);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
-  const [state, setState] = useState({ event_name: "", task_name: "", venue: "", venue_address: "", event_date: "", start_time: "", end_time: "", guest_count: "", pay_amount: "" });
+  const [state, setState] = useState({ event_name: "", task_name: "", venue: "", venue_address: "", event_date: "", start_time: "", end_time: "", guest_count: "", pay_amount: "", requirements: "" });
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -288,6 +288,7 @@ function VendorHireCard({ vendor, eventId, sourceSlug }: { vendor: Vendor; event
       event_name: state.event_name.trim(),
       task_name: state.task_name.trim(),
       description: selectionSummary || null,
+      customer_requirements: state.requirements.trim() || null,
       selected_items: selectedItems,
       guest_count: guestCount || null,
       venue: state.venue || null,
@@ -397,6 +398,13 @@ function VendorHireCard({ vendor, eventId, sourceSlug }: { vendor: Vendor; event
             className="mt-1 w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
         </label>
       </div>
+      <textarea
+        placeholder="Tell them exactly what you need — dietary preferences, theme/colours, must-haves, anything specific to your event."
+        value={state.requirements}
+        onChange={(e) => setState((s) => ({ ...s, requirements: e.target.value }))}
+        rows={3}
+        className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet"
+      />
       {estimatedTotal > 0 && (
         <div className="flex items-center justify-between rounded-xl bg-accent/40 px-3.5 py-2.5 text-sm font-semibold">
           <span>Estimated total</span>
