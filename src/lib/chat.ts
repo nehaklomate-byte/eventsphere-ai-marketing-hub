@@ -28,6 +28,7 @@ export type Message = {
   sender_id: string;
   body: string;
   created_at: string;
+  attachments: { url: string; name: string; type: string; size: number }[];
 };
 
 /** Finds (or lazily creates, if the DB trigger hasn't fired yet for some
@@ -110,10 +111,10 @@ export async function fetchMessages(conversationId: string): Promise<Message[]> 
   return (data as unknown as Message[]) ?? [];
 }
 
-export async function sendMessage(conversationId: string, senderId: string, body: string): Promise<Message> {
+export async function sendMessage(conversationId: string, senderId: string, body: string, attachments: Message["attachments"] = []): Promise<Message> {
   const { data, error } = await supabase
     .from("messages" as never)
-    .insert({ conversation_id: conversationId, sender_id: senderId, body } as never)
+    .insert({ conversation_id: conversationId, sender_id: senderId, body, attachments } as never)
     .select().single();
   if (error) throw error;
 
