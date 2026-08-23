@@ -341,6 +341,19 @@ export type InFlightBookingRow = {
   finalAmount: number | null; // null = owner hasn't set the whole price yet
   createdAt: string;
   stage: "awaiting_advance" | "awaiting_final_price" | "awaiting_balance";
+  // Once the advance's commission has been charged (migration
+  // 20260823090000, backfilled for older bookings by 20260823100000),
+  // this booking has a matching venue_payouts row for stage='advance'
+  // — these fields mirror THAT row exactly (never a re-derived
+  // estimate), so they always agree with what "Payouts owed" shows
+  // and with what admin actually sends. All null until that row
+  // exists (i.e. while still `awaiting_advance` or `awaiting_final_price`).
+  payoutId: string | null;
+  ownerName: string | null;
+  ownerUpiId: string | null;
+  commissionAmount: number | null;
+  netPayoutAmount: number | null;
+  payoutStatus: "pending" | "paid" | "cancelled" | "clawback_required" | null;
 };
 
 /** Hall bookings that are "in flight" — confirmed by the venue but not
@@ -354,19 +367,47 @@ export type InFlightBookingRow = {
 export async function fetchInFlightHallBookings(): Promise<InFlightBookingRow[]> {
   const { data, error } = await supabase
     .from("customer_bookings" as never)
-    .select("id, target_name, status, advance_amount, advance_paid_amount, amount, payment_status, created_at" as never)
+    .select("id, target_id, target_name, status, advance_amount, advance_paid_amount, amount, payment_status, created_at" as never)
     .eq("kind" as never, "hall" as never)
     .in("status" as never, ["confirmed", "in_progress"] as never)
     .neq("payment_status" as never, "paid" as never)
     .order("created_at" as never, { ascending: false });
   if (error) throw error;
 
-  type Row = { id: string; target_name: string; status: string; advance_amount: number | null; advance_paid_amount: number; amount: number | null; payment_status: string; created_at: string };
-  return ((data as unknown as Row[]) ?? []).map((r) => ({
-    id: r.id, venueName: r.target_name, status: r.status,
-    advanceAmount: r.advance_amount, advancePaid: r.advance_paid_amount, finalAmount: r.amount, createdAt: r.created_at,
-    stage: r.payment_status === "partial" ? (r.amount == null ? "awaiting_final_price" : "awaiting_balance") : "awaiting_advance",
-  }));
+  type Row = { id: string; target_id: string; target_name: string; status: string; advance_amount: number | null; advance_paid_amount: number; amount: number | null; payment_status: string; created_at: string };
+  const rows = (data as unknown as Row[]) ?? [];
+  if (rows.length === 0) return [];
+
+  const bookingIds = rows.map((r) => r.id);
+  const hallIds = [...new Set(rows.map((r) => r.target_id))];
+
+  const [{ data: halls }, { data: payouts }] = await Promise.all([
+    supabase.from("halls").select("id, owner_id").in("id", hallIds),
+    supabase.from("venue_payouts" as never).select("id, booking_id, status, amount, commission_amount, hall_owner_id, stage" as never).in("booking_id" as never, bookingIds as never).eq("stage" as never, "advance" as never),
+  ]);
+  const ownerIdByHall = new Map((halls ?? []).map((h: { id: string; owner_id: string }) => [h.id, h.owner_id]));
+  const ownerIds = [...new Set([...ownerIdByHall.values()])];
+  const { data: profiles } = await supabase.from("profiles" as never).select("id, full_name, payout_upi_id" as never).in("id" as never, ownerIds as never);
+  const profileById = new Map(((profiles as unknown as { id: string; full_name: string; payout_upi_id: string | null }[]) ?? []).map((p) => [p.id, p]));
+  type PayoutJoin = { id: string; booking_id: string; status: InFlightBookingRow["payoutStatus"]; amount: number; commission_amount: number; hall_owner_id: string };
+  const payoutByBooking = new Map(((payouts as unknown as PayoutJoin[]) ?? []).map((p) => [p.booking_id, p]));
+
+  return rows.map((r) => {
+    const payout = payoutByBooking.get(r.id);
+    const ownerId = payout?.hall_owner_id ?? ownerIdByHall.get(r.target_id);
+    const profile = ownerId ? profileById.get(ownerId) : undefined;
+    return {
+      id: r.id, venueName: r.target_name, status: r.status,
+      advanceAmount: r.advance_amount, advancePaid: r.advance_paid_amount, finalAmount: r.amount, createdAt: r.created_at,
+      stage: r.payment_status === "partial" ? (r.amount == null ? "awaiting_final_price" : "awaiting_balance") : "awaiting_advance",
+      payoutId: payout?.id ?? null,
+      ownerName: profile?.full_name ?? null,
+      ownerUpiId: profile?.payout_upi_id ?? null,
+      commissionAmount: payout?.commission_amount ?? null,
+      netPayoutAmount: payout?.amount ?? null,
+      payoutStatus: payout?.status ?? null,
+    };
+  });
 }
 
 export type PayoutSource = "worker" | "vendor" | "venue";
