@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Printer, CheckCircle2, Loader2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { useSession } from "@/lib/session";
 
 export const Route = createFileRoute("/_authenticated/receipt/$type/$id")({
   head: () => ({ meta: [{ title: "Payment Receipt — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
@@ -34,6 +35,13 @@ type ReceiptData = {
   payoutStage: "advance" | "balance" | "full" | null;
   payoutReference: string | null;
   recipientUpiId: string | null;
+  // Whoever booked/hired this (customer_bookings.user_id /
+  // worker_tasks|vendor_tasks.assigned_by) — used to hide the platform
+  // fee / net-payout breakdown from the customer's own view of a
+  // receipt they share a URL with the venue owner/vendor/worker for.
+  // null for receipt types that are never viewed by a customer
+  // (profile activation, venue payout).
+  customerUserId: string | null;
 };
 
 const PAYOUT_STAGE_LABEL: Record<"advance" | "balance" | "full", string> = { advance: "Advance", balance: "Balance", full: "Full settlement" };
@@ -70,6 +78,7 @@ async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData 
       lineItems: null,
       advancePaid: null, advanceRazorpayPaymentId: null, balanceRazorpayPaymentId: null,
       payoutStage: stage, payoutReference: d.payout_reference as string | null, recipientUpiId: ownerRow?.payout_upi_id ?? null,
+      customerUserId: null,
     };
   }
 
@@ -85,6 +94,7 @@ async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData 
         receiptNo: `PP-${id.slice(0, 8).toUpperCase()}`, itemLabel: "", counterpartyLabel: "",
         eventName: null, eventDate: null, amount: 0, commission: 0, paidAt: null, razorpayPaymentId: null, razorpayOrderId: null, lineItems: null,
         advancePaid: null, advanceRazorpayPaymentId: null, balanceRazorpayPaymentId: null, payoutStage: null, payoutReference: null, recipientUpiId: null,
+        customerUserId: null,
       };
     }
 
@@ -113,12 +123,13 @@ async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData 
       razorpayOrderId: d.razorpay_order_id as string | null,
       lineItems: null,
       advancePaid: null, advanceRazorpayPaymentId: null, balanceRazorpayPaymentId: null, payoutStage: null, payoutReference: null, recipientUpiId: null,
+      customerUserId: null,
     };
   }
 
   if (type === "hall") {
     const { data, error } = await supabase.from("customer_bookings" as never)
-      .select("id,target_name,event_date,amount,commission_amount,paid_at,razorpay_payment_id,razorpay_order_id,advance_amount,advance_paid_amount,advance_razorpay_payment_id,details")
+      .select("id,user_id,target_name,event_date,amount,commission_amount,paid_at,razorpay_payment_id,razorpay_order_id,advance_amount,advance_paid_amount,advance_razorpay_payment_id,details")
       .eq("id" as never, id as never).maybeSingle();
     if (error) throw error;
     if (!data) return null;
@@ -147,12 +158,13 @@ async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData 
       advanceRazorpayPaymentId: d.advance_razorpay_payment_id as string | null,
       balanceRazorpayPaymentId: d.razorpay_payment_id as string | null,
       payoutStage: null, payoutReference: null, recipientUpiId: null,
+      customerUserId: d.user_id as string,
     };
   }
 
   if (type === "worker") {
     const { data, error } = await supabase.from("worker_tasks" as never)
-      .select("id,task_name,event_name,event_date,payment_amount,commission_amount,paid_at,razorpay_payment_id,razorpay_order_id,selected_items,worker:workers(full_name)")
+      .select("id,assigned_by,task_name,event_name,event_date,payment_amount,commission_amount,paid_at,razorpay_payment_id,razorpay_order_id,selected_items,worker:workers(full_name)")
       .eq("id" as never, id as never).maybeSingle();
     if (error) throw error;
     if (!data) return null;
@@ -172,11 +184,12 @@ async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData 
       razorpayOrderId: d.razorpay_order_id as string | null,
       lineItems: items.length > 0 ? items : null,
       advancePaid: null, advanceRazorpayPaymentId: null, balanceRazorpayPaymentId: null, payoutStage: null, payoutReference: null, recipientUpiId: null,
+      customerUserId: d.assigned_by as string,
     };
   }
 
   const { data, error } = await supabase.from("vendor_tasks" as never)
-    .select("id,task_name,event_name,event_date,payment_amount,commission_amount,paid_at,razorpay_payment_id,razorpay_order_id,selected_items,vendor:vendors(business_name)")
+    .select("id,assigned_by,task_name,event_name,event_date,payment_amount,commission_amount,paid_at,razorpay_payment_id,razorpay_order_id,selected_items,vendor:vendors(business_name)")
     .eq("id" as never, id as never).maybeSingle();
   if (error) throw error;
   if (!data) return null;
@@ -196,12 +209,14 @@ async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData 
     razorpayOrderId: d.razorpay_order_id as string | null,
     lineItems: items.length > 0 ? items : null,
     advancePaid: null, advanceRazorpayPaymentId: null, balanceRazorpayPaymentId: null, payoutStage: null, payoutReference: null, recipientUpiId: null,
+    customerUserId: d.assigned_by as string,
   };
 }
 
 function ReceiptPage() {
   const { type, id } = Route.useParams();
   const receiptType = (type === "worker" || type === "vendor" || type === "profile" || type === "venue-payout" ? type : "hall") as ReceiptType;
+  const { user } = useSession();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["receipt", receiptType, id],
@@ -213,6 +228,12 @@ function ReceiptPage() {
   if (!data.paidAt) return <div className="mx-auto max-w-lg py-16 text-center text-sm text-muted-foreground">This hasn't been paid yet — no receipt is available.</div>;
 
   const netPayout = data.amount - data.commission;
+  // The venue owner / vendor / worker on the other side of this booking
+  // opens the exact same receipt URL to see what the platform kept and
+  // what's owed to them — but the customer who paid shouldn't see that
+  // internal split, only what they themselves paid.
+  const isCustomerViewer = !!data.customerUserId && data.customerUserId === user?.id;
+  const showCommissionBreakdown = !isCustomerViewer && (data.commission > 0 || data.payoutStage === "balance");
 
   return (
     <div className="mx-auto max-w-2xl py-6">
@@ -293,13 +314,15 @@ function ReceiptPage() {
             <span className="text-muted-foreground">{data.payoutStage ? "Collected from customer (this stage)" : `Amount paid${data.advancePaid != null ? " (total)" : ""}`}</span>
             <span className="font-semibold">₹{data.amount.toLocaleString("en-IN")}</span>
           </div>
-          {data.commission > 0 ? (
-            <>
-              <div className="flex justify-between text-muted-foreground"><span>Platform fee</span><span>− ₹{data.commission.toLocaleString("en-IN")}</span></div>
-              <div className="flex justify-between font-semibold"><span>Net to {data.counterpartyLabel}</span><span>₹{netPayout.toLocaleString("en-IN")}</span></div>
-            </>
-          ) : data.payoutStage === "balance" ? (
-            <div className="flex justify-between text-muted-foreground"><span>Platform fee</span><span>₹0 — already collected on the advance</span></div>
+          {showCommissionBreakdown ? (
+            data.commission > 0 ? (
+              <>
+                <div className="flex justify-between text-muted-foreground"><span>Platform fee</span><span>− ₹{data.commission.toLocaleString("en-IN")}</span></div>
+                <div className="flex justify-between font-semibold"><span>Net to {data.counterpartyLabel}</span><span>₹{netPayout.toLocaleString("en-IN")}</span></div>
+              </>
+            ) : (
+              <div className="flex justify-between text-muted-foreground"><span>Platform fee</span><span>₹0 — already collected on the advance</span></div>
+            )
           ) : null}
         </div>
 
