@@ -13,8 +13,6 @@ import { shortlistApplication, rejectApplication, acceptApplication } from "@/li
 import { WORKER_CATEGORIES } from "@/lib/worker";
 import { AttachmentUpload, AttachmentGallery, type Attachment } from "@/components/AttachmentUpload";
 import { EmojiPicker } from "@/components/EmojiPicker";
-import { AttachmentUpload, AttachmentGallery, type Attachment } from "@/components/AttachmentUpload";
-import { EmojiPicker } from "@/components/EmojiPicker";
 
 export const Route = createFileRoute("/_authenticated/vendor/post-jobs")({
   head: () => ({ meta: [{ title: "Job Board — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
