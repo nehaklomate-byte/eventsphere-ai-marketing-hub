@@ -60,3 +60,68 @@ Run it and "Price & confirm" should work.
 The `expire_unpaid_hall_advances` cron job (from `20260822090000`) also sets
 bookings to `cancelled` but never sets `decline_reason` — it already sends its own
 "advance payment pending → cancelled" message, so that's intentional.
+
+# Vendor/Worker marketplace spec — what's done vs. what's not
+
+I read the full 26-section spec. Honest assessment: most of the structural pieces it
+asks for **already exist** in this codebase (someone/something has been actively
+building this out) — packages, add-ons, server-authoritative pricing, verification
+badges, privacy separation. The one clear, real gap was **§3/§15/§21: the
+customer's own words weren't being captured** — only an auto-generated summary of
+what they clicked. That's what's fixed here. Everything else is listed below as an
+honest backlog, not implemented.
+
+## What was already there (spec §4–11, §16, §20 — mostly done)
+- `vendor_packages` table — vendors already define named packages with their own
+  price, not one fixed price per category.
+- `pricing_options` (add-ons) on both vendors and workers, with `per_guest` support.
+- Booking price is **server-authoritative** — a DB trigger
+  (`tg_recompute_vendor_task_amount` / `tg_recompute_worker_task_amount`) re-derives
+  `payment_amount` from the actual package/options server-side; the client-sent
+  amount is never trusted. This already satisfies §16 ("profile price ≠ final
+  price") and most of §20 (snapshot can't drift from a later profile edit).
+- Category badges, ratings, portfolio, verified badge, service areas — all present
+  on the public vendor/worker pages.
+
+## What was fixed in this change (closes §3, §15 step 3, §21)
+Added a **`customer_requirements`** column to `vendor_tasks` and `worker_tasks`,
+separate from the existing `description` (which stays as the auto-generated
+"Package: X (₹Y)\nAdd-on: Z" summary). Now:
+- Both booking forms (`vendor.$id.tsx`, `worker.$id.tsx`) have a
+  "Tell them exactly what you need" textarea.
+- It's saved distinctly, not merged into the summary text.
+- It shows to the vendor/worker on their Jobs page in its own highlighted block
+  ("Customer asked for: ...") so it can't get lost inside the selection summary.
+
+### Files here
+- `supabase/migrations/20260823110000_task_customer_requirements.sql` — run this
+- `src/lib/vendor.ts`, `src/lib/worker.ts` — type updates
+- `src/routes/vendor.$id.tsx`, `src/routes/worker.$id.tsx` — booking forms
+- `src/routes/_authenticated/vendor/jobs.tsx`, `.../worker/jobs.tsx` — display
+
+## Privacy audit (spec §12, §22)
+Checked `vendor.$id.tsx`, `worker.$id.tsx`, `hall.$id.tsx` for GST/PAN/UPI/emergency-
+contact/ID-proof leaks on the public pages — none found. Already correct.
+
+## Genuinely NOT done — real backlog, not a small add-on
+These are multi-day-to-multi-week efforts each, not something to bolt on quietly:
+
+1. **Category-specific structured fields** (§5–8): decoration style + specific
+   elements (stage/mandap/entrance...), photography type/drone/album checkboxes,
+   DJ equipment/genre fields, catering menu-builder with sections and items. Right
+   now customers express all of this through the one free-text box just added —
+   functional, but not the guided, checkbox-driven UI the spec describes per
+   category. This is the single biggest remaining chunk of work.
+2. **Reference image / document attachments on booking** (§3, §14) — not added.
+3. **Event bundling — one event, multiple providers, combined estimate** (§17–19):
+   venue + in-house vs external vendor linking, "Find Caterers" fallback when a
+   venue doesn't offer catering, one combined quote across venue+vendor+workers.
+   Not present at all currently.
+4. **Worker accept/reject/counter-offer with clarification requests** (§14) —
+   accept/reject exists; structured "request clarification" or counter-quote does
+   not.
+5. **Reviews restricted to verified bookings only** — not verified either way in
+   this pass; worth checking separately.
+
+If you want, tell me which of these to tackle next and I'll scope + build that one
+properly rather than spreading thin across all five.
