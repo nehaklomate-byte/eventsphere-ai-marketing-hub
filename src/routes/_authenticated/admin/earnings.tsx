@@ -108,7 +108,7 @@ function EarningsPage() {
         <PayoutsTable rows={payouts.data ?? []} isLoading={payouts.isLoading} adminUserId={user?.id ?? ""}
           onPaid={() => qc.invalidateQueries({ queryKey: ["admin-payouts"] })} />
       ) : (
-        <InFlightTable rows={inFlight.data ?? []} isLoading={inFlight.isLoading} />
+        <InFlightTable rows={inFlight.data ?? []} isLoading={inFlight.isLoading} onGoToPayout={() => setTab("payouts")} />
       )}
     </div>
   );
@@ -220,7 +220,7 @@ function ProfileRevenueTable({ rows, isLoading }: { rows: ProfileRevenueRow[]; i
   );
 }
 
-function InFlightTable({ rows, isLoading }: { rows: InFlightBookingRow[]; isLoading: boolean }) {
+function InFlightTable({ rows, isLoading, onGoToPayout }: { rows: InFlightBookingRow[]; isLoading: boolean; onGoToPayout: () => void }) {
   const STAGE_LABEL: Record<InFlightBookingRow["stage"], string> = {
     awaiting_advance: "Waiting on advance",
     awaiting_final_price: "Advance received — needs final price",
@@ -234,29 +234,67 @@ function InFlightTable({ rows, isLoading }: { rows: InFlightBookingRow[]; isLoad
   if (isLoading) return <div className="py-10 text-center text-muted-foreground"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></div>;
   if (rows.length === 0) return <div className="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground">No hall bookings mid-flow right now — everything's either not yet confirmed or fully paid.</div>;
   return (
-    <div className="rounded-2xl border border-border bg-card overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            <th className="px-5 py-3">Venue</th>
-            <th className="px-5 py-3">Stage</th>
-            <th className="px-5 py-3">Advance</th>
-            <th className="px-5 py-3">Final price</th>
-            <th className="px-5 py-3">Confirmed on</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.id} className="border-b border-border last:border-0">
-              <td className="px-5 py-3 font-medium">{r.venueName}</td>
-              <td className="px-5 py-3"><span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${STAGE_STYLE[r.stage]}`}>{STAGE_LABEL[r.stage]}</span></td>
-              <td className="px-5 py-3">{r.advanceAmount ? `${money(r.advanceAmount)} requested (${money(r.advancePaid)} paid)` : "—"}</td>
-              <td className="px-5 py-3">{r.finalAmount != null ? money(r.finalAmount) : "Not set yet"}</td>
-              <td className="px-5 py-3 text-muted-foreground text-xs">{new Date(r.createdAt).toLocaleDateString("en-IN")}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="rounded-2xl border border-border bg-card overflow-hidden divide-y divide-border">
+      {rows.map((r) => (
+        <div key={r.id} className="p-5">
+          {/* One card per booking — advance details, owner payout info, and
+              status all sit together so nothing from a different booking
+              (or a different stage of the same booking) can blur into it. */}
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div className="font-semibold">{r.venueName}</div>
+            <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${STAGE_STYLE[r.stage]}`}>{STAGE_LABEL[r.stage]}</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 text-sm">
+            <div>
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Advance</div>
+              <div className="font-medium">{r.advanceAmount ? `${money(r.advanceAmount)} requested` : "—"}</div>
+              <div className="text-xs text-muted-foreground">{money(r.advancePaid)} paid</div>
+            </div>
+            <div>
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Final price</div>
+              <div className="font-medium">{r.finalAmount != null ? money(r.finalAmount) : "Not set yet"}</div>
+            </div>
+            <div>
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Confirmed on</div>
+              <div className="font-medium">{new Date(r.createdAt).toLocaleDateString("en-IN")}</div>
+            </div>
+            <div>
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Commission cut</div>
+              <div className="font-medium">{r.commissionAmount != null ? `− ${money(r.commissionAmount)}` : "—"}</div>
+            </div>
+          </div>
+
+          {/* This block is the actual "what to do next" — once the advance's
+              commission has been charged, this is exactly what "Payouts owed"
+              shows for this booking's advance row: who to pay, on what UPI id,
+              how much (net of commission), and whether it's already been sent. */}
+          {r.netPayoutAmount != null ? (
+            <div className="mt-3 rounded-xl border border-violet-200 dark:border-violet-900 bg-violet-50 dark:bg-violet-950/20 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="text-xs text-muted-foreground">Send net amount to venue owner</div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-lg font-bold text-brand-violet">{money(r.netPayoutAmount)}</span>
+                  <span className="text-sm text-muted-foreground">to {r.ownerName ?? "venue owner"}</span>
+                </div>
+                <div className="text-xs font-mono text-muted-foreground mt-0.5">
+                  UPI: {r.ownerUpiId ?? <span className="text-red-600 dark:text-red-400 font-sans font-semibold">not set — ask the venue owner to add one</span>}
+                </div>
+              </div>
+              {r.payoutStatus === "paid" ? (
+                <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 text-xs font-semibold"><CheckCircle2 className="h-3.5 w-3.5" /> Already sent</span>
+              ) : (
+                <button onClick={onGoToPayout} className="rounded-lg bg-brand-violet text-white text-xs font-semibold px-3 py-1.5 hover:opacity-90">
+                  Mark as paid in Payouts owed →
+                </button>
+              )}
+            </div>
+          ) : r.stage === "awaiting_balance" || r.stage === "awaiting_final_price" ? (
+            <div className="mt-3 rounded-xl border border-dashed border-border px-4 py-3 text-xs text-muted-foreground">
+              {r.stage === "awaiting_final_price" ? "Commission and payout will show here once the venue sets the final price." : "Payout details are still being calculated — refresh in a moment."}
+            </div>
+          ) : null}
+        </div>
+      ))}
     </div>
   );
 }
@@ -268,9 +306,10 @@ function PayoutsTable({ rows, isLoading, adminUserId, onPaid }: { rows: PayoutRo
 
   async function confirmMark() {
     if (!marking) return;
+    if (!reference.trim()) { toast.error("Enter the UPI transaction reference before confirming — this is what shows on the receipt."); return; }
     setBusy(true);
     try {
-      await markPayoutPaid(marking.source as PayoutSource, marking.id, reference, adminUserId);
+      await markPayoutPaid(marking.source as PayoutSource, marking.id, reference.trim(), adminUserId);
       toast.success("Marked as paid");
       setMarking(null); setReference("");
       onPaid();
@@ -361,12 +400,12 @@ function PayoutsTable({ rows, isLoading, adminUserId, onPaid }: { rows: PayoutRo
             ) : (
               <p className="mt-1 text-xs font-semibold text-rose-700 dark:text-rose-400">This person hasn't added their UPI ID yet — ask them to set it in their Settings before you send anything.</p>
             )}
-            <p className="mt-2 text-xs text-muted-foreground">Confirm you've sent this via UPI outside the platform, then record the reference (transaction ID) here.</p>
-            <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="UPI transaction reference (optional)"
+            <p className="mt-2 text-xs text-muted-foreground">Confirm you've sent this via UPI outside the platform, then record the transaction ID here — {marking.recipientName} will see this exact reference on their receipt.</p>
+            <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="UPI transaction reference (required)"
               className="mt-3 w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
             <div className="mt-4 flex justify-end gap-2">
               <button onClick={() => setMarking(null)} className="rounded-full border border-input px-4 py-2 text-sm font-semibold hover:bg-accent">Cancel</button>
-              <button onClick={confirmMark} disabled={busy} className="inline-flex items-center gap-1.5 rounded-full btn-brand btn-brand-hover px-4 py-2 text-sm font-semibold disabled:opacity-70">
+              <button onClick={confirmMark} disabled={busy || !reference.trim()} className="inline-flex items-center gap-1.5 rounded-full btn-brand btn-brand-hover px-4 py-2 text-sm font-semibold disabled:opacity-50">
                 {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Confirm paid
               </button>
             </div>
