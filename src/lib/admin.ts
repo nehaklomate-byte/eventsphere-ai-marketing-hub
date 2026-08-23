@@ -929,6 +929,7 @@ export type ComplaintRow = {
   raised_by_role: string | null;
   subject: string;
   description: string;
+  attachments: { url: string; name: string; type: string; size: number }[];
   related_source_type: string | null;
   related_source_id: string | null;
   status: "open" | "in_progress" | "resolved" | "closed";
@@ -940,7 +941,7 @@ export type ComplaintRow = {
 export async function fetchComplaints(): Promise<ComplaintRow[]> {
   const { data, error } = await supabase
     .from("complaints" as never)
-    .select("id,raised_by,raised_by_role,subject,description,related_source_type,related_source_id,status,admin_notes,created_at,resolved_at" as never)
+    .select("id,raised_by,raised_by_role,subject,description,attachments,related_source_type,related_source_id,status,admin_notes,created_at,resolved_at" as never)
     .order("created_at" as never, { ascending: false })
     .limit(500);
   if (error) throw error;
