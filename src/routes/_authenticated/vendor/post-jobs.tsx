@@ -11,6 +11,10 @@ import {
 } from "@/lib/vendor";
 import { shortlistApplication, rejectApplication, acceptApplication } from "@/lib/organization";
 import { WORKER_CATEGORIES } from "@/lib/worker";
+import { AttachmentUpload, AttachmentGallery, type Attachment } from "@/components/AttachmentUpload";
+import { EmojiPicker } from "@/components/EmojiPicker";
+import { AttachmentUpload, AttachmentGallery, type Attachment } from "@/components/AttachmentUpload";
+import { EmojiPicker } from "@/components/EmojiPicker";
 
 export const Route = createFileRoute("/_authenticated/vendor/post-jobs")({
   head: () => ({ meta: [{ title: "Job Board — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
@@ -115,6 +119,12 @@ function VendorJobsPage() {
                 <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${expanded === p.id ? "rotate-180" : ""}`} />
               </div>
             </button>
+            {expanded === p.id && (
+              <div className="border-t border-border bg-muted/20 px-5 py-3">
+                {p.description && <p className="text-sm text-muted-foreground whitespace-pre-wrap">{p.description}</p>}
+                <AttachmentGallery attachments={p.attachments ?? []} />
+              </div>
+            )}
             {expanded === p.id && <ApplicationsPanel postingId={p.id} vendorId={activeVendorId} />}
           </div>
         ))}
@@ -197,6 +207,7 @@ function NewPostingModal({ vendorId, onClose, onDone }: { vendorId: string; onCl
     title: "", category: WORKER_CATEGORIES[0], description: "", venue: "", venue_address: "",
     event_date: "", start_time: "", end_time: "", slots_needed: "1", pay_amount: "", pay_type: "per_event" as const,
   });
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const cls = "mt-1.5 w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm";
@@ -219,6 +230,7 @@ function NewPostingModal({ vendorId, onClose, onDone }: { vendorId: string; onCl
         slots_needed: Number(form.slots_needed) || 1,
         pay_amount: form.pay_amount ? Number(form.pay_amount) : null,
         pay_type: form.pay_type,
+        attachments,
       });
       toast.success("Job posted — visible to workers now.");
       onDone();
@@ -253,6 +265,12 @@ function NewPostingModal({ vendorId, onClose, onDone }: { vendorId: string; onCl
           </div>
           <Field label="Description">
             <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className={cls} />
+          </Field>
+          <div className="flex items-center gap-2">
+            <EmojiPicker compact onSelect={(e) => setForm((f) => ({ ...f, description: f.description + e }))} />
+          </div>
+          <Field label="Reference photos / documents (optional)">
+            <AttachmentUpload pathPrefix={`jobs/vendor-${vendorId}`} value={attachments} onChange={setAttachments} maxFiles={5} />
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Venue"><input value={form.venue} onChange={(e) => setForm({ ...form, venue: e.target.value })} className={cls} /></Field>
