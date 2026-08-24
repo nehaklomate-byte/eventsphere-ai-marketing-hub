@@ -18,6 +18,18 @@ export type ConversationSummary = {
   created_at: string;
   other_participant_id: string | null;
   other_role_label: string | null;
+  // The person on the other end's actual name — `subject` alone can't
+  // serve this: it's a fixed string set once when the conversation is
+  // created (usually the venue/task name), so a venue owner with ten
+  // customers all booking the same hall would see the SAME subject
+  // ("Vishwaraj lawns") on every single row and have no way to tell
+  // who any of them actually are. This is resolved per-viewer instead.
+  other_participant_name: string;
+  // For customer_booking conversations, the event this booking is
+  // for (from customer_bookings.details.event_name) — subject alone
+  // (the venue name) doesn't say WHICH event/booking a thread is
+  // about when the same venue has several.
+  event_name: string | null;
   unread_count: number;
   last_message_preview: string | null;
 };
@@ -64,7 +76,39 @@ export async function fetchMyConversations(userId: string): Promise<Conversation
     .select("conversation_id, user_id, role_label")
     .in("conversation_id" as never, conversationIds as never)
     .neq("user_id" as never, userId as never);
-  const otherByConv = new Map(((others as unknown as { conversation_id: string; user_id: string; role_label: string | null }[]) ?? []).map((o) => [o.conversation_id, o]));
+  const otherRows = ((others as unknown as { conversation_id: string; user_id: string; role_label: string | null }[]) ?? []);
+  const otherByConv = new Map(otherRows.map((o) => [o.conversation_id, o]));
+
+  // Resolve the other participant's actual name — profiles covers
+  // customers/owners/assigners, but a worker or vendor's display name
+  // often lives on their workers/vendors row instead (full_name there
+  // can be blank), so fall back to those tables too.
+  const otherUserIds = Array.from(new Set(otherRows.map((o) => o.user_id)));
+  const nameById = new Map<string, string>();
+  if (otherUserIds.length) {
+    const [{ data: profs }, { data: workerRows }, { data: vendorRows }] = await Promise.all([
+      supabase.from("profiles" as never).select("id, full_name, business_name" as never).in("id" as never, otherUserIds as never),
+      supabase.from("workers" as never).select("owner_id, full_name" as never).in("owner_id" as never, otherUserIds as never),
+      supabase.from("vendors" as never).select("owner_id, business_name" as never).in("owner_id" as never, otherUserIds as never),
+    ]);
+    ((profs as unknown as { id: string; full_name: string | null; business_name?: string | null }[]) ?? []).forEach((p) => {
+      if (p.full_name || p.business_name) nameById.set(p.id, p.full_name || p.business_name!);
+    });
+    ((workerRows as unknown as { owner_id: string; full_name: string | null }[]) ?? []).forEach((w) => { if (w.full_name && !nameById.has(w.owner_id)) nameById.set(w.owner_id, w.full_name); });
+    ((vendorRows as unknown as { owner_id: string; business_name: string | null }[]) ?? []).forEach((v) => { if (v.business_name && !nameById.has(v.owner_id)) nameById.set(v.owner_id, v.business_name); });
+  }
+
+  // For hall bookings, look up the event name too — the venue owner
+  // needs to know WHICH event a thread is about, not just the venue's
+  // own name (which is all `subject` currently carries for these).
+  const bookingConvContextIds = list.filter((r) => r.conversations.context_type === "customer_booking").map((r) => r.conversations.context_id);
+  const eventNameByContextId = new Map<string, string>();
+  if (bookingConvContextIds.length) {
+    const { data: bookings } = await supabase.from("customer_bookings").select("id, details").in("id", bookingConvContextIds);
+    ((bookings as unknown as { id: string; details: { event_name?: string } | null }[]) ?? []).forEach((b) => {
+      if (b.details?.event_name) eventNameByContextId.set(b.id, b.details.event_name);
+    });
+  }
 
   const { data: lastMsgs } = await supabase
     .from("messages" as never)
@@ -96,6 +140,8 @@ export async function fetchMyConversations(userId: string): Promise<Conversation
         ...r.conversations,
         other_participant_id: other?.user_id ?? null,
         other_role_label: other?.role_label ?? null,
+        other_participant_name: (other?.user_id && nameById.get(other.user_id)) || "Someone",
+        event_name: eventNameByContextId.get(r.conversations.context_id) ?? null,
         unread_count: unreadByConv.get(r.conversation_id) ?? 0,
         last_message_preview: previewByConv.get(r.conversation_id) ?? null,
       };
