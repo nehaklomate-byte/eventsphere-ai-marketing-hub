@@ -57,9 +57,9 @@ export function ProfileHistoryPanel({ entityType, entityId }: { entityType: Prof
         setRows(list);
         const ids = Array.from(new Set(list.map((r) => r.changed_by).filter(Boolean))) as string[];
         if (ids.length) {
-          const { data: profs } = await supabase.from("profiles").select("id,full_name").in("id", ids);
+          const { data: profs } = await supabase.from("profile_directory" as never).select("id,full_name" as never).in("id" as never, ids as never);
           const map: Record<string, string> = {};
-          (profs ?? []).forEach((p: { id: string; full_name: string | null }) => { map[p.id] = p.full_name ?? "Someone"; });
+          ((profs ?? []) as unknown as { id: string; full_name: string | null }[]).forEach((p) => { map[p.id] = p.full_name ?? "Someone"; });
           setNames(map);
         }
       }
