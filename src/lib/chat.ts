@@ -79,23 +79,17 @@ export async function fetchMyConversations(userId: string): Promise<Conversation
   const otherRows = ((others as unknown as { conversation_id: string; user_id: string; role_label: string | null }[]) ?? []);
   const otherByConv = new Map(otherRows.map((o) => [o.conversation_id, o]));
 
-  // Resolve the other participant's actual name — profiles covers
-  // customers/owners/assigners, but a worker or vendor's display name
-  // often lives on their workers/vendors row instead (full_name there
-  // can be blank), so fall back to those tables too.
+  // Resolve the other participant's actual name via profile_directory
+  // (migration 20260823150000) — profiles itself only allows reading
+  // your OWN row, so a customer/venue owner/vendor/worker could never
+  // see who they're actually talking to; this view is the fix.
   const otherUserIds = Array.from(new Set(otherRows.map((o) => o.user_id)));
   const nameById = new Map<string, string>();
   if (otherUserIds.length) {
-    const [{ data: profs }, { data: workerRows }, { data: vendorRows }] = await Promise.all([
-      supabase.from("profiles" as never).select("id, full_name, business_name" as never).in("id" as never, otherUserIds as never),
-      supabase.from("workers" as never).select("owner_id, full_name" as never).in("owner_id" as never, otherUserIds as never),
-      supabase.from("vendors" as never).select("owner_id, business_name" as never).in("owner_id" as never, otherUserIds as never),
-    ]);
+    const { data: profs } = await supabase.from("profile_directory" as never).select("id, full_name, business_name" as never).in("id" as never, otherUserIds as never);
     ((profs as unknown as { id: string; full_name: string | null; business_name?: string | null }[]) ?? []).forEach((p) => {
       if (p.full_name || p.business_name) nameById.set(p.id, p.full_name || p.business_name!);
     });
-    ((workerRows as unknown as { owner_id: string; full_name: string | null }[]) ?? []).forEach((w) => { if (w.full_name && !nameById.has(w.owner_id)) nameById.set(w.owner_id, w.full_name); });
-    ((vendorRows as unknown as { owner_id: string; business_name: string | null }[]) ?? []).forEach((v) => { if (v.business_name && !nameById.has(v.owner_id)) nameById.set(v.owner_id, v.business_name); });
   }
 
   // For hall bookings, look up the event name too — the venue owner
@@ -164,7 +158,11 @@ export async function fetchMessages(conversationId: string): Promise<Message[]> 
 async function attachSenderNames<T extends { sender_id: string }>(rows: T[]): Promise<(T & { sender_name: string })[]> {
   if (rows.length === 0) return [];
   const senderIds = Array.from(new Set(rows.map((r) => r.sender_id)));
-  const { data: profs } = await supabase.from("profiles" as never).select("id, full_name, business_name" as never).in("id" as never, senderIds as never);
+  // profile_directory (migration 20260823150000), NOT profiles directly —
+  // profiles' RLS only allows reading your OWN row, so a straight query
+  // against it silently returns nothing for whoever you're chatting
+  // with and every bubble falls back to "Someone".
+  const { data: profs } = await supabase.from("profile_directory" as never).select("id, full_name, business_name" as never).in("id" as never, senderIds as never);
   const nameById = new Map(((profs as unknown as { id: string; full_name: string | null; business_name?: string | null }[]) ?? []).map((p) => [p.id, p.full_name || p.business_name || "Someone"]));
   return rows.map((r) => ({ ...r, sender_name: nameById.get(r.sender_id) ?? "Someone" }));
 }
