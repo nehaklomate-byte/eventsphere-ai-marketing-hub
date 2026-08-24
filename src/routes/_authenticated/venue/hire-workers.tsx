@@ -3,11 +3,11 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  HardHat, MapPin, Star, Search, Wallet, Send, X, Loader2, Briefcase, IndianRupee, CheckCircle2, Clock3, ImageIcon,
+  HardHat, MapPin, Star, Search, Wallet, Send, X, Loader2, Briefcase, IndianRupee, CheckCircle2, Clock3, ImageIcon, Sparkles, Info,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
-import { fetchMyHalls, fetchHallBookings } from "@/lib/venue";
+import { fetchMyHalls, fetchHallBookings, type HallBooking } from "@/lib/venue";
 import { WORKER_CATEGORIES, isVideoUrl } from "@/lib/worker";
 import { payForWorkerTask } from "@/lib/razorpay";
 import { notifyUsers } from "@/lib/push";
@@ -43,6 +43,38 @@ type MyRequest = {
   worker: { full_name: string } | null;
 };
 
+type RequestedItem = {
+  bookingId: string; bookingLabel: string; category: string; name: string;
+  requirementNote: string | null; budget: number | null;
+};
+
+function extractRequestedItems(bookings: HallBooking[]): RequestedItem[] {
+  const items: RequestedItem[] = [];
+  for (const b of bookings) {
+    if (b.status === "cancelled") continue;
+    const requested = (b.details?.requested_services as { category: string; name: string; requirement_note?: string | null }[] | undefined) ?? [];
+    const priceLines = (b.details?.price_breakdown as { label: string; amount: number }[] | undefined) ?? [];
+    for (const r of requested) {
+      const line = priceLines.find((l) => l.label === `${r.name} (${r.category})`);
+      items.push({
+        bookingId: b.id,
+        bookingLabel: `${b.target_name}${b.event_date ? ` — ${new Date(b.event_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}` : ""}`,
+        category: r.category,
+        name: r.name,
+        requirementNote: r.requirement_note ?? null,
+        budget: line ? Number(line.amount) : null,
+      });
+    }
+  }
+  return items;
+}
+
+function categoriesLooselyMatch(a: string, b: string): boolean {
+  const norm = (s: string) => s.trim().toLowerCase().replace(/s$/, "");
+  const na = norm(a), nb = norm(b);
+  return na.includes(nb) || nb.includes(na);
+}
+
 async function fetchMyRequests(userId: string): Promise<MyRequest[]> {
   const { data, error } = await supabase.from("worker_tasks" as never)
     .select("id,task_name,event_name,event_date,status,payment_status,payment_amount,check_in_photo_url,check_out_photo_url,completion_photo_urls,completion_notes,worker:workers(full_name)")
@@ -57,6 +89,7 @@ function HireWorkersPage() {
   const [category, setCategory] = useState("");
   const [q, setQ] = useState("");
   const [hireTarget, setHireTarget] = useState<MarketWorker | null>(null);
+  const [matchedRequestKey, setMatchedRequestKey] = useState("");
 
   const { data: halls = [] } = useQuery({ queryKey: ["my-halls"], queryFn: fetchMyHalls, enabled: !!user?.id });
   const { data: bookings = [] } = useQuery({
@@ -66,7 +99,14 @@ function HireWorkersPage() {
   });
   const { data: workers = [], isLoading } = useQuery({ queryKey: ["verified-workers", category], queryFn: () => fetchVerifiedWorkers(category) });
 
-  const filtered = workers.filter((w) => !q || w.full_name.toLowerCase().includes(q.toLowerCase()) || (w.city ?? "").toLowerCase().includes(q.toLowerCase()));
+  const requestedItems = extractRequestedItems(bookings);
+  const matchedRequest = requestedItems.find((r) => `${r.bookingId}::${r.name}` === matchedRequestKey) ?? null;
+
+  const filtered = workers.filter((w) => {
+    if (q && !(w.full_name.toLowerCase().includes(q.toLowerCase()) || (w.city ?? "").toLowerCase().includes(q.toLowerCase()))) return false;
+    if (matchedRequest && w.category && !categoriesLooselyMatch(w.category, matchedRequest.category)) return false;
+    return true;
+  });
 
   return (
     <div className="space-y-6">
@@ -74,6 +114,24 @@ function HireWorkersPage() {
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Hire Workers</h1>
         <p className="mt-1 text-sm text-muted-foreground">Browse verified workers and send them a direct booking request for your venue's events — they need to accept before it's confirmed.</p>
       </div>
+
+      {requestedItems.length > 0 && (
+        <div className="rounded-xl border border-brand-violet/25 bg-brand-violet/5 px-4 py-3">
+          <label className="flex items-center gap-1.5 text-xs font-semibold text-brand-violet mb-1.5"><Sparkles className="h-3.5 w-3.5" /> Find a worker for a customer's request</label>
+          <select value={matchedRequestKey} onChange={(e) => setMatchedRequestKey(e.target.value)}
+            className="w-full rounded-full border border-input bg-card px-4 py-2.5 text-sm outline-none">
+            <option value="">Show all workers</option>
+            {requestedItems.map((r) => (
+              <option key={`${r.bookingId}::${r.name}`} value={`${r.bookingId}::${r.name}`}>
+                {r.name} ({r.category}) — {r.bookingLabel}{r.budget != null ? ` · budgeted ₹${r.budget.toLocaleString("en-IN")}` : ""}
+              </option>
+            ))}
+          </select>
+          {matchedRequest && (
+            <p className="mt-1.5 text-[11px] text-muted-foreground">Showing workers whose category matches "{matchedRequest.category}". When you send a request, this service's requirement note {matchedRequest.budget != null ? "and budgeted amount " : ""}will be filled in for you.</p>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[220px]">
@@ -135,7 +193,7 @@ function HireWorkersPage() {
       )}
 
       {hireTarget && user?.id && (
-        <HirePanel worker={hireTarget} bookings={bookings} userId={user.id} onClose={() => setHireTarget(null)} />
+        <HirePanel worker={hireTarget} bookings={bookings} userId={user.id} matchedRequest={matchedRequest} onClose={() => setHireTarget(null)} />
       )}
 
       {user?.id && <MyRequests userId={user.id} />}
@@ -246,15 +304,36 @@ function ProofItem({ url, label }: { url: string; label: string }) {
   );
 }
 
-function HirePanel({ worker, bookings, userId, onClose }: {
-  worker: MarketWorker; bookings: { id: string; target_name: string; event_date: string | null; status: string }[]; userId: string; onClose: () => void;
+function HirePanel({ worker, bookings, userId, matchedRequest, onClose }: {
+  worker: MarketWorker; bookings: HallBooking[]; userId: string; matchedRequest: RequestedItem | null; onClose: () => void;
 }) {
   const qc = useQueryClient();
   const activeBookings = bookings.filter((b) => b.status !== "cancelled");
+  const initialBookingId = matchedRequest?.bookingId ?? activeBookings[0]?.id ?? "";
+  const initialBooking = activeBookings.find((b) => b.id === initialBookingId);
   const [form, setForm] = useState({
-    event_name: "", task_name: "", booking_id: activeBookings[0]?.id ?? "", event_date: activeBookings[0]?.event_date ?? "", start_time: "", end_time: "", pay_amount: "", advance_amount: "",
+    event_name: "", task_name: matchedRequest?.name ?? "",
+    booking_id: initialBookingId, event_date: initialBooking?.event_date ?? "",
+    start_time: "", end_time: "", pay_amount: "", advance_amount: "",
   });
+  const [requirementNote, setRequirementNote] = useState(matchedRequest?.requirementNote ?? "");
+  const [budgetHint, setBudgetHint] = useState<number | null>(matchedRequest?.budget ?? null);
   const [formError, setFormError] = useState<string | null>(null);
+
+  function onBookingChange(bookingId: string) {
+    const b = activeBookings.find((x) => x.id === bookingId);
+    const requested = (b?.details?.requested_services as { category: string; name: string; requirement_note?: string | null }[] | undefined) ?? [];
+    const priceLines = (b?.details?.price_breakdown as { label: string; amount: number }[] | undefined) ?? [];
+    const match = worker.category ? requested.find((r) => categoriesLooselyMatch(r.category, worker.category!)) : undefined;
+    setForm((f) => ({ ...f, booking_id: bookingId, event_date: b?.event_date ?? f.event_date, task_name: match ? match.name : f.task_name }));
+    if (match) {
+      setRequirementNote(match.requirement_note ?? "");
+      const line = priceLines.find((l) => l.label === `${match.name} (${match.category})`);
+      setBudgetHint(line ? Number(line.amount) : null);
+    } else {
+      setBudgetHint(null);
+    }
+  }
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -272,6 +351,7 @@ function HirePanel({ worker, bookings, userId, onClose }: {
         customer_booking_id: booking?.id ?? null,
         event_name: (form.event_name || booking?.target_name || "Event").trim(),
         task_name: form.task_name.trim(),
+        description: requirementNote.trim() || null,
         venue: booking?.target_name ?? null,
         event_date: form.event_date,
         start_time: form.start_time || null,
@@ -309,10 +389,8 @@ function HirePanel({ worker, bookings, userId, onClose }: {
           {activeBookings.length > 0 ? (
             <div>
               <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">Which event/booking is this for?</label>
-              <select value={form.booking_id} onChange={(e) => {
-                const b = activeBookings.find((x) => x.id === e.target.value);
-                setForm((f) => ({ ...f, booking_id: e.target.value, event_date: b?.event_date ?? f.event_date }));
-              }} className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none">
+              <select value={form.booking_id} onChange={(e) => onBookingChange(e.target.value)}
+                className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none">
                 {activeBookings.map((b) => (
                   <option key={b.id} value={b.id}>{b.target_name} — {b.event_date ? new Date(b.event_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "no date"} ({b.status})</option>
                 ))}
@@ -325,6 +403,12 @@ function HirePanel({ worker, bookings, userId, onClose }: {
           )}
           <input placeholder="Task (what should they do?)" value={form.task_name} onChange={(e) => setForm((f) => ({ ...f, task_name: e.target.value }))}
             className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
+          <div>
+            <textarea rows={2} placeholder="Customer's requirement for this (optional — shown to the worker)"
+              value={requirementNote} onChange={(e) => setRequirementNote(e.target.value)}
+              className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
+            {requirementNote && <p className="mt-1 text-[11px] text-muted-foreground">This will show on the worker's job request so they know exactly what the customer asked for.</p>}
+          </div>
           <input type="date" value={form.event_date} onChange={(e) => setForm((f) => ({ ...f, event_date: e.target.value }))}
             className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
           <div className="grid grid-cols-2 gap-2">
@@ -333,6 +417,11 @@ function HirePanel({ worker, bookings, userId, onClose }: {
             <input type="time" value={form.end_time} onChange={(e) => setForm((f) => ({ ...f, end_time: e.target.value }))}
               className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
           </div>
+          {budgetHint != null && (
+            <p className="flex items-center gap-1.5 rounded-lg bg-accent/40 px-3 py-2 text-[11px] text-muted-foreground">
+              <Info className="h-3.5 w-3.5 shrink-0 text-brand-violet" /> You quoted the customer ₹{budgetHint.toLocaleString("en-IN")} for this service — enter what you're paying the worker below.
+            </p>
+          )}
           <div className="relative">
             <Wallet className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input type="number" placeholder="Pay amount (₹, optional)" value={form.pay_amount} onChange={(e) => setForm((f) => ({ ...f, pay_amount: e.target.value }))}
