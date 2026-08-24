@@ -28,6 +28,7 @@ export function MessagesInbox({ userId }: { userId: string }) {
   }
 
   const active = conversations.find((c) => c.id === openId);
+  const activeAbout = active ? (active.event_name ? `${active.event_name} · ${active.subject ?? ""}`.replace(/ · $/, "") : active.subject ?? CONTEXT_LABEL[active.context_type]) : undefined;
 
   return (
     <>
@@ -38,25 +39,33 @@ export function MessagesInbox({ userId }: { userId: string }) {
       </div>
       {active && (
         <ChatPanel conversationId={active.id} userId={userId}
-          otherLabel={active.subject ?? CONTEXT_LABEL[active.context_type]} onClose={() => setOpenId(null)} />
+          otherLabel={active.other_participant_name} aboutLabel={activeAbout} onClose={() => setOpenId(null)} />
       )}
     </>
   );
 }
 
 function ConversationRow({ conversation, onClick }: { conversation: ConversationSummary; onClick: () => void }) {
+  // What this thread is "about" — for a hall booking, the event name
+  // if we have it (customer_bookings.details.event_name), else fall
+  // back to the venue name (subject) that was always there.
+  const aboutLine = conversation.event_name
+    ? `${conversation.event_name} · ${conversation.subject ?? ""}`.replace(/ · $/, "")
+    : conversation.subject ?? CONTEXT_LABEL[conversation.context_type];
+
   return (
     <button onClick={onClick} className="flex w-full items-center gap-3 px-5 py-4 text-left hover:bg-accent/50 transition-colors">
       <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-brand text-white text-xs font-semibold">
-        {(conversation.subject ?? "?")[0]?.toUpperCase()}
+        {conversation.other_participant_name[0]?.toUpperCase()}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-sm font-semibold">{conversation.subject ?? CONTEXT_LABEL[conversation.context_type]}</span>
+          <span className="truncate text-sm font-semibold">{conversation.other_participant_name}</span>
           <span className="shrink-0 text-[10px] text-muted-foreground">{new Date(conversation.last_message_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
         </div>
+        <div className="truncate text-[11px] text-brand-violet/80 font-medium">{aboutLine}</div>
         <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-xs text-muted-foreground">{conversation.last_message_preview ?? CONTEXT_LABEL[conversation.context_type]}</span>
+          <span className="truncate text-xs text-muted-foreground">{conversation.last_message_preview ?? "No messages yet"}</span>
           {conversation.unread_count > 0 && (
             <span className="shrink-0 grid h-5 min-w-5 place-items-center rounded-full bg-brand-violet px-1.5 text-[10px] font-bold text-white">{conversation.unread_count}</span>
           )}
