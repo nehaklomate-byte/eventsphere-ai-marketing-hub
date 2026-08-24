@@ -14,8 +14,8 @@ import { EmojiPicker } from "@/components/EmojiPicker";
  * Fully self-contained: fetches history, subscribes to realtime updates,
  * marks read on open, and sends new messages.
  */
-export function ChatPanel({ conversationId, userId, otherLabel, onClose }: {
-  conversationId: string; userId: string; otherLabel?: string; onClose: () => void;
+export function ChatPanel({ conversationId, userId, otherLabel, aboutLabel, onClose }: {
+  conversationId: string; userId: string; otherLabel?: string; aboutLabel?: string; onClose: () => void;
 }) {
   const qc = useQueryClient();
   const [draft, setDraft] = useState("");
@@ -71,9 +71,12 @@ export function ChatPanel({ conversationId, userId, otherLabel, onClose }: {
     <div className="fixed inset-0 z-50 grid place-items-end bg-black/40 p-0 sm:place-items-center sm:p-4" onClick={onClose}>
       <div className="flex h-[85vh] w-full max-w-md flex-col rounded-t-3xl border border-border bg-card shadow-elegant sm:h-[600px] sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <div className="flex items-center gap-2">
-            <MessageCircle className="h-4 w-4 text-brand-violet" />
-            <h3 className="font-semibold text-sm">{otherLabel ?? "Conversation"}</h3>
+          <div className="flex items-center gap-2 min-w-0">
+            <MessageCircle className="h-4 w-4 shrink-0 text-brand-violet" />
+            <div className="min-w-0">
+              <h3 className="truncate font-semibold text-sm">{otherLabel ?? "Conversation"}</h3>
+              {aboutLabel && <p className="truncate text-[11px] text-muted-foreground">{aboutLabel}</p>}
+            </div>
           </div>
           <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-accent"><X className="h-4 w-4" /></button>
         </div>
