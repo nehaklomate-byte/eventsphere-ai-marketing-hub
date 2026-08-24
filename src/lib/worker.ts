@@ -222,6 +222,12 @@ export type OpenPosting = {
   status: "open" | "closed" | "cancelled";
   created_at: string;
   poster_name?: string;
+  // Reference photos / documents the poster attached (migration
+  // 20260823110000_attachments_support.sql) — was missing from this
+  // type even though the column and the runtime data have always had
+  // it (fetchOpenPostings selects "*"), which is why worker/board.tsx
+  // referencing p.attachments failed typecheck.
+  attachments: { url: string; name: string; type: string; size: number }[];
 };
 
 export type MyApplication = {
