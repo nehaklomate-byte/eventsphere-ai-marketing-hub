@@ -2,11 +2,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarCheck, Check, X, Loader2, IndianRupee, Eye, Download, Ban, Users, HardHat, Store, Receipt } from "lucide-react";
+import { CalendarCheck, Check, X, Loader2, IndianRupee, Eye, Download, Ban, Users, HardHat, Store, Receipt, MessageSquareWarning } from "lucide-react";
 import { fetchMyHalls, fetchHallBookings, updateBookingStatus, declineHallBooking, confirmBookingWithPricing, resolveHallBasePrice, resolveRescheduleRequest, type HallBooking, type PriceLine, type Hall } from "@/lib/venue";
 import { notifyUsers } from "@/lib/push";
 import { downloadCsv } from "@/lib/admin";
 import { supabase } from "@/integrations/supabase/client";
+import { acceptWorkerCounter, rejectWorkerCounter } from "@/lib/worker";
+import { acceptVendorCounter, rejectVendorCounter } from "@/lib/vendor";
 
 export const Route = createFileRoute("/_authenticated/venue/bookings")({
   head: () => ({ meta: [{ title: "Bookings — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
@@ -436,30 +438,63 @@ function PricingModal({
   );
 }
 
+type HiredWorkerRow = {
+  id: string; task_name: string; status: string; payment_status: string; service_category: string | null;
+  proposed_fee: number | null; final_fee: number | null; counter_offer_amount: number | null; counter_offer_note: string | null;
+  worker: { full_name: string } | null;
+};
+type HiredVendorRow = {
+  id: string; task_name: string; status: string; payment_status: string; service_category: string | null;
+  proposed_fee: number | null; final_fee: number | null; counter_offer_amount: number | null; counter_offer_note: string | null;
+  vendor: { business_name: string } | null;
+};
+
+// Per-event operational view for the venue owner (spec Part 32): who's
+// hired for which service, their status, and — new — the fee each side
+// is at (proposed vs agreed), plus accept/decline actions when a
+// vendor/worker has sent a counter-offer back.
 function HiredTeamPanel({ bookingId }: { bookingId: string }) {
+  const qc = useQueryClient();
+  const [busyId, setBusyId] = useState<string | null>(null);
   const { data, isLoading } = useQuery({
     queryKey: ["booking-hired-team", bookingId],
     queryFn: async () => {
       const [{ data: workers, error: wErr }, { data: vendors, error: vErr }] = await Promise.all([
-        supabase.from("worker_tasks" as never).select("id,task_name,status,payment_status,worker:workers(full_name)")
+        supabase.from("worker_tasks" as never)
+          .select("id,task_name,status,payment_status,service_category,proposed_fee,final_fee,counter_offer_amount,counter_offer_note,worker:workers(full_name)")
           .eq("customer_booking_id" as never, bookingId as never),
-        supabase.from("vendor_tasks" as never).select("id,task_name,status,payment_status,vendor:vendors(business_name)")
+        supabase.from("vendor_tasks" as never)
+          .select("id,task_name,status,payment_status,service_category,proposed_fee,final_fee,counter_offer_amount,counter_offer_note,vendor:vendors(business_name)")
           .eq("customer_booking_id" as never, bookingId as never),
       ]);
       if (wErr) throw wErr;
       if (vErr) throw vErr;
       return {
-        workers: (workers ?? []) as unknown as { id: string; task_name: string; status: string; payment_status: string; worker: { full_name: string } | null }[],
-        vendors: (vendors ?? []) as unknown as { id: string; task_name: string; status: string; payment_status: string; vendor: { business_name: string } | null }[],
+        workers: (workers ?? []) as unknown as HiredWorkerRow[],
+        vendors: (vendors ?? []) as unknown as HiredVendorRow[],
       };
     },
   });
 
   const statusTone: Record<string, string> = {
-    pending: "bg-amber-500/15 text-amber-700", accepted: "bg-blue-500/15 text-blue-700",
+    pending: "bg-amber-500/15 text-amber-700", countered: "bg-purple-500/15 text-purple-700", accepted: "bg-blue-500/15 text-blue-700",
     in_progress: "bg-blue-500/15 text-blue-700", completed: "bg-emerald-500/15 text-emerald-700",
     rejected: "bg-rose-500/15 text-rose-700", cancelled: "bg-rose-500/15 text-rose-700",
   };
+
+  async function respond(kind: "worker" | "vendor", id: string, accept: boolean) {
+    setBusyId(id);
+    try {
+      if (kind === "worker") await (accept ? acceptWorkerCounter(id) : rejectWorkerCounter(id, "Counter offer declined by venue owner"));
+      else await (accept ? acceptVendorCounter(id) : rejectVendorCounter(id, "Counter offer declined by venue owner"));
+      toast.success(accept ? "Counter offer accepted — assignment confirmed" : "Counter offer declined");
+      qc.invalidateQueries({ queryKey: ["booking-hired-team", bookingId] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not respond");
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   const nothing = !isLoading && (data?.workers.length ?? 0) === 0 && (data?.vendors.length ?? 0) === 0;
 
@@ -471,24 +506,60 @@ function HiredTeamPanel({ bookingId }: { bookingId: string }) {
         <div className="text-xs text-muted-foreground">No worker or vendor has been hired for this event yet — use "Hire Workers" / "Hire Vendors" and pick this event.</div>
       ) : (
         <div className="space-y-2">
-          {data!.workers.map((w) => (
-            <div key={`w-${w.id}`} className="flex items-center justify-between gap-3 rounded-xl bg-muted/40 px-3 py-2 text-xs">
-              <span className="flex items-center gap-2 font-medium"><HardHat className="h-3.5 w-3.5 text-muted-foreground" /> {w.worker?.full_name ?? "Worker"} — {w.task_name}</span>
-              <span className="flex items-center gap-2">
-                <span className={`rounded-full px-2 py-0.5 font-semibold capitalize ${statusTone[w.status] ?? "bg-muted"}`}>{w.status.replace("_", " ")}</span>
-                {w.payment_status === "paid" && <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 font-semibold text-emerald-700">Paid</span>}
-              </span>
+          {data!.workers.map((w) => {
+            const fee = w.final_fee ?? w.proposed_fee;
+            return (
+            <div key={`w-${w.id}`} className="rounded-xl bg-muted/40 px-3 py-2 text-xs">
+              <div className="flex items-center justify-between gap-3">
+                <span className="flex items-center gap-2 font-medium">
+                  <HardHat className="h-3.5 w-3.5 text-muted-foreground" /> {w.worker?.full_name ?? "Worker"} — {w.task_name}
+                  {w.service_category && <span className="rounded-full bg-accent px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">{w.service_category}</span>}
+                </span>
+                <span className="flex items-center gap-2">
+                  {fee != null && <span className="font-semibold text-foreground">₹{fee.toLocaleString("en-IN")}</span>}
+                  <span className={`rounded-full px-2 py-0.5 font-semibold capitalize ${statusTone[w.status] ?? "bg-muted"}`}>{w.status.replace("_", " ")}</span>
+                  {w.payment_status === "paid" && <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 font-semibold text-emerald-700">Paid</span>}
+                </span>
+              </div>
+              {w.status === "countered" && (
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-purple-300/60 bg-purple-50 dark:bg-purple-950/20 px-2.5 py-2">
+                  <span className="flex items-center gap-1.5 font-semibold text-purple-800 dark:text-purple-300"><MessageSquareWarning className="h-3.5 w-3.5" /> Countered ₹{(w.counter_offer_amount ?? 0).toLocaleString("en-IN")}{w.counter_offer_note ? ` — "${w.counter_offer_note}"` : ""}</span>
+                  <span className="flex gap-1.5">
+                    <button disabled={busyId === w.id} onClick={() => respond("worker", w.id, true)} className="rounded-full bg-emerald-600 px-2.5 py-1 font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">Accept</button>
+                    <button disabled={busyId === w.id} onClick={() => respond("worker", w.id, false)} className="rounded-full border border-input px-2.5 py-1 font-semibold hover:bg-accent disabled:opacity-50">Decline</button>
+                  </span>
+                </div>
+              )}
             </div>
-          ))}
-          {data!.vendors.map((v) => (
-            <div key={`v-${v.id}`} className="flex items-center justify-between gap-3 rounded-xl bg-muted/40 px-3 py-2 text-xs">
-              <span className="flex items-center gap-2 font-medium"><Store className="h-3.5 w-3.5 text-muted-foreground" /> {v.vendor?.business_name ?? "Vendor"} — {v.task_name}</span>
-              <span className="flex items-center gap-2">
-                <span className={`rounded-full px-2 py-0.5 font-semibold capitalize ${statusTone[v.status] ?? "bg-muted"}`}>{v.status.replace("_", " ")}</span>
-                {v.payment_status === "paid" && <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 font-semibold text-emerald-700">Paid</span>}
-              </span>
+            );
+          })}
+          {data!.vendors.map((v) => {
+            const fee = v.final_fee ?? v.proposed_fee;
+            return (
+            <div key={`v-${v.id}`} className="rounded-xl bg-muted/40 px-3 py-2 text-xs">
+              <div className="flex items-center justify-between gap-3">
+                <span className="flex items-center gap-2 font-medium">
+                  <Store className="h-3.5 w-3.5 text-muted-foreground" /> {v.vendor?.business_name ?? "Vendor"} — {v.task_name}
+                  {v.service_category && <span className="rounded-full bg-accent px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">{v.service_category}</span>}
+                </span>
+                <span className="flex items-center gap-2">
+                  {fee != null && <span className="font-semibold text-foreground">₹{fee.toLocaleString("en-IN")}</span>}
+                  <span className={`rounded-full px-2 py-0.5 font-semibold capitalize ${statusTone[v.status] ?? "bg-muted"}`}>{v.status.replace("_", " ")}</span>
+                  {v.payment_status === "paid" && <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 font-semibold text-emerald-700">Paid</span>}
+                </span>
+              </div>
+              {v.status === "countered" && (
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-purple-300/60 bg-purple-50 dark:bg-purple-950/20 px-2.5 py-2">
+                  <span className="flex items-center gap-1.5 font-semibold text-purple-800 dark:text-purple-300"><MessageSquareWarning className="h-3.5 w-3.5" /> Countered ₹{(v.counter_offer_amount ?? 0).toLocaleString("en-IN")}{v.counter_offer_note ? ` — "${v.counter_offer_note}"` : ""}</span>
+                  <span className="flex gap-1.5">
+                    <button disabled={busyId === v.id} onClick={() => respond("vendor", v.id, true)} className="rounded-full bg-emerald-600 px-2.5 py-1 font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">Accept</button>
+                    <button disabled={busyId === v.id} onClick={() => respond("vendor", v.id, false)} className="rounded-full border border-input px-2.5 py-1 font-semibold hover:bg-accent disabled:opacity-50">Decline</button>
+                  </span>
+                </div>
+              )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
