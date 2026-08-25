@@ -118,6 +118,10 @@ export type HallBooking = {
   decline_reason: string | null; // set when the owner declines/cancels — shown to the customer (migration 20260822100000)
   requested_event_date: string | null; // customer's requested new date while status = 'reschedule_requested' (src/routes/_authenticated/customer/bookings.tsx)
   details: Record<string, unknown>;
+  // Reference files the customer uploaded when booking (images, menus, PDFs —
+  // migration 20260824090000). {url,name,type,size} shape, same as other
+  // attachments columns.
+  attachments: { url: string; name: string; type: string; size: number }[];
   created_at: string;
 };
 
