@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
 import {
   Briefcase, MapPin, Calendar, Clock, Play, Pause, CheckCircle2, XCircle, Loader2,
-  Camera, X, MapPinned, ImagePlus,
+  Camera, X, MapPinned, ImagePlus, MessageSquareWarning, Paperclip,
 } from "lucide-react";
 import { toast } from "sonner";
 import { statusTone, priorityTone, uploadWorkerFile, isVideoUrl, getBestEffortLocation, type WorkerTask } from "@/lib/worker";
@@ -33,6 +33,7 @@ function JobsPage() {
   const [completeTask, setCompleteTask] = useState<WorkerTask | null>(null);
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [counterTask, setCounterTask] = useState<WorkerTask | null>(null);
 
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ["worker-tasks", user?.id],
@@ -93,7 +94,7 @@ function JobsPage() {
                 <div className="min-w-0">
                   <div className="text-xs font-mono text-muted-foreground">#{t.id.slice(0, 8)}</div>
                   <h3 className="mt-1 font-semibold text-lg truncate">{t.task_name}</h3>
-                  <div className="text-sm text-muted-foreground truncate">{t.event_name}</div>
+                  <div className="text-sm text-muted-foreground truncate">{t.event_name}{t.service_category ? ` · ${t.service_category}` : ""}{t.quantity > 1 ? ` · × ${t.quantity}` : ""}</div>
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${priorityTone(t.priority)}`}>{t.priority.toUpperCase()}</span>
@@ -106,9 +107,10 @@ function JobsPage() {
                 <div className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5" /> {t.venue ?? "Venue TBD"}{t.venue_address ? ` · ${t.venue_address}` : ""}</div>
                 <div className="flex items-center gap-2"><Calendar className="h-3.5 w-3.5" /> {new Date(t.event_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</div>
                 <div className="flex items-center gap-2"><Clock className="h-3.5 w-3.5" /> {t.start_time ?? "—"} – {t.end_time ?? "—"}</div>
-                {t.payment_amount != null && (
+                {(t.final_fee ?? t.proposed_fee ?? t.payment_amount) != null && (
                   <div className="pt-1 flex items-center gap-2 text-sm font-semibold text-foreground">
-                    ₹{Number(t.payment_amount).toLocaleString("en-IN")}
+                    ₹{Number(t.final_fee ?? t.proposed_fee ?? t.payment_amount).toLocaleString("en-IN")}
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">{t.final_fee != null ? "Agreed fee" : "Proposed fee"}</span>
                     {t.payment_status === "paid" && (
                       <>
                         <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Paid</span>
@@ -126,7 +128,23 @@ function JobsPage() {
                   <span className="text-muted-foreground">{t.customer_requirements}</span>
                 </p>
               )}
+              {t.attachments && t.attachments.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {t.attachments.map((a) => (
+                    <a key={a.url} href={a.url} target="_blank" rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-[11px] font-medium hover:bg-accent">
+                      <Paperclip className="h-3 w-3" /> {a.name}
+                    </a>
+                  ))}
+                </div>
+              )}
               {t.description && <p className="mt-3 text-xs text-muted-foreground border-t border-border pt-3">{t.description}</p>}
+
+              {t.status === "countered" && (
+                <div className="mt-3 rounded-lg border border-purple-300/60 bg-purple-50 dark:bg-purple-950/20 px-3 py-2 text-xs">
+                  <span className="inline-flex items-center gap-1.5 font-semibold text-purple-800 dark:text-purple-300"><MessageSquareWarning className="h-3.5 w-3.5" /> Your counter of ₹{Number(t.counter_offer_amount).toLocaleString("en-IN")} is with the venue owner.</span>
+                </div>
+              )}
 
               {(t.check_in_photo_url || t.check_out_photo_url || (t.completion_photo_urls && t.completion_photo_urls.length > 0)) && (
                 <div className="mt-3 border-t border-border pt-3">
@@ -144,7 +162,11 @@ function JobsPage() {
                   <>
                     <button onClick={() => simpleUpdate(t.id, { status: "accepted", accepted_at: new Date().toISOString() })}
                       className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 text-white px-3 py-1.5 text-xs font-semibold hover:bg-emerald-700">
-                      <CheckCircle2 className="h-3.5 w-3.5" /> Accept
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Accept ₹{Number(t.proposed_fee ?? t.payment_amount ?? 0).toLocaleString("en-IN")}
+                    </button>
+                    <button onClick={() => setCounterTask(t)}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold hover:bg-accent">
+                      <MessageSquareWarning className="h-3.5 w-3.5" /> Counter Offer
                     </button>
                     <button onClick={() => { setRejectId(t.id); setRejectReason(""); }}
                       className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-500/10">
@@ -196,6 +218,16 @@ function JobsPage() {
         />
       )}
 
+      {counterTask && (
+        <CounterOfferPanel task={counterTask} busy={update.isPending}
+          onCancel={() => setCounterTask(null)}
+          onConfirm={(amount, note) => update.mutate(
+            { id: counterTask.id, patch: { status: "countered", counter_offer_amount: amount, counter_offer_note: note || null } },
+            { onSuccess: () => setCounterTask(null) },
+          )}
+        />
+      )}
+
       {rejectId && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onClick={() => setRejectId(null)}>
           <div className="w-full max-w-md rounded-2xl bg-card p-6 shadow-elegant" onClick={(e) => e.stopPropagation()}>
@@ -214,6 +246,51 @@ function JobsPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ---------------- Counter-offer panel (spec Part 23/24) ---------------- */
+function CounterOfferPanel({ task, busy, onCancel, onConfirm }: {
+  task: WorkerTask; busy: boolean; onCancel: () => void; onConfirm: (amount: number, note: string) => void;
+}) {
+  const [amount, setAmount] = useState(String(task.proposed_fee ?? task.payment_amount ?? ""));
+  const [note, setNote] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  function submit() {
+    const n = Number(amount);
+    if (!n || n <= 0) { setError("Enter a valid amount"); return; }
+    onConfirm(n, note.trim());
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onClick={onCancel}>
+      <div className="w-full max-w-md rounded-2xl bg-card p-6 shadow-elegant" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Counter offer</h3>
+          <button onClick={onCancel} className="rounded-lg p-1.5 hover:bg-accent"><X className="h-4 w-4" /></button>
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">Proposed fee was ₹{Number(task.proposed_fee ?? task.payment_amount ?? 0).toLocaleString("en-IN")}{task.quantity > 1 ? ` for ${task.quantity}` : ""} — suggest a different total for "{task.task_name}".</p>
+        <div className="mt-4">
+          <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground">Your counter amount (₹, total)</label>
+          <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)}
+            className="mt-1.5 w-full rounded-xl border border-input bg-background p-3 text-sm outline-none focus:border-brand-violet" />
+        </div>
+        <div className="mt-3">
+          <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground">Reason (optional)</label>
+          <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3}
+            className="mt-1.5 w-full rounded-xl border border-input bg-background p-3 text-sm" placeholder="e.g. Longer shift than usual…" />
+        </div>
+        {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
+        <div className="mt-4 flex justify-end gap-2">
+          <button onClick={onCancel} className="rounded-full border border-border px-4 py-2 text-sm font-medium">Cancel</button>
+          <button disabled={busy} onClick={submit}
+            className="inline-flex items-center gap-2 rounded-full btn-brand btn-brand-hover px-4 py-2 text-sm font-semibold text-white disabled:opacity-70">
+            {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Send counter offer
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
