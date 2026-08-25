@@ -63,8 +63,28 @@ export type WorkerTask = {
   start_time: string | null;
   end_time: string | null;
   priority: "low" | "normal" | "high" | "urgent";
-  status: "pending" | "accepted" | "in_progress" | "paused" | "completed" | "rejected" | "cancelled";
+  status: "pending" | "accepted" | "in_progress" | "paused" | "completed" | "rejected" | "cancelled" | "countered";
   payment_amount: number | null;
+  // Service this fulfils from the customer's original booking (spec Part 7/20) —
+  // matches a category/name in customer_bookings.details.requested_services.
+  service_category: string | null;
+  service_name: string | null;
+  quantity: number;
+  pricing_unit: "per_worker" | "per_day" | "per_shift" | "per_job";
+  // Negotiation (migration 20260824090000). proposed_fee is what the venue
+  // owner first offered; final_fee locks the moment either side accepts and
+  // is immutable after that — see tg_partner_task_negotiate.
+  proposed_fee: number | null;
+  final_fee: number | null;
+  counter_offer_amount: number | null;
+  counter_offer_note: string | null;
+  counter_offer_by: string | null;
+  counter_offered_at: string | null;
+  fee_locked_at: string | null;
+  // Reference files the venue owner forwarded from the customer's booking
+  // (need-to-know subset — spec Part 9), same {url,name,type,size} shape
+  // as other attachments columns (migration 20260823110000).
+  attachments: { url: string; name: string; type: string; size: number }[];
   accepted_at: string | null;
   started_at: string | null;
   paused_at: string | null;
@@ -178,6 +198,7 @@ export function computeCompletion(w: Partial<WorkerRow> | null): number {
 export function statusTone(status: WorkerTask["status"]) {
   const m: Record<WorkerTask["status"], string> = {
     pending: "bg-amber-500/10 text-amber-700 border-amber-500/20",
+    countered: "bg-purple-500/10 text-purple-700 border-purple-500/20",
     accepted: "bg-blue-500/10 text-blue-700 border-blue-500/20",
     in_progress: "bg-indigo-500/10 text-indigo-700 border-indigo-500/20",
     paused: "bg-slate-500/10 text-slate-700 border-slate-500/20",
@@ -186,6 +207,49 @@ export function statusTone(status: WorkerTask["status"]) {
     cancelled: "bg-zinc-500/10 text-zinc-700 border-zinc-500/20",
   };
   return m[status];
+}
+
+// ---- Fee negotiation (migration 20260824090000) ----
+// Worker/agency side: accept the proposed_fee as-is, counter with a
+// different amount, or reject outright. The DB trigger
+// (tg_partner_task_negotiate) enforces who's allowed to make each move
+// and freezes final_fee the instant either side accepts — these
+// helpers just perform the matching, single-field-focused update so
+// the UI never has to construct the transition by hand.
+export async function acceptWorkerTask(taskId: string): Promise<void> {
+  const { error } = await supabase.from("worker_tasks" as never)
+    .update({ status: "accepted", accepted_at: new Date().toISOString() } as never)
+    .eq("id" as never, taskId as never);
+  if (error) throw error;
+}
+
+export async function counterOfferWorkerTask(taskId: string, amount: number, note: string): Promise<void> {
+  const { error } = await supabase.from("worker_tasks" as never)
+    .update({ status: "countered", counter_offer_amount: amount, counter_offer_note: note || null } as never)
+    .eq("id" as never, taskId as never);
+  if (error) throw error;
+}
+
+export async function rejectWorkerTask(taskId: string, reason: string): Promise<void> {
+  const { error } = await supabase.from("worker_tasks" as never)
+    .update({ status: "rejected", rejected_at: new Date().toISOString(), rejection_reason: reason || null } as never)
+    .eq("id" as never, taskId as never);
+  if (error) throw error;
+}
+
+// Venue-owner side: respond to a worker's counter-offer.
+export async function acceptWorkerCounter(taskId: string): Promise<void> {
+  const { error } = await supabase.from("worker_tasks" as never)
+    .update({ status: "accepted", accepted_at: new Date().toISOString() } as never)
+    .eq("id" as never, taskId as never);
+  if (error) throw error;
+}
+
+export async function rejectWorkerCounter(taskId: string, reason: string): Promise<void> {
+  const { error } = await supabase.from("worker_tasks" as never)
+    .update({ status: "rejected", rejected_at: new Date().toISOString(), rejection_reason: reason || null } as never)
+    .eq("id" as never, taskId as never);
+  if (error) throw error;
 }
 
 export function priorityTone(p: WorkerTask["priority"]) {
