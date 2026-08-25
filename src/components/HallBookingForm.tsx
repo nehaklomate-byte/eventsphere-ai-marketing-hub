@@ -2,11 +2,12 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   Loader2, Send, Phone, AlertCircle, CheckCircle2, PartyPopper, User,
-  CalendarDays, MessageSquare, ChevronDown, Sparkles, Info,
+  CalendarDays, MessageSquare, ChevronDown, Sparkles, Info, Paperclip,
 } from "lucide-react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { emailSchema, phoneSchema } from "@/lib/validation";
+import { AttachmentUpload, type Attachment } from "@/components/AttachmentUpload";
 
 /* ============================================================
  * What this venue offers in-house vs what a customer books
@@ -161,6 +162,13 @@ function BookingForm({
   // venue owner sees exactly which service a note belongs to, instead of
   // everything lumped into the one general instructions box below.
   const [serviceNotes, setServiceNotes] = useState<Record<string, string>>({});
+  // Reference files (theme photos, menu PDFs, decoration mood boards…) the
+  // customer wants the venue owner — and later, the vendor fulfilling a
+  // service — to see (spec Part 9). Uploaded to a per-form-session draft
+  // folder since the booking row doesn't exist yet at upload time; the
+  // list itself is what actually gets attached to the row on submit.
+  const [draftId] = useState(() => crypto.randomUUID());
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   function toggleOption(key: string) {
     setRequestedOptions((prev) => {
       const next = { ...prev, [key]: !prev[key] };
@@ -204,6 +212,7 @@ function BookingForm({
       status: "pending",
       payment_status: "pending",
       notes: d.special_instructions || null,
+      attachments,
       details: {
         event_name: d.event_name,
         organizer_type: d.organizer_type === "Other" ? (d.organizer_type_other || "Other") : d.organizer_type,
@@ -391,6 +400,11 @@ function BookingForm({
       <Section icon={<MessageSquare className="h-4 w-4" />} title="Anything else?" subtitle="Optional">
         <textarea rows={3} className="input" value={state.special_instructions} onChange={(e) => set("special_instructions", e.target.value)} placeholder="Any requirement not covered above — e.g. a specific decoration idea the venue doesn't list" />
         {errors.special_instructions && <p className="text-[11px] font-medium text-destructive">{errors.special_instructions}</p>}
+      </Section>
+
+      <Section icon={<Paperclip className="h-4 w-4" />} title="Reference files" subtitle="Optional — theme photos, menu ideas, decoration mood boards, floor plans…">
+        <AttachmentUpload pathPrefix={`customer_bookings/${draftId}`} value={attachments} onChange={setAttachments} maxFiles={6} />
+        <p className="text-[11px] text-muted-foreground">The venue owner sees these when reviewing your request, and can forward the relevant ones to a vendor/worker they hire for a specific service — not everything you attach here goes to everyone.</p>
       </Section>
 
       <div className="flex items-start gap-2 rounded-xl bg-accent/40 px-3.5 py-2.5 text-sm text-muted-foreground">
