@@ -44,11 +44,11 @@ export function Footer() {
   return (
     <footer className="relative mt-24 border-t border-border bg-gradient-brand-soft">
       <div className="mx-auto max-w-7xl px-5 md:px-8 py-16">
-        <div className="grid gap-12 md:grid-cols-6">
+        <div className="grid gap-12 md:grid-cols-5">
           <div className="md:col-span-2">
             <Logo className="h-10" />
             <p className="mt-4 max-w-sm text-sm text-muted-foreground">
-              One intelligent cloud platform to plan, manage and execute every event — from intimate weddings to enterprise summits.
+              The clear workspace for finding venues, coordinating people and delivering better events.
             </p>
           </div>
           {cols.map((c) => (
