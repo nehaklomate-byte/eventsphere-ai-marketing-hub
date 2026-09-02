@@ -1,24 +1,25 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import {
-  ArrowRight, Building2, Store, UserCheck, ShieldCheck, CheckCircle2, Users2,
+  ArrowRight, Building2, Store, UserCheck, ShieldCheck, Users2,
   BellRing, Wallet, ClipboardCheck, Search, FileCheck2, CalendarRange, ChevronRight,
-  CircleDashed, Hammer, Loader2,
+  MapPin, BriefcaseBusiness, Sparkles, Check,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { SiteLayout } from "@/components/SiteLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveDashboardPath } from "@/lib/auth-redirect";
 import { isNativeAppShell } from "@/lib/platform";
+import heroImage from "@/assets/event-operations-hero.jpg";
 
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "EventOrbit — Event Operations Platform for Venues, Vendors & Teams" },
-      { name: "description", content: "EventOrbit connects organizations, venues, vendors and event workers on one verified platform — listings, enquiries, job assignment, task tracking and payouts in a single workspace." },
-      { property: "og:title", content: "EventOrbit — Event Operations Platform" },
-      { property: "og:description", content: "One verified workspace for venues, vendors, workers and the teams that hire them." },
+      { title: "EventOrbit — Event operations, without the scramble" },
+      { name: "description", content: "EventOrbit brings venue discovery, enquiries, job assignment and work tracking into one clear workspace." },
+      { property: "og:title", content: "EventOrbit — Event operations, without the scramble" },
+      { property: "og:description", content: "Find the right venue, coordinate the right people and keep every event detail in one place." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:url", content: "/" },
@@ -28,11 +29,11 @@ export const Route = createFileRoute("/")({
   component: Home,
 });
 
-const fadeUp = {
+const reveal = {
   initial: { opacity: 0, y: 24 },
   whileInView: { opacity: 1, y: 0 },
   viewport: { once: true, margin: "-80px" },
-  transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const },
+  transition: { duration: 0.65, ease: [0.22, 1, 0.36, 1] as const },
 };
 
 function Home() {
@@ -65,11 +66,11 @@ function Home() {
   return (
     <SiteLayout>
       <Hero />
-      <WhoItsFor />
+      <MarketplaceIntro />
       <Platform />
+      <WhoItsFor />
       <HowItWorks />
       <Trust />
-      <BuildStatus />
       <FAQ />
       <CTA />
     </SiteLayout>
@@ -79,33 +80,66 @@ function Home() {
 /* ---------------- HERO ---------------- */
 function Hero() {
   return (
-    <section className="relative overflow-hidden bg-gradient-hero">
-      <div aria-hidden className="pointer-events-none absolute -top-24 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-gradient-warm opacity-20 blur-3xl animate-float-slow" />
-      <div className="mx-auto max-w-4xl px-5 pt-20 pb-20 text-center md:px-8 md:pt-28 md:pb-24">
-        <motion.div {...fadeUp}>
-          <span className="inline-flex items-center gap-2 rounded-full glass px-3 py-1.5 text-xs font-medium text-foreground/80">
-            <CircleDashed className="h-3.5 w-3.5 text-brand-violet" />
-            Early access — onboarding venues, vendors and workers now
-          </span>
-          <h1 className="mt-6 font-display text-4xl font-semibold leading-[1.06] tracking-tight text-foreground sm:text-5xl md:text-6xl">
-            Run every event on <span className="text-gradient-brand">one operations platform.</span>
+    <section className="relative isolate min-h-[680px] overflow-hidden bg-brand-navy text-primary-foreground">
+      <img src={heroImage} alt="Event manager preparing a contemporary venue" width={1408} height={912} className="absolute inset-0 -z-20 h-full w-full object-cover object-center" />
+      <div aria-hidden className="absolute inset-0 -z-10 bg-brand-navy/80" />
+      <div className="mx-auto flex min-h-[680px] max-w-7xl flex-col justify-between px-5 py-16 md:px-8 md:py-24">
+        <motion.div {...reveal} className="max-w-2xl">
+          <span className="eyebrow-dark"><Sparkles className="h-3.5 w-3.5 text-brand-orange" /> Built for the work behind every event</span>
+          <h1 className="mt-7 max-w-3xl font-display text-5xl font-semibold leading-[1.02] tracking-tight sm:text-6xl md:text-7xl">
+            Make the event feel effortless.
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
-            EventOrbit brings venues, vendors, event workers and the teams that hire them into a single verified workspace — listings and enquiries, job assignment, live task tracking, and payment records. No spreadsheets, no lost WhatsApp threads.
+          <p className="mt-6 max-w-xl text-base leading-relaxed text-primary-foreground/75 md:text-lg">
+            Find trusted venues and event professionals, keep enquiries clear, and move every assignment from accepted to complete in one workspace.
           </p>
-          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-            <Link to="/register" className="group inline-flex items-center gap-2 rounded-full btn-brand btn-brand-hover px-6 py-3 text-sm font-semibold">
-              Create your account <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+          <div className="mt-9 flex flex-wrap gap-3">
+            <Link to="/marketplace" className="group inline-flex items-center gap-2 rounded-full bg-primary-foreground px-6 py-3 text-sm font-semibold text-brand-navy shadow-elegant transition-transform hover:-translate-y-0.5">
+              Explore the marketplace <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
-            <Link to="/marketplace" className="inline-flex items-center gap-2 rounded-full border border-input bg-background/70 px-6 py-3 text-sm font-semibold backdrop-blur hover:bg-accent">
-              Explore the marketplace
+            <Link to="/register" className="inline-flex items-center gap-2 rounded-full border border-primary-foreground/35 px-6 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-foreground/10">
+              Join EventOrbit
             </Link>
           </div>
-          <div className="mt-9 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-4 w-4 text-brand-blue" /> Role-based access on every record</span>
-            <span className="inline-flex items-center gap-1.5"><FileCheck2 className="h-4 w-4 text-brand-violet" /> Manual verification before any listing goes live</span>
-            <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-brand-magenta" /> Free while we are in early access</span>
-          </div>
+        </motion.div>
+        <motion.div {...reveal} transition={{ ...reveal.transition, delay: 0.14 }} className="mt-16 grid max-w-4xl gap-3 sm:grid-cols-3">
+          {[
+            { icon: Search, label: "Discover", text: "Verified venues and providers" },
+            { icon: BriefcaseBusiness, label: "Coordinate", text: "Jobs, people and timelines" },
+            { icon: Check, label: "Deliver", text: "A clear record from start to finish" },
+          ].map((item) => (
+            <div key={item.label} className="hero-mini-card">
+              <item.icon className="h-4 w-4 text-brand-orange" />
+              <div><div className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-foreground/55">{item.label}</div><div className="mt-1 text-sm text-primary-foreground/90">{item.text}</div></div>
+            </div>
+          ))}
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+function MarketplaceIntro() {
+  return (
+    <section className="border-b border-border bg-secondary/40">
+      <div className="mx-auto grid max-w-7xl gap-10 px-5 py-16 md:grid-cols-[1fr_1.2fr] md:items-center md:px-8 md:py-20">
+        <motion.div {...reveal}>
+          <SectionEyebrow>Start with the marketplace</SectionEyebrow>
+          <h2 className="mt-4 max-w-xl font-display text-3xl font-semibold leading-tight md:text-4xl">The fastest way to get moving.</h2>
+          <p className="mt-4 max-w-lg text-muted-foreground">Browse by city and category, open a real profile, then send an enquiry when the fit is right.</p>
+          <Link to="/marketplace" className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-brand-blue hover:text-brand-navy">Browse venues and professionals <ArrowRight className="h-4 w-4" /></Link>
+        </motion.div>
+        <motion.div {...reveal} transition={{ ...reveal.transition, delay: 0.1 }} className="grid gap-3 sm:grid-cols-3">
+          {[
+            { icon: Building2, title: "Venues", text: "Gallery, facilities and availability" },
+            { icon: Store, title: "Vendors", text: "Services, work history and areas" },
+            { icon: UserCheck, title: "Workers", text: "Skills, rates and verified profiles" },
+          ].map((item) => (
+            <Link to="/marketplace" key={item.title} className="group rounded-2xl border border-border bg-card p-4 shadow-soft transition-all hover:-translate-y-1 hover:border-brand-blue/35 hover:shadow-elegant">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-brand-blue/10 text-brand-blue transition-colors group-hover:bg-brand-blue group-hover:text-primary-foreground"><item.icon className="h-5 w-5" /></div>
+              <h3 className="mt-4 font-display text-base font-semibold">{item.title}</h3>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{item.text}</p>
+            </Link>
+          ))}
         </motion.div>
       </div>
     </section>
@@ -146,30 +180,22 @@ const audiences = [
 
 function WhoItsFor() {
   return (
-    <section className="mx-auto max-w-7xl px-5 md:px-8 py-20">
-      <motion.div {...fadeUp} className="max-w-2xl">
+    <section className="mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-28">
+      <motion.div {...reveal} className="max-w-2xl">
         <SectionEyebrow>Who it's for</SectionEyebrow>
-        <h2 className="mt-3 font-display text-3xl md:text-4xl font-semibold">Four sides of an event, one shared record.</h2>
-        <p className="mt-3 text-muted-foreground">
-          Everyone works in their own dashboard, but a booking, a job and a payout exist once — not four times in four notebooks.
-        </p>
+        <h2 className="mt-4 font-display text-3xl font-semibold md:text-4xl">Everyone sees the part of the event they own.</h2>
+        <p className="mt-3 max-w-xl text-muted-foreground">Different roles. One shared source of truth.</p>
       </motion.div>
-      <div className="mt-10 grid gap-4 sm:grid-cols-2">
+      <div className="stagger-children mt-10 grid gap-4 sm:grid-cols-2">
         {audiences.map((a, i) => (
-          <motion.div key={a.title} {...fadeUp} transition={{ ...fadeUp.transition, delay: (i % 2) * 0.06 }}
-            className="rounded-3xl border border-border bg-card p-6 shadow-soft hover:shadow-elegant transition-shadow">
-            <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-brand text-white shadow-glow">
+          <motion.div key={a.title} {...reveal} transition={{ ...reveal.transition, delay: (i % 2) * 0.06 }} className="card-interactive rounded-2xl border border-border bg-card p-6 shadow-soft">
+            <div className="grid h-11 w-11 place-items-center rounded-xl bg-brand-blue text-primary-foreground shadow-soft">
               <a.icon className="h-5 w-5" />
             </div>
             <h3 className="mt-4 font-display text-xl font-semibold">{a.title}</h3>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              <span className="font-semibold text-foreground">Today: </span>{a.problem}
-            </p>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              <span className="font-semibold text-foreground">On EventOrbit: </span>{a.solution}
-            </p>
-            <Link to={a.href} className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-brand-violet hover:opacity-80">
-              See the full workflow <ChevronRight className="h-4 w-4" />
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{a.solution}</p>
+            <Link to={a.href} className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-brand-blue hover:text-brand-navy">
+              See your workflow <ChevronRight className="h-4 w-4" />
             </Link>
           </motion.div>
         ))}
@@ -192,20 +218,17 @@ const modules = [
 
 function Platform() {
   return (
-    <section id="platform" className="bg-gradient-brand-soft">
-      <div className="mx-auto max-w-7xl px-5 md:px-8 py-20">
-        <motion.div {...fadeUp} className="max-w-2xl">
+    <section id="platform" className="bg-secondary/45">
+      <div className="mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-28">
+        <motion.div {...reveal} className="max-w-2xl">
           <SectionEyebrow>Platform</SectionEyebrow>
-          <h2 className="mt-3 font-display text-3xl md:text-4xl font-semibold">What is live today.</h2>
-          <p className="mt-3 text-muted-foreground">
-            Everything listed here is built and usable right now. What we are still building is listed further down — we would rather under-promise.
-          </p>
+          <h2 className="mt-4 font-display text-3xl font-semibold md:text-4xl">The essentials, without the noise.</h2>
+          <p className="mt-3 max-w-xl text-muted-foreground">A focused toolkit for finding, assigning and finishing event work.</p>
         </motion.div>
-        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="stagger-children mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {modules.map((f, i) => (
-            <motion.div key={f.title} {...fadeUp} transition={{ ...fadeUp.transition, delay: (i % 4) * 0.05 }}
-              className="group rounded-2xl border border-border bg-card p-5 shadow-soft transition-all hover:-translate-y-0.5 hover:shadow-elegant">
-              <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-brand text-white shadow-glow">
+            <motion.div key={f.title} {...reveal} transition={{ ...reveal.transition, delay: (i % 3) * 0.05 }} className="card-interactive rounded-2xl border border-border bg-card p-5 shadow-soft">
+              <div className="grid h-11 w-11 place-items-center rounded-xl bg-brand-blue/10 text-brand-blue">
                 <f.icon className="h-5 w-5" />
               </div>
               <h3 className="mt-4 font-display text-lg font-semibold">{f.title}</h3>
@@ -214,7 +237,7 @@ function Platform() {
           ))}
         </div>
         <div className="mt-8">
-          <Link to="/features" className="inline-flex items-center gap-2 rounded-full border border-input bg-card px-5 py-2.5 text-sm font-semibold hover:bg-accent">
+          <Link to="/features" className="inline-flex items-center gap-2 rounded-full border border-input bg-card px-5 py-2.5 text-sm font-semibold transition-colors hover:bg-accent">
             See every module in detail <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
@@ -232,21 +255,19 @@ function HowItWorks() {
     { icon: CalendarRange, title: "Go live and work", desc: "Once verified, you appear in the marketplace, receive enquiries and jobs, and track them to completion." },
   ];
   return (
-    <section id="how" className="mx-auto max-w-7xl px-5 md:px-8 py-20">
-      <motion.div {...fadeUp} className="max-w-2xl">
+    <section id="how" className="mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-28">
+      <motion.div {...reveal} className="max-w-2xl">
         <SectionEyebrow>How it works</SectionEyebrow>
-        <h2 className="mt-3 font-display text-3xl md:text-4xl font-semibold">Four steps from signup to your first job.</h2>
+        <h2 className="mt-4 font-display text-3xl font-semibold md:text-4xl">From first search to finished work.</h2>
       </motion.div>
       <div className="relative mt-14">
-        <div aria-hidden className="absolute left-0 right-0 top-6 hidden h-px bg-gradient-brand lg:block" />
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map((s, i) => (
-            <motion.div key={s.title} {...fadeUp} transition={{ ...fadeUp.transition, delay: i * 0.08 }}
-              className="relative rounded-2xl border border-border bg-card p-5 shadow-soft">
-              <div className="relative -mt-10 grid h-12 w-12 place-items-center rounded-2xl bg-gradient-brand text-white shadow-glow">
+            <motion.div key={s.title} {...reveal} transition={{ ...reveal.transition, delay: i * 0.08 }} className="relative border-l-2 border-brand-orange/40 pl-5">
+              <div className="grid h-11 w-11 place-items-center rounded-xl bg-brand-navy text-primary-foreground shadow-soft">
                 <s.icon className="h-5 w-5" />
               </div>
-              <div className="mt-4 text-xs font-semibold uppercase tracking-widest text-brand-violet">Step {i + 1}</div>
+              <div className="mt-4 text-xs font-semibold uppercase tracking-widest text-brand-orange">Step {i + 1}</div>
               <div className="mt-1 font-display text-lg font-semibold">{s.title}</div>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{s.desc}</p>
             </motion.div>
@@ -267,52 +288,19 @@ function Trust() {
   ];
   return (
     <section className="bg-background">
-      <div className="mx-auto max-w-7xl px-5 md:px-8 py-20">
-        <motion.div {...fadeUp} className="max-w-2xl">
+      <div className="mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-28">
+        <motion.div {...reveal} className="max-w-2xl">
           <SectionEyebrow>Trust</SectionEyebrow>
-          <h2 className="mt-3 font-display text-3xl md:text-4xl font-semibold">Why people can rely on what they see here.</h2>
+          <h2 className="mt-4 font-display text-3xl font-semibold md:text-4xl">Clear records build better events.</h2>
         </motion.div>
         <div className="mt-10 grid gap-4 sm:grid-cols-2">
           {points.map((p, i) => (
-            <motion.div key={p.title} {...fadeUp} transition={{ ...fadeUp.transition, delay: (i % 2) * 0.06 }}
-              className="rounded-2xl glass p-6 shadow-soft">
+            <motion.div key={p.title} {...reveal} transition={{ ...reveal.transition, delay: (i % 2) * 0.06 }} className="rounded-2xl border border-border bg-secondary/35 p-6">
               <div className="font-display text-lg font-semibold">{p.title}</div>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{p.desc}</p>
             </motion.div>
           ))}
         </div>
-      </div>
-    </section>
-  );
-}
-
-/* ---------------- BUILD STATUS ---------------- */
-function BuildStatus() {
-  const building = [
-    { title: "Organization workspace", desc: "Members, departments, roles and internal event forms exist. Registration forms for participants and end-to-end event execution are still being finished." },
-    { title: "Online payments", desc: "Payment and payout records are in place. Live card and UPI collection is behind final gateway activation." },
-    { title: "Mobile OTP verification", desc: "Email and password sign-in works today. Phone verification arrives with our SMS provider." },
-    { title: "Attendance & participants", desc: "Guest lists, check-in and headcount reporting are planned once the organization workspace is complete." },
-  ];
-  return (
-    <section className="mx-auto max-w-7xl px-5 md:px-8 py-20">
-      <motion.div {...fadeUp} className="max-w-2xl">
-        <SectionEyebrow>In progress</SectionEyebrow>
-        <h2 className="mt-3 font-display text-3xl md:text-4xl font-semibold">What we are still building.</h2>
-        <p className="mt-3 text-muted-foreground">
-          We publish this openly so nobody signs up expecting something that is not ready yet.
-        </p>
-      </motion.div>
-      <div className="mt-10 grid gap-4 sm:grid-cols-2">
-        {building.map((b) => (
-          <motion.div key={b.title} {...fadeUp} className="rounded-2xl border border-dashed border-border bg-card/60 p-6">
-            <div className="flex items-center gap-2">
-              <Hammer className="h-4 w-4 text-brand-orange" />
-              <div className="font-display text-lg font-semibold">{b.title}</div>
-            </div>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{b.desc}</p>
-          </motion.div>
-        ))}
       </div>
     </section>
   );
@@ -329,9 +317,9 @@ function FAQ() {
     { q: "Is my listing removed if I stop taking work?", a: "No. You can turn marketplace visibility off or block specific dates from your availability page and stay listed for the periods you actually want work." },
   ];
   return (
-    <section className="bg-gradient-brand-soft">
-      <div className="mx-auto max-w-7xl px-5 md:px-8 py-20">
-        <motion.div {...fadeUp} className="max-w-2xl">
+    <section className="bg-secondary/45">
+      <div className="mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-28">
+        <motion.div {...reveal} className="max-w-2xl">
           <SectionEyebrow>FAQ</SectionEyebrow>
           <h2 className="mt-3 font-display text-3xl md:text-4xl font-semibold">Questions we get asked most.</h2>
         </motion.div>
@@ -354,19 +342,16 @@ function FAQ() {
 /* ---------------- CTA ---------------- */
 function CTA() {
   return (
-    <section className="mx-auto max-w-7xl px-5 md:px-8 py-20">
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-brand p-10 md:p-14 text-white shadow-elegant">
-        <div aria-hidden className="absolute -top-16 -right-16 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
+    <section className="mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-28">
+      <div className="relative overflow-hidden rounded-3xl bg-brand-navy p-10 text-primary-foreground shadow-elegant md:p-14">
         <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div className="max-w-xl">
-            <h2 className="font-display text-3xl md:text-4xl font-semibold leading-tight">Get listed before the season starts.</h2>
-            <p className="mt-3 text-white/85">
-              Create an account in a minute, complete your profile from your dashboard, and start receiving enquiries and jobs once you are verified.
-            </p>
+            <h2 className="font-display text-3xl font-semibold leading-tight md:text-4xl">Ready to make the next event simpler?</h2>
+            <p className="mt-3 text-primary-foreground/70">Create your account, complete only what matters, and start with the marketplace.</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link to="/register" className="rounded-full bg-white text-brand-navy px-6 py-3 text-sm font-semibold hover:opacity-90">Create your account</Link>
-            <Link to="/contact" className="rounded-full border border-white/40 px-6 py-3 text-sm font-semibold hover:bg-white/10">Ask us a question</Link>
+            <Link to="/register" className="rounded-full bg-primary-foreground px-6 py-3 text-sm font-semibold text-brand-navy hover:opacity-90">Create your account</Link>
+            <Link to="/contact" className="rounded-full border border-primary-foreground/35 px-6 py-3 text-sm font-semibold hover:bg-primary-foreground/10">Ask us a question</Link>
           </div>
         </div>
       </div>
@@ -376,7 +361,7 @@ function CTA() {
 
 function SectionEyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full glass px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-violet">
+    <span className="eyebrow">
       {children}
     </span>
   );
