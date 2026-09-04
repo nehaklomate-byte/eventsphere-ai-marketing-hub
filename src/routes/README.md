@@ -126,4 +126,52 @@ These are multi-day-to-multi-week efforts each, not something to bolt on quietly
 If you want, tell me which of these to tackle next and I'll scope + build that one
 properly rather than spreading thin across all five.
 
+# Vendor & Worker booking flow — now matches Venue exactly
 
+## What changed
+Previously: a customer booking a **Venue** just described their requirement
+and date — the venue owner reviewed it and set the price. But booking a
+**Vendor** or **Worker** was different: the customer had to pick a
+package/add-ons and a computed total was locked in at request time, with the
+vendor/worker only able to Accept/Counter/Reject that number.
+
+Now all three work identically:
+1. Customer describes their requirement + date (packages/pricing shown only
+   as *reference*, never a binding number)
+2. Request goes to the Venue Owner / Vendor / Worker as "pending"
+3. They review it and send back their own real price
+4. Customer sees that price and pays — same as it always worked for Venue
+
+## Files changed
+- `src/routes/vendor.$id.tsx` — removed the pay-amount input & computed
+  total from the public hire form; requests now submit with no price
+- `src/routes/worker.$id.tsx` — same change
+- `src/lib/vendor.ts` — added `confirmVendorTaskWithPricing(taskId, amount, note)`
+- `src/lib/worker.ts` — added `confirmWorkerTaskWithPricing(taskId, amount)`
+- `src/routes/_authenticated/vendor/jobs.tsx` — pending requests with no
+  price now show "Review & Send Price" (opens a dialog showing the
+  customer's requirement) instead of "Accept ₹0"
+- `src/routes/_authenticated/worker/jobs.tsx` — same change
+
+## What was NOT touched
+The **internal** venue/organization → vendor/worker hiring flow (where a
+venue owner assigns a task and proposes a fee, e.g. `venue/hire-vendors.tsx`)
+is untouched — that flow's Accept/Counter/Reject negotiation still works
+exactly as before. The two flows are told apart automatically: a task with
+no `proposed_fee` and no `payment_amount` is a fresh public request needing
+a price; a task with either already set is an internal hire negotiation.
+
+## No database migration needed
+The existing trigger (`tg_recompute_vendor_task_amount` /
+`tg_recompute_worker_task_amount`, migration
+`20260820090000_server_authoritative_task_pricing.sql`) already had a
+built-in exception for exactly this case: it only recomputes a price when
+`selected_items` is non-empty. Since the customer's request now always
+sends an empty `selected_items`, the trigger never touches
+`payment_amount` — leaving it free for the vendor/worker to set manually,
+safely.
+
+## Verified
+- `npx tsc --noEmit` run across the full project — zero errors in any of
+  the 6 files changed above (pre-existing, unrelated errors elsewhere in
+  the codebase are untouched and unaffected).
