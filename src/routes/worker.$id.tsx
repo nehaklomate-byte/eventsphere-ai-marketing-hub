@@ -1,7 +1,7 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
-  ArrowLeft, MapPin, Star, BadgeCheck, HardHat, Send, CheckCircle2, Wallet, Clock, Languages,
+  ArrowLeft, MapPin, Star, BadgeCheck, HardHat, Send, CheckCircle2, Clock, Languages,
   Users, IndianRupee, Navigation, Briefcase,
 } from "lucide-react";
 import { SiteLayout } from "@/components/SiteLayout";
@@ -240,7 +240,7 @@ function WorkerDetail() {
 function HireCard({ worker, eventId, sourceSlug }: { worker: WorkerProfile; eventId?: string; sourceSlug?: string }) {
   const navigate = useNavigate();
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
-  const [state, setState] = useState({ event_name: "", task_name: "", venue: "", venue_address: "", event_date: "", start_time: "", end_time: "", guest_count: "", pay_amount: "", requirements: "" });
+  const [state, setState] = useState({ event_name: "", task_name: "", venue: "", venue_address: "", event_date: "", start_time: "", end_time: "", guest_count: "", requirements: "" });
   const isAgency = worker.worker_type === "agency";
   const minQty = worker.min_booking_qty ?? 1;
   const maxQty = worker.max_booking_qty ?? worker.agency_team_size ?? 99;
@@ -253,24 +253,19 @@ function HireCard({ worker, eventId, sourceSlug }: { worker: WorkerProfile; even
   const [selectedOptions, setSelectedOptions] = useState<Record<string, boolean>>({});
   const hasPerGuestOption = options.some((o) => o.per_guest);
   const guestCount = Number(state.guest_count) || 0;
-  // Same fix as vendor.$id.tsx: once the customer types into "Pay
-  // amount" themselves, stop silently overwriting it every time a
-  // selection changes elsewhere on the form.
-  const [payAmountTouched, setPayAmountTouched] = useState(false);
 
   useEffect(() => { supabase.auth.getUser().then(({ data }) => setLoggedIn(!!data.user)); }, []);
 
   // Base = daily rate × headcount for an agency, else just the daily
   // rate — plus every ticked add-on (per-guest ones × guest count).
-  // Kept in sync so pay_amount always reflects what was actually
-  // picked, instead of the customer guessing an offer amount.
+  // Shown to the customer purely as a REFERENCE figure, never
+  // submitted as a price — the worker/agency reviews the actual
+  // requirement and sends back their own real quote (see "Review &
+  // send price" in worker/jobs.tsx / confirmWorkerTaskWithPricing in
+  // lib/worker.ts).
   const basePrice = isAgency ? (worker.daily_charges ?? 0) * quantity : (worker.daily_charges ?? 0);
   const optionsTotal = options.reduce((s, o) => s + (selectedOptions[o.id] ? (o.per_guest ? o.price * guestCount : o.price) : 0), 0);
   const estimatedTotal = basePrice + optionsTotal;
-
-  useEffect(() => {
-    if (estimatedTotal > 0 && !payAmountTouched) setState((s) => ({ ...s, pay_amount: String(estimatedTotal) }));
-  }, [estimatedTotal, payAmountTouched]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -288,18 +283,16 @@ function HireCard({ worker, eventId, sourceSlug }: { worker: WorkerProfile; even
     if (!userRes.user) { setSubmitting(false); setErr("Please log in first."); return; }
 
     const chosenOptions = options.filter((o) => selectedOptions[o.id]);
+    // Reference only, folded into the free-text description — never a
+    // binding price. selected_items stays empty on purpose: that's
+    // what keeps tg_recompute_worker_task_amount (see migration
+    // 20260820090000_server_authoritative_task_pricing.sql) from
+    // computing a payment_amount here or later when the worker/agency
+    // sets their real price via confirmWorkerTaskWithPricing.
     const selectionSummary = [
-      isAgency ? `${quantity} workers × ₹${(worker.daily_charges ?? 0).toLocaleString("en-IN")}/day` : null,
-      ...chosenOptions.map((o) => `${o.name}: ₹${o.price.toLocaleString("en-IN")}${o.per_guest ? ` × ${guestCount} guests` : ""}`),
+      isAgency ? `Requesting ${quantity} workers (listed from ₹${(worker.daily_charges ?? 0).toLocaleString("en-IN")}/day each — reference only, agency will confirm the final price)` : null,
+      ...chosenOptions.map((o) => `Interested in add-on: ${o.name} (listed at ₹${o.price.toLocaleString("en-IN")}${o.per_guest ? "/guest" : ""} — reference only)`),
     ].filter(Boolean).join("\n");
-    // Amounts here are only a client preview — the DB trigger
-    // (tg_recompute_worker_task_amount) re-derives the real
-    // payment_amount server-side from workers using these ref_ids,
-    // ignoring whatever amount is sent from here.
-    const selectedItems = [
-      { type: "daily_charge", ref_id: worker.id, name: isAgency ? `${quantity} workers × ₹${(worker.daily_charges ?? 0).toLocaleString("en-IN")}/day` : "Base charge", amount: basePrice },
-      ...chosenOptions.map((o) => ({ type: "option", ref_id: o.id, per_guest: o.per_guest, name: o.per_guest ? `${o.name} (× ${guestCount} guests)` : o.name, amount: o.per_guest ? o.price * guestCount : o.price })),
-    ];
     const { error } = await supabase.from("worker_tasks" as never).insert({
       worker_id: worker.id,
       worker_user_id: worker.owner_id,
@@ -311,7 +304,11 @@ function HireCard({ worker, eventId, sourceSlug }: { worker: WorkerProfile; even
       task_name: state.task_name.trim(),
       description: selectionSummary || null,
       customer_requirements: state.requirements.trim() || null,
-      selected_items: selectedItems,
+      // Deliberately empty — this is a requirement-only request, same
+      // pattern as a hall booking request. The worker/agency reviews it
+      // and sets the real price themselves (see "Review & send price"
+      // in worker/jobs.tsx).
+      selected_items: [],
       guest_count: guestCount || null,
       venue: state.venue || null,
       venue_address: state.venue_address || null,
@@ -320,9 +317,8 @@ function HireCard({ worker, eventId, sourceSlug }: { worker: WorkerProfile; even
       end_time: state.end_time || null,
       priority: "normal",
       status: "pending",
-      // Overwritten server-side by the recompute trigger — kept here
-      // only so the UI has a value to show before the insert returns.
-      payment_amount: state.pay_amount ? Number(state.pay_amount) : null,
+      // No price yet — the worker/agency sets this after reviewing the requirement.
+      payment_amount: null,
       quantity: isAgency ? quantity : 1,
       booking_source: sourceSlug ? "public_profile_link" : "marketplace",
       source_slug: sourceSlug ?? null,
@@ -336,7 +332,7 @@ function HireCard({ worker, eventId, sourceSlug }: { worker: WorkerProfile; even
     return (
       <div className="rounded-2xl border border-brand-violet/30 bg-accent/40 p-5 text-sm sticky top-24">
         <div className="flex items-center gap-2 font-semibold text-foreground"><CheckCircle2 className="h-5 w-5 text-emerald-600" /> Request sent!</div>
-        <p className="mt-1.5 text-muted-foreground">{worker.full_name} will accept or decline from their dashboard — you'll be notified either way.</p>
+        <p className="mt-1.5 text-muted-foreground">{worker.full_name} will review your requirement and send you a price — you only pay after that. You'll be notified either way.</p>
       </div>
     );
   }
@@ -412,20 +408,12 @@ function HireCard({ worker, eventId, sourceSlug }: { worker: WorkerProfile; even
       />
       {estimatedTotal > 0 && (
         <div className="flex items-center justify-between rounded-xl bg-accent/40 px-3.5 py-2.5 text-sm font-semibold">
-          <span>Estimated total</span>
+          <span>Reference total for your selections</span>
           <span>₹{estimatedTotal.toLocaleString("en-IN")}</span>
         </div>
       )}
-      <div className="relative">
-        <Wallet className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <input type="number" placeholder="Pay amount (₹, optional)" value={state.pay_amount}
-          onChange={(e) => { setPayAmountTouched(true); setState((s) => ({ ...s, pay_amount: e.target.value })); }}
-          className="w-full rounded-xl border border-input bg-background pl-9 pr-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
-      </div>
       <p className="-mt-2 text-[11px] text-muted-foreground">
-        {payAmountTouched
-          ? "Your own amount — it won't change automatically even if you tick more add-ons above."
-          : estimatedTotal > 0 ? "Pre-filled from your selections above — adjust it if you'd like to negotiate." : "Not sure what to pay? Leave it blank and discuss with them after they accept."}
+        This is just a guide based on their listed rates — {worker.full_name} will look at your actual requirement and send you their real, final price before you pay anything.
       </p>
       {err && <p className="text-xs text-destructive">{err}</p>}
       <button type="submit" disabled={submitting} className="inline-flex w-full items-center justify-center gap-2 rounded-full btn-brand btn-brand-hover px-4 py-2.5 text-sm font-semibold disabled:opacity-70">
