@@ -5,11 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
 import {
   Briefcase, MapPin, Calendar, Clock, Play, Pause, CheckCircle2, XCircle, Loader2,
-  Camera, X, MapPinned, ImagePlus, MessageSquareWarning, Paperclip,
+  Camera, X, MapPinned, ImagePlus, MessageSquareWarning, Paperclip, IndianRupee,
 } from "lucide-react";
 import { toast } from "sonner";
 import { statusTone, priorityTone, isVideoUrl, getBestEffortLocation } from "@/lib/worker";
-import { uploadVendorFile, type VendorTask } from "@/lib/vendor";
+import { uploadVendorFile, confirmVendorTaskWithPricing, type VendorTask } from "@/lib/vendor";
 
 export const Route = createFileRoute("/_authenticated/vendor/jobs")({
   component: JobsPage,
@@ -44,6 +44,7 @@ function JobsPage() {
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [counterTask, setCounterTask] = useState<VendorTask | null>(null);
+  const [priceTask, setPriceTask] = useState<VendorTask | null>(null);
 
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ["vendor-tasks", user?.id],
@@ -68,6 +69,18 @@ function JobsPage() {
   });
 
   const simpleUpdate = (id: string, patch: Record<string, unknown>) => update.mutate({ id, patch });
+
+  // Requirement-only public-marketplace requests (no proposed_fee, no
+  // payment_amount yet) go through this instead of the plain
+  // accept/counter/reject trio below — see confirmVendorTaskWithPricing
+  // in lib/vendor.ts for why this has to be a dedicated call rather
+  // than a plain .update().
+  const sendPrice = useMutation({
+    mutationFn: ({ id, amount, note }: { id: string; amount: number; note: string }) =>
+      confirmVendorTaskWithPricing(id, amount, note),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["vendor-tasks", user?.id] }); setPriceTask(null); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not send this price"),
+  });
 
   const filtered = tasks.filter((t) => filter === "all" ? true : t.status === filter);
 
@@ -167,7 +180,26 @@ function JobsPage() {
               )}
 
               <div className="mt-4 pt-3 border-t border-border flex flex-wrap gap-2">
-                {t.status === "pending" && (
+                {t.status === "pending" && !t.proposed_fee && !t.payment_amount && (
+                  // Requirement-only request from the public marketplace
+                  // (customer described what they need, no price attached —
+                  // see vendor.$id.tsx). Nothing to "accept at a fixed
+                  // amount" here — review it and send back a real price.
+                  <>
+                    <button onClick={() => setPriceTask(t)}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 text-white px-3 py-1.5 text-xs font-semibold hover:bg-emerald-700">
+                      <IndianRupee className="h-3.5 w-3.5" /> Review &amp; Send Price
+                    </button>
+                    <button onClick={() => { setRejectId(t.id); setRejectReason(""); }}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-500/10">
+                      <XCircle className="h-3.5 w-3.5" /> Decline
+                    </button>
+                  </>
+                )}
+                {t.status === "pending" && (t.proposed_fee || t.payment_amount) && (
+                  // Internal hire (a venue/organization proposed a fee for
+                  // this vendor to do the work) — the original accept /
+                  // counter / reject negotiation flow.
                   <>
                     <button onClick={() => simpleUpdate(t.id, { status: "accepted", accepted_at: new Date().toISOString() })}
                       className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 text-white px-3 py-1.5 text-xs font-semibold hover:bg-emerald-700">
@@ -227,6 +259,13 @@ function JobsPage() {
         />
       )}
 
+      {priceTask && (
+        <PriceRequestPanel task={priceTask} busy={sendPrice.isPending}
+          onCancel={() => setPriceTask(null)}
+          onConfirm={(amount, note) => sendPrice.mutate({ id: priceTask.id, amount, note })}
+        />
+      )}
+
       {counterTask && (
         <CounterOfferPanel task={counterTask} busy={update.isPending}
           onCancel={() => setCounterTask(null)}
@@ -255,6 +294,62 @@ function JobsPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ---------------- Review & send price (requirement-only requests) ---------------- */
+function PriceRequestPanel({ task, busy, onCancel, onConfirm }: {
+  task: VendorTask; busy: boolean; onCancel: () => void; onConfirm: (amount: number, note: string) => void;
+}) {
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  function submit() {
+    const n = Number(amount);
+    if (!n || n <= 0) { setError("Enter a valid price"); return; }
+    onConfirm(n, note.trim());
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onClick={onCancel}>
+      <div className="w-full max-w-md rounded-2xl bg-card p-6 shadow-elegant" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Send your price</h3>
+          <button onClick={onCancel} className="rounded-lg p-1.5 hover:bg-accent"><X className="h-4 w-4" /></button>
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          For "{task.task_name}" — {task.event_name} on {new Date(task.event_date).toLocaleDateString()}.
+        </p>
+        {task.customer_requirements && (
+          <div className="mt-3 rounded-xl bg-muted/40 p-3 text-xs">
+            <div className="font-semibold text-muted-foreground">What the customer asked for</div>
+            <p className="mt-1 whitespace-pre-line text-foreground/90">{task.customer_requirements}</p>
+          </div>
+        )}
+        {task.description && (
+          <div className="mt-2 rounded-xl bg-muted/20 p-3 text-xs text-muted-foreground whitespace-pre-line">{task.description}</div>
+        )}
+        <div className="mt-4">
+          <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground">Your price (₹)</label>
+          <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus
+            className="mt-1.5 w-full rounded-xl border border-input bg-background p-3 text-sm outline-none focus:border-brand-violet" />
+        </div>
+        <div className="mt-3">
+          <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground">Note to customer (optional)</label>
+          <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3}
+            className="mt-1.5 w-full rounded-xl border border-input bg-background p-3 text-sm" placeholder="e.g. What's included, travel charges, anything they should know…" />
+        </div>
+        {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
+        <div className="mt-4 flex justify-end gap-2">
+          <button onClick={onCancel} className="rounded-full border border-border px-4 py-2 text-sm font-medium">Cancel</button>
+          <button disabled={busy} onClick={submit}
+            className="inline-flex items-center gap-2 rounded-full btn-brand btn-brand-hover px-4 py-2 text-sm font-semibold text-white disabled:opacity-70">
+            {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Send price to customer
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
