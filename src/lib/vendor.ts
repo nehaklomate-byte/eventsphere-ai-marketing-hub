@@ -180,6 +180,37 @@ export async function acceptVendorTask(taskId: string): Promise<void> {
   if (error) throw error;
 }
 
+/** Vendor reviews a requirement-only public-marketplace request (no
+ * price attached — see vendor.$id.tsx's hire form, which deliberately
+ * sends selected_items: [] and payment_amount: null) and sets the
+ * real, final price in one step — mirrors confirmBookingWithPricing
+ * in lib/venue.ts. Because selected_items is (and stays) empty on
+ * this task, tg_recompute_vendor_task_amount has nothing to compute
+ * and leaves this payment_amount alone, now and on any future update.
+ * Not for use on tasks that already carry a proposed_fee (the
+ * internal venue/organization → vendor hire flow) — those go through
+ * acceptVendorTask/counterOfferVendorTask instead. */
+export async function confirmVendorTaskWithPricing(
+  taskId: string,
+  amount: number,
+  note?: string,
+): Promise<void> {
+  if (!(amount > 0)) throw new Error("Enter a price before sending it to the customer.");
+  const { data, error } = await supabase.from("vendor_tasks" as never)
+    .update({
+      status: "accepted",
+      accepted_at: new Date().toISOString(),
+      payment_amount: amount,
+      vendor_notes: note?.trim() || null,
+    } as never)
+    .eq("id" as never, taskId as never)
+    .eq("status" as never, "pending" as never) // guard: only a still-pending request can be priced
+    .select()
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("Could not send this price — please refresh and try again.");
+}
+
 export async function counterOfferVendorTask(taskId: string, amount: number, note: string): Promise<void> {
   const { error } = await supabase.from("vendor_tasks" as never)
     .update({ status: "countered", counter_offer_amount: amount, counter_offer_note: note || null } as never)
