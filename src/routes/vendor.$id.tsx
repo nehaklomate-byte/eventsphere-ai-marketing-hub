@@ -2,7 +2,7 @@ import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-ro
 import { useEffect, useState } from "react";
 import {
   ArrowLeft, MapPin, Star, BadgeCheck, Wrench, Send, Phone, CheckCircle2, Globe, Instagram, Facebook,
-  Users, IndianRupee, Wallet, Briefcase, Clock,
+  Users, IndianRupee, Briefcase, Clock,
 } from "lucide-react";
 import { SiteLayout } from "@/components/SiteLayout";
 import { WishlistButton } from "@/components/WishlistButton";
@@ -211,7 +211,7 @@ function VendorHireCard({ vendor, eventId, sourceSlug }: { vendor: Vendor; event
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
   const [packages, setPackages] = useState<{ id: string; name: string; price: number; description: string | null }[]>([]);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
-  const [state, setState] = useState({ event_name: "", task_name: "", venue: "", venue_address: "", event_date: "", start_time: "", end_time: "", guest_count: "", pay_amount: "", requirements: "" });
+  const [state, setState] = useState({ event_name: "", task_name: "", venue: "", venue_address: "", event_date: "", start_time: "", end_time: "", guest_count: "", requirements: "" });
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -220,12 +220,6 @@ function VendorHireCard({ vendor, eventId, sourceSlug }: { vendor: Vendor; event
   const [selectedOptions, setSelectedOptions] = useState<Record<string, boolean>>({});
   const hasPerGuestOption = options.some((o) => o.per_guest);
   const guestCount = Number(state.guest_count) || 0;
-  // Once the customer types into "Offer amount" themselves, their
-  // number is a deliberate choice (e.g. negotiating) — it must stop
-  // being silently clobbered the next time a selection changes. Before
-  // that first manual edit, it's fine (expected, even) to keep it in
-  // sync with the calculated total.
-  const [payAmountTouched, setPayAmountTouched] = useState(false);
 
   useEffect(() => { supabase.auth.getUser().then(({ data }) => setLoggedIn(!!data.user)); }, []);
   useEffect(() => {
@@ -241,16 +235,14 @@ function VendorHireCard({ vendor, eventId, sourceSlug }: { vendor: Vendor; event
 
   // Base = whichever package is picked, else the vendor's starting
   // price — plus every ticked add-on (per-guest ones × guest count).
-  // Recalculated any time a selection changes so "Estimated total"
-  // (and the pay_amount that gets submitted) always matches what the
-  // customer actually picked, rather than them guessing an offer.
+  // Shown to the customer purely as a REFERENCE figure so they know
+  // roughly what they're looking at — it is never submitted as a
+  // price. The vendor reviews the actual requirement below and sends
+  // back their own real quote (see "Review & send price" in
+  // vendor/jobs.tsx / confirmVendorTaskWithPricing in lib/vendor.ts).
   const basePrice = selectedPackage ? (packages.find((p) => p.id === selectedPackage)?.price ?? 0) : (vendor.base_price ?? 0);
   const optionsTotal = options.reduce((s, o) => s + (selectedOptions[o.id] ? (o.per_guest ? o.price * guestCount : o.price) : 0), 0);
   const estimatedTotal = basePrice + optionsTotal;
-
-  useEffect(() => {
-    if (estimatedTotal > 0 && !payAmountTouched) setState((s) => ({ ...s, pay_amount: String(estimatedTotal) }));
-  }, [estimatedTotal, payAmountTouched]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -263,22 +255,17 @@ function VendorHireCard({ vendor, eventId, sourceSlug }: { vendor: Vendor; event
     if (!userRes.user) { setSubmitting(false); setErr("Please log in first."); return; }
     const chosenOptions = options.filter((o) => selectedOptions[o.id]);
     const pkgName = selectedPackage ? packages.find((p) => p.id === selectedPackage)?.name : null;
+    // Reference only, folded into the free-text description so the
+    // vendor sees what caught the customer's eye — never a binding
+    // price. selected_items stays empty on purpose: that's what keeps
+    // tg_recompute_vendor_task_amount (see migration
+    // 20260820090000_server_authoritative_task_pricing.sql) from
+    // computing a payment_amount here or later when the vendor sets
+    // their real price via confirmVendorTaskWithPricing.
     const selectionSummary = [
-      pkgName ? `Package: ${pkgName} (₹${basePrice.toLocaleString("en-IN")})` : null,
-      ...chosenOptions.map((o) => `${o.name}: ₹${o.price.toLocaleString("en-IN")}${o.per_guest ? ` × ${guestCount} guests` : ""}`),
+      pkgName ? `Interested in package: ${pkgName} (listed from ₹${basePrice.toLocaleString("en-IN")} — reference only, vendor will confirm the final price)` : null,
+      ...chosenOptions.map((o) => `Interested in add-on: ${o.name} (listed at ₹${o.price.toLocaleString("en-IN")}${o.per_guest ? "/guest" : ""} — reference only)`),
     ].filter(Boolean).join("\n");
-    // Amounts here are only a client preview — the DB trigger
-    // (tg_recompute_vendor_task_amount) re-derives the real
-    // payment_amount server-side from vendor_packages/vendors using
-    // these ref_ids, ignoring whatever amount is sent from here. Never
-    // trust this array as the final price; it exists so the customer
-    // sees a sensible number before the trigger overwrites it.
-    const selectedItems = [
-      selectedPackage
-        ? { type: "package", ref_id: selectedPackage, name: `Package — ${pkgName}`, amount: basePrice }
-        : { type: "base_price", ref_id: vendor.id, name: "Base price", amount: basePrice },
-      ...chosenOptions.map((o) => ({ type: "option", ref_id: o.id, per_guest: o.per_guest, name: o.per_guest ? `${o.name} (× ${guestCount} guests)` : o.name, amount: o.per_guest ? o.price * guestCount : o.price })),
-    ].filter(Boolean);
     const { error } = await supabase.from("vendor_tasks" as never).insert({
       vendor_id: vendor.id,
       vendor_user_id: vendor.owner_id,
@@ -289,7 +276,12 @@ function VendorHireCard({ vendor, eventId, sourceSlug }: { vendor: Vendor; event
       task_name: state.task_name.trim(),
       description: selectionSummary || null,
       customer_requirements: state.requirements.trim() || null,
-      selected_items: selectedItems,
+      // Deliberately empty — this is a requirement-only request, same
+      // pattern as a hall booking request. The vendor reviews it and
+      // sets the real price themselves (see "Review & send price" in
+      // vendor/jobs.tsx). Leaving this empty is what keeps the price
+      // out of the customer's hands, now and when the vendor prices it.
+      selected_items: [],
       guest_count: guestCount || null,
       venue: state.venue || null,
       venue_address: state.venue_address || null,
@@ -298,9 +290,8 @@ function VendorHireCard({ vendor, eventId, sourceSlug }: { vendor: Vendor; event
       end_time: state.end_time || null,
       priority: "normal",
       status: "pending",
-      // Overwritten server-side by the recompute trigger — kept here
-      // only so the UI has a value to show before the insert returns.
-      payment_amount: state.pay_amount ? Number(state.pay_amount) : null,
+      // No price yet — the vendor sets this after reviewing the requirement.
+      payment_amount: null,
       booking_source: sourceSlug ? "public_profile_link" : "marketplace",
       source_slug: sourceSlug ?? null,
     } as never);
@@ -314,7 +305,7 @@ function VendorHireCard({ vendor, eventId, sourceSlug }: { vendor: Vendor; event
       <div className="rounded-2xl border border-brand-violet/30 bg-accent/40 p-5 text-sm">
         <div className="flex items-center gap-2 font-semibold text-foreground"><CheckCircle2 className="h-5 w-5 text-emerald-600" /> Request sent!</div>
         <p className="mt-1.5 text-muted-foreground">
-          {vendor.business_name} will accept or decline from their dashboard. Track it — and chat with them — under Bookings in your workspace.
+          {vendor.business_name} will review your requirement and send you a price — you only pay after that. Track it — and chat with them — under Bookings in your workspace.
         </p>
       </div>
     );
@@ -336,7 +327,7 @@ function VendorHireCard({ vendor, eventId, sourceSlug }: { vendor: Vendor; event
     <form onSubmit={submit} className="rounded-2xl border border-border bg-card p-5 shadow-soft space-y-3">
       <h3 className="font-display text-lg font-semibold">Book {vendor.business_name}</h3>
       <p className="text-xs text-muted-foreground -mt-1">
-        They accept or decline first — you only pay after that, from Bookings in your workspace.
+        Tell them what you need — they'll review it and send you a real price. You only pay after that, from Bookings in your workspace.
       </p>
       {packages.length > 0 && (
         <div>
@@ -407,20 +398,12 @@ function VendorHireCard({ vendor, eventId, sourceSlug }: { vendor: Vendor; event
       />
       {estimatedTotal > 0 && (
         <div className="flex items-center justify-between rounded-xl bg-accent/40 px-3.5 py-2.5 text-sm font-semibold">
-          <span>Estimated total</span>
+          <span>Reference total for your selections</span>
           <span>₹{estimatedTotal.toLocaleString("en-IN")}</span>
         </div>
       )}
-      <div className="relative">
-        <Wallet className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <input type="number" placeholder="Offer amount (₹, optional)" value={state.pay_amount}
-          onChange={(e) => { setPayAmountTouched(true); setState((s) => ({ ...s, pay_amount: e.target.value })); }}
-          className="w-full rounded-xl border border-input bg-background pl-9 pr-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
-      </div>
       <p className="-mt-2 text-[11px] text-muted-foreground">
-        {payAmountTouched
-          ? "Your own amount — it won't change automatically even if you tick more add-ons above."
-          : estimatedTotal > 0 ? "Pre-filled from your selections above — adjust it if you'd like to negotiate." : "Not sure what to offer? Leave it blank and discuss with them after they accept."}
+        This is just a guide based on their listed prices — {vendor.business_name} will look at your actual requirement and send you their real, final price before you pay anything.
       </p>
       {err && <p className="text-xs text-destructive">{err}</p>}
       <button type="submit" disabled={submitting} className="inline-flex w-full items-center justify-center gap-2 rounded-full btn-brand btn-brand-hover px-4 py-2.5 text-sm font-semibold disabled:opacity-70">
