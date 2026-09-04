@@ -216,6 +216,33 @@ export function statusTone(status: WorkerTask["status"]) {
 // and freezes final_fee the instant either side accepts — these
 // helpers just perform the matching, single-field-focused update so
 // the UI never has to construct the transition by hand.
+/** Worker/agency reviews a requirement-only public-marketplace request
+ * (no price attached — see worker.$id.tsx's hire form, which
+ * deliberately sends selected_items: [] and payment_amount: null) and
+ * sets the real, final price in one step — mirrors
+ * confirmBookingWithPricing in lib/venue.ts / confirmVendorTaskWithPricing
+ * in lib/vendor.ts. Because selected_items is (and stays) empty on
+ * this task, tg_recompute_worker_task_amount has nothing to compute
+ * and leaves this payment_amount alone, now and on any future update.
+ * Not for use on tasks that already carry a proposed_fee (the internal
+ * venue/organization → worker hire flow) — those go through
+ * acceptWorkerTask/counterOfferWorkerTask instead. */
+export async function confirmWorkerTaskWithPricing(taskId: string, amount: number): Promise<void> {
+  if (!(amount > 0)) throw new Error("Enter a price before sending it to the customer.");
+  const { data, error } = await supabase.from("worker_tasks" as never)
+    .update({
+      status: "accepted",
+      accepted_at: new Date().toISOString(),
+      payment_amount: amount,
+    } as never)
+    .eq("id" as never, taskId as never)
+    .eq("status" as never, "pending" as never) // guard: only a still-pending request can be priced
+    .select()
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("Could not send this price — please refresh and try again.");
+}
+
 export async function acceptWorkerTask(taskId: string): Promise<void> {
   const { error } = await supabase.from("worker_tasks" as never)
     .update({ status: "accepted", accepted_at: new Date().toISOString() } as never)
