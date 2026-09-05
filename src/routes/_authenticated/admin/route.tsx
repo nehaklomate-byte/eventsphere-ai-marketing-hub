@@ -8,6 +8,8 @@ import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSession } from "@/lib/session";
+import { isNativeApp } from "@/lib/native";
+import { MobileAppShell } from "@/components/MobileAppShell";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   // Extra layer on top of /_authenticated's "is logged in" check: this route
@@ -77,6 +79,26 @@ function AdminShell() {
 
   const isActive = (to: string, exact?: boolean) =>
     exact ? pathname === to : pathname === to || pathname.startsWith(to + "/");
+
+  // Native app (Android/iOS via Capacitor) gets the Top Bar + Bottom Tab
+  // Bar structure. The web build (desktop AND mobile browser) below this
+  // block is completely untouched — same sidebar as before.
+  if (isNativeApp()) {
+    const PRIMARY = NAV.slice(0, 4);
+    const MORE = NAV.slice(4);
+    return (
+      <MobileAppShell
+        roleLabel="Admin"
+        primaryNav={PRIMARY}
+        moreNav={MORE}
+        notificationsTo="/admin/notifications"
+        settingsTo="/admin/settings"
+        onSignOut={signOut}
+      >
+        <div key={pathname} className="animate-page-in"><Outlet /></div>
+      </MobileAppShell>
+    );
+  }
 
   return (
     <div className="min-h-dvh bg-muted/30">
