@@ -13,6 +13,8 @@ import { fetchMyVendor, computeVendorCompletion } from "@/lib/vendor";
 import { useSession } from "@/lib/session";
 import { PhoneVerifyBanner } from "@/components/PhoneVerifyBanner";
 import { subscribeNotificationToasts } from "@/lib/realtimeToast";
+import { isNativeApp } from "@/lib/native";
+import { MobileAppShell } from "@/components/MobileAppShell";
 
 // Mirrors src/routes/_authenticated/worker/route.tsx exactly (Step-1
 // account_status gate, sidebar shell, verification badge) — same
@@ -165,6 +167,35 @@ function VendorShell() {
           </button>
         </div>
       </div>
+    );
+  }
+
+  // Native app (Android/iOS via Capacitor) gets the Top Bar + Bottom Tab
+  // Bar structure. The web build (desktop AND mobile browser) below this
+  // block is completely untouched — same sidebar as before.
+  if (isNativeApp()) {
+    const PRIMARY = nav.slice(0, 4);
+    const MORE = nav.slice(4);
+    return (
+      <MobileAppShell
+        roleLabel="Vendor"
+        primaryNav={PRIMARY}
+        moreNav={MORE}
+        unreadCount={unread}
+        notificationsTo="/vendor/notifications"
+        settingsTo="/vendor/settings"
+        onSignOut={signOut}
+      >
+        {user && !user.phone_confirmed_at && <PhoneVerifyBanner user={user} />}
+        {completion < 60 && vStatus !== "approved" && location.pathname !== "/vendor/profile" && (
+          <div className="mb-6 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
+            <div className="text-sm font-semibold text-foreground">Welcome to EventOrbit Nova 👋</div>
+            <div className="text-xs text-muted-foreground">Complete your profile to get verified. You're at {completion}%.</div>
+            <Link to="/vendor/profile" className="mt-3 inline-block rounded-full btn-brand btn-brand-hover px-4 py-2 text-xs font-semibold text-white">Complete Profile</Link>
+          </div>
+        )}
+        <div key={location.pathname} className="animate-page-in"><Outlet /></div>
+      </MobileAppShell>
     );
   }
 
