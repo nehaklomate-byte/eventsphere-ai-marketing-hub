@@ -10,6 +10,8 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useSession } from "@/lib/session";
 import { PhoneVerifyBanner } from "@/components/PhoneVerifyBanner";
 import { subscribeNotificationToasts } from "@/lib/realtimeToast";
+import { isNativeApp } from "@/lib/native";
+import { MobileAppShell } from "@/components/MobileAppShell";
 
 // beforeLoad only gates Step 1 (account_status). Step 2 (hall
 // verification_status) no longer blocks navigation — once the account is
@@ -174,6 +176,40 @@ function VenueShell() {
   const isVerified = hall?.verification_status === "approved";
   const isActive = (to: string, exact?: boolean) =>
     exact ? pathname === to : pathname === to || pathname.startsWith(to + "/");
+
+  const verificationBanner = !isVerified && (
+    <div className={`mb-6 flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold ${
+      hall?.verification_status === "rejected" ? "bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300" : "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+    }`}>
+      {hall?.verification_status === "rejected" ? <ShieldAlert className="h-4 w-4" /> : <MailWarning className="h-4 w-4" />}
+      {hall?.verification_status === "rejected"
+        ? `Your last profile submission was rejected${hall.rejection_reason ? `: ${hall.rejection_reason}` : ""}. Update your details in Venue Profile to resubmit.`
+        : "Complete your Venue Profile fully and submit it for verification — customers only see the \"Verified\" badge and your listing on the marketplace once that's approved."}
+    </div>
+  );
+
+  // Native app (Android/iOS via Capacitor) gets the Top Bar + Bottom Tab
+  // Bar structure. The web build (desktop AND mobile browser) below this
+  // block is completely untouched — same sidebar as before.
+  if (isNativeApp()) {
+    const PRIMARY = NAV.filter((n) => !n.soon).slice(0, 4);
+    const MORE = NAV.filter((n) => !n.soon).slice(4);
+    return (
+      <MobileAppShell
+        roleLabel="Venue Owner"
+        primaryNav={PRIMARY}
+        moreNav={MORE}
+        unreadCount={unread}
+        notificationsTo="/venue/notifications"
+        settingsTo="/venue/settings"
+        onSignOut={signOut}
+      >
+        {user && !user.phone_confirmed_at && <PhoneVerifyBanner user={user} />}
+        {verificationBanner}
+        <div key={pathname} className="animate-page-in"><Outlet /></div>
+      </MobileAppShell>
+    );
+  }
 
   return (
     <div className="min-h-dvh bg-muted/30">
