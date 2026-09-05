@@ -4,6 +4,8 @@ import { LogOut, ShieldCheck, Clock, LayoutDashboard, CalendarDays, Building2, U
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchMyMemberships, memberHasPermission } from "@/lib/organization";
+import { isNativeApp } from "@/lib/native";
+import { MobileAppShell } from "@/components/MobileAppShell";
 
 export const Route = createFileRoute("/_authenticated/team-member")({
   beforeLoad: async () => {
@@ -81,6 +83,31 @@ function TeamMemberShell() {
   ].filter((i) => i.show);
 
   const isActive = (to: string, exact?: boolean) => (exact ? pathname === to : pathname === to || pathname.startsWith(to + "/"));
+
+  const orgBanner = (
+    <div className="mb-6 flex items-center justify-between gap-2 rounded-2xl bg-brand-violet/10 px-5 py-3 text-sm font-semibold text-brand-violet">
+      <span className="flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> {membership.org_name} - {role?.name ?? "Member"}</span>
+    </div>
+  );
+
+  // Native app (Android/iOS via Capacitor) gets the Top Bar + Bottom Tab
+  // Bar structure. The web build (desktop AND mobile browser) below this
+  // block is completely untouched — same as before. This role only ever
+  // has up to 4 nav items, so all of them fit directly as primary tabs —
+  // no "More" sheet content is needed.
+  if (isNativeApp()) {
+    return (
+      <MobileAppShell
+        roleLabel="Team Member"
+        primaryNav={NAV}
+        moreNav={[]}
+        onSignOut={signOut}
+      >
+        {orgBanner}
+        <Outlet />
+      </MobileAppShell>
+    );
+  }
 
   return (
     <div className="min-h-dvh bg-muted/30">
