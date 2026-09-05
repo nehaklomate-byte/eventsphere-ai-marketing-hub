@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "@/lib/session";
 import { PhoneVerifyBanner } from "@/components/PhoneVerifyBanner";
+import { isNativeApp } from "@/lib/native";
+import { MobileAppShell } from "@/components/MobileAppShell";
 
 export const Route = createFileRoute("/_authenticated/organization")({
   beforeLoad: async () => {
@@ -147,6 +149,40 @@ function OrganizationShell() {
   const isVerified = org?.verification_status === "approved";
   const isActive = (to: string, exact?: boolean) =>
     exact ? pathname === to : pathname === to || pathname.startsWith(to + "/");
+
+  const verificationBanner = !isVerified && (
+    <div className={`mb-6 flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold ${
+      org?.verification_status === "rejected" ? "bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300" : "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+    }`}>
+      {org?.verification_status === "rejected" ? <ShieldAlert className="h-4 w-4" /> : <MailWarning className="h-4 w-4" />}
+      {org?.verification_status === "rejected"
+        ? `Your last submission was rejected${org.rejection_reason ? `: ${org.rejection_reason}` : ""}. Update your details to resubmit.`
+        : "Your organization is pending verification — you can still set up departments, invite members, and draft events in the meantime."}
+    </div>
+  );
+
+  // Native app (Android/iOS via Capacitor) gets the Top Bar + Bottom Tab
+  // Bar structure. The web build (desktop AND mobile browser) below this
+  // block is completely untouched — same sidebar as before.
+  if (isNativeApp()) {
+    const PRIMARY = NAV.slice(0, 4);
+    const MORE = NAV.slice(4);
+    return (
+      <MobileAppShell
+        roleLabel="Organization"
+        primaryNav={PRIMARY}
+        moreNav={MORE}
+        unreadCount={unread}
+        notificationsTo="/organization/notifications"
+        settingsTo="/organization/settings"
+        onSignOut={signOut}
+      >
+        {user && !user.phone_confirmed_at && <PhoneVerifyBanner user={user} />}
+        {verificationBanner}
+        <div key={pathname} className="animate-page-in"><Outlet /></div>
+      </MobileAppShell>
+    );
+  }
 
   return (
     <div className="min-h-dvh bg-muted/30">
