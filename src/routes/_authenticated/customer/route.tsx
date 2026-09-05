@@ -12,6 +12,8 @@ import { useSession } from "@/lib/session";
 import { PhoneVerifyBanner } from "@/components/PhoneVerifyBanner";
 import { ensureCustomerBootstrapped } from "@/lib/customer";
 import { subscribeNotificationToasts } from "@/lib/realtimeToast";
+import { isNativeApp } from "@/lib/native";
+import { MobileAppShell } from "@/components/MobileAppShell";
 
 export const Route = createFileRoute("/_authenticated/customer")({
   head: () => ({ meta: [{ title: "Customer workspace — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
@@ -96,6 +98,28 @@ function CustomerLayout() {
 
   const isActive = (to: string, exact?: boolean) =>
     exact ? pathname === to : pathname === to || pathname.startsWith(to + "/");
+
+  // Native app (Android/iOS via Capacitor) gets the Top Bar + Bottom Tab
+  // Bar structure. The web build (desktop AND mobile browser) below this
+  // block is completely untouched — same sidebar as before.
+  if (isNativeApp()) {
+    const PRIMARY = NAV.filter((n) => !n.external).slice(0, 4);
+    const MORE = NAV.filter((n) => !n.external).slice(4);
+    return (
+      <MobileAppShell
+        roleLabel="Customer"
+        primaryNav={PRIMARY}
+        moreNav={MORE}
+        unreadCount={unread}
+        notificationsTo="/customer/notifications"
+        settingsTo="/customer/settings"
+        onSignOut={signOut}
+      >
+        {user && !user.phone_confirmed_at && <PhoneVerifyBanner user={user} />}
+        <div key={pathname} className="animate-page-in"><Outlet /></div>
+      </MobileAppShell>
+    );
+  }
 
   return (
     <div className="min-h-dvh bg-muted/30">
