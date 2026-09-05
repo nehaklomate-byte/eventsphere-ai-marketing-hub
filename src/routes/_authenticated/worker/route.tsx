@@ -12,6 +12,8 @@ import { fetchMyWorker, computeCompletion } from "@/lib/worker";
 import { useSession } from "@/lib/session";
 import { PhoneVerifyBanner } from "@/components/PhoneVerifyBanner";
 import { subscribeNotificationToasts } from "@/lib/realtimeToast";
+import { isNativeApp } from "@/lib/native";
+import { MobileAppShell } from "@/components/MobileAppShell";
 
 export const Route = createFileRoute("/_authenticated/worker")({
   beforeLoad: async () => {
@@ -165,6 +167,35 @@ function WorkerShell() {
           </button>
         </div>
       </div>
+    );
+  }
+
+  // Native app (Android/iOS via Capacitor) gets the Top Bar + Bottom Tab
+  // Bar structure. The web build (desktop AND mobile browser) below this
+  // block is completely untouched — same sidebar as before.
+  if (isNativeApp()) {
+    const PRIMARY = nav.slice(0, 4);
+    const MORE = nav.slice(4);
+    return (
+      <MobileAppShell
+        roleLabel="Worker"
+        primaryNav={PRIMARY}
+        moreNav={MORE}
+        unreadCount={unread}
+        notificationsTo="/worker/notifications"
+        settingsTo="/worker/settings"
+        onSignOut={signOut}
+      >
+        {user && !user.phone_confirmed_at && <PhoneVerifyBanner user={user} />}
+        {completion < 60 && vStatus === "unsubmitted" && location.pathname !== "/worker/profile" && (
+          <div className="mb-6 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
+            <div className="text-sm font-semibold text-foreground">Welcome to EventOrbit Nova 👋</div>
+            <div className="text-xs text-muted-foreground">Complete your profile to start receiving assigned jobs. You're at {completion}%.</div>
+            <Link to="/worker/profile" className="mt-3 inline-block rounded-full btn-brand btn-brand-hover px-4 py-2 text-xs font-semibold text-white">Complete Profile</Link>
+          </div>
+        )}
+        <div key={location.pathname} className="animate-page-in"><Outlet /></div>
+      </MobileAppShell>
     );
   }
 
