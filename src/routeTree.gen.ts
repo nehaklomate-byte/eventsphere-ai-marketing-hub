@@ -16,6 +16,7 @@ import { Route as ResearchRouteImport } from './routes/research'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as RefundPolicyRouteImport } from './routes/refund-policy'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as PartnerTermsRouteImport } from './routes/partner-terms'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as MarketplaceRouteImport } from './routes/marketplace'
 import { Route as LoginRouteImport } from './routes/login'
@@ -27,6 +28,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as WorkerIdRouteImport } from './routes/worker.$id'
 import { Route as VendorIdRouteImport } from './routes/vendor.$id'
+import { Route as PSlugRouteImport } from './routes/p.$slug'
 import { Route as JoinOrganizationTokenRouteImport } from './routes/join-organization/$token'
 import { Route as HallIdRouteImport } from './routes/hall.$id'
 import { Route as HallBookIdRouteImport } from './routes/hall-book.$id'
@@ -61,13 +63,16 @@ import { Route as AuthenticatedVenueSettingsRouteImport } from './routes/_authen
 import { Route as AuthenticatedVenueProfileRouteImport } from './routes/_authenticated/venue/profile'
 import { Route as AuthenticatedVenueNotificationsRouteImport } from './routes/_authenticated/venue/notifications'
 import { Route as AuthenticatedVenueMessagesRouteImport } from './routes/_authenticated/venue/messages'
+import { Route as AuthenticatedVenueJobsRouteImport } from './routes/_authenticated/venue/jobs'
 import { Route as AuthenticatedVenueHireWorkersRouteImport } from './routes/_authenticated/venue/hire-workers'
 import { Route as AuthenticatedVenueHireVendorsRouteImport } from './routes/_authenticated/venue/hire-vendors'
 import { Route as AuthenticatedVenueEnquiriesRouteImport } from './routes/_authenticated/venue/enquiries'
+import { Route as AuthenticatedVenueEarningsRouteImport } from './routes/_authenticated/venue/earnings'
 import { Route as AuthenticatedVenueBookingsRouteImport } from './routes/_authenticated/venue/bookings'
 import { Route as AuthenticatedVendorSupportRouteImport } from './routes/_authenticated/vendor/support'
 import { Route as AuthenticatedVendorSettingsRouteImport } from './routes/_authenticated/vendor/settings'
 import { Route as AuthenticatedVendorProfileRouteImport } from './routes/_authenticated/vendor/profile'
+import { Route as AuthenticatedVendorPostJobsRouteImport } from './routes/_authenticated/vendor/post-jobs'
 import { Route as AuthenticatedVendorNotificationsRouteImport } from './routes/_authenticated/vendor/notifications'
 import { Route as AuthenticatedVendorMessagesRouteImport } from './routes/_authenticated/vendor/messages'
 import { Route as AuthenticatedVendorJobsRouteImport } from './routes/_authenticated/vendor/jobs'
@@ -82,7 +87,9 @@ import { Route as AuthenticatedTeamMemberEventsRouteImport } from './routes/_aut
 import { Route as AuthenticatedTeamMemberDepartmentsRouteImport } from './routes/_authenticated/team-member/departments'
 import { Route as AuthenticatedOrganizationSettingsRouteImport } from './routes/_authenticated/organization/settings'
 import { Route as AuthenticatedOrganizationRolesRouteImport } from './routes/_authenticated/organization/roles'
+import { Route as AuthenticatedOrganizationNotificationsRouteImport } from './routes/_authenticated/organization/notifications'
 import { Route as AuthenticatedOrganizationMembersRouteImport } from './routes/_authenticated/organization/members'
+import { Route as AuthenticatedOrganizationJobsRouteImport } from './routes/_authenticated/organization/jobs'
 import { Route as AuthenticatedOrganizationEventsRouteImport } from './routes/_authenticated/organization/events'
 import { Route as AuthenticatedOrganizationDepartmentsRouteImport } from './routes/_authenticated/organization/departments'
 import { Route as AuthenticatedCustomerWishlistRouteImport } from './routes/_authenticated/customer/wishlist'
@@ -97,9 +104,15 @@ import { Route as AuthenticatedCustomerBookingsRouteImport } from './routes/_aut
 import { Route as AuthenticatedAdminVerificationRouteImport } from './routes/_authenticated/admin/verification'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin/users'
 import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/admin/settings'
+import { Route as AuthenticatedAdminRefundsRouteImport } from './routes/_authenticated/admin/refunds'
 import { Route as AuthenticatedAdminNotificationsRouteImport } from './routes/_authenticated/admin/notifications'
+import { Route as AuthenticatedAdminJobsRouteImport } from './routes/_authenticated/admin/jobs'
+import { Route as AuthenticatedAdminEventsRouteImport } from './routes/_authenticated/admin/events'
 import { Route as AuthenticatedAdminEarningsRouteImport } from './routes/_authenticated/admin/earnings'
+import { Route as AuthenticatedAdminComplaintsRouteImport } from './routes/_authenticated/admin/complaints'
+import { Route as AuthenticatedAdminActivityRouteImport } from './routes/_authenticated/admin/activity'
 import { Route as AuthenticatedAdminAccountsRouteImport } from './routes/_authenticated/admin/accounts'
+import { Route as AuthenticatedReceiptTypeIdRouteImport } from './routes/_authenticated/receipt.$type.$id'
 import { Route as AuthenticatedCustomerEventsEventIdRouteImport } from './routes/_authenticated/customer/events.$eventId'
 import { Route as AuthenticatedOrganizationEventsEventIdFormRouteImport } from './routes/_authenticated/organization/events.$eventId.form'
 
@@ -136,6 +149,11 @@ const RefundPolicyRoute = RefundPolicyRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PartnerTermsRoute = PartnerTermsRouteImport.update({
+  id: '/partner-terms',
+  path: '/partner-terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -190,6 +208,11 @@ const WorkerIdRoute = WorkerIdRouteImport.update({
 const VendorIdRoute = VendorIdRouteImport.update({
   id: '/vendor/$id',
   path: '/vendor/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PSlugRoute = PSlugRouteImport.update({
+  id: '/p/$slug',
+  path: '/p/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JoinOrganizationTokenRoute = JoinOrganizationTokenRouteImport.update({
@@ -386,6 +409,11 @@ const AuthenticatedVenueMessagesRoute =
     path: '/messages',
     getParentRoute: () => AuthenticatedVenueRouteRoute,
   } as any)
+const AuthenticatedVenueJobsRoute = AuthenticatedVenueJobsRouteImport.update({
+  id: '/jobs',
+  path: '/jobs',
+  getParentRoute: () => AuthenticatedVenueRouteRoute,
+} as any)
 const AuthenticatedVenueHireWorkersRoute =
   AuthenticatedVenueHireWorkersRouteImport.update({
     id: '/hire-workers',
@@ -402,6 +430,12 @@ const AuthenticatedVenueEnquiriesRoute =
   AuthenticatedVenueEnquiriesRouteImport.update({
     id: '/enquiries',
     path: '/enquiries',
+    getParentRoute: () => AuthenticatedVenueRouteRoute,
+  } as any)
+const AuthenticatedVenueEarningsRoute =
+  AuthenticatedVenueEarningsRouteImport.update({
+    id: '/earnings',
+    path: '/earnings',
     getParentRoute: () => AuthenticatedVenueRouteRoute,
   } as any)
 const AuthenticatedVenueBookingsRoute =
@@ -426,6 +460,12 @@ const AuthenticatedVendorProfileRoute =
   AuthenticatedVendorProfileRouteImport.update({
     id: '/profile',
     path: '/profile',
+    getParentRoute: () => AuthenticatedVendorRouteRoute,
+  } as any)
+const AuthenticatedVendorPostJobsRoute =
+  AuthenticatedVendorPostJobsRouteImport.update({
+    id: '/post-jobs',
+    path: '/post-jobs',
     getParentRoute: () => AuthenticatedVendorRouteRoute,
   } as any)
 const AuthenticatedVendorNotificationsRoute =
@@ -511,10 +551,22 @@ const AuthenticatedOrganizationRolesRoute =
     path: '/roles',
     getParentRoute: () => AuthenticatedOrganizationRouteRoute,
   } as any)
+const AuthenticatedOrganizationNotificationsRoute =
+  AuthenticatedOrganizationNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AuthenticatedOrganizationRouteRoute,
+  } as any)
 const AuthenticatedOrganizationMembersRoute =
   AuthenticatedOrganizationMembersRouteImport.update({
     id: '/members',
     path: '/members',
+    getParentRoute: () => AuthenticatedOrganizationRouteRoute,
+  } as any)
+const AuthenticatedOrganizationJobsRoute =
+  AuthenticatedOrganizationJobsRouteImport.update({
+    id: '/jobs',
+    path: '/jobs',
     getParentRoute: () => AuthenticatedOrganizationRouteRoute,
   } as any)
 const AuthenticatedOrganizationEventsRoute =
@@ -600,10 +652,27 @@ const AuthenticatedAdminSettingsRoute =
     path: '/settings',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
+const AuthenticatedAdminRefundsRoute =
+  AuthenticatedAdminRefundsRouteImport.update({
+    id: '/refunds',
+    path: '/refunds',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedAdminNotificationsRoute =
   AuthenticatedAdminNotificationsRouteImport.update({
     id: '/notifications',
     path: '/notifications',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminJobsRoute = AuthenticatedAdminJobsRouteImport.update({
+  id: '/jobs',
+  path: '/jobs',
+  getParentRoute: () => AuthenticatedAdminRouteRoute,
+} as any)
+const AuthenticatedAdminEventsRoute =
+  AuthenticatedAdminEventsRouteImport.update({
+    id: '/events',
+    path: '/events',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminEarningsRoute =
@@ -612,11 +681,29 @@ const AuthenticatedAdminEarningsRoute =
     path: '/earnings',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
+const AuthenticatedAdminComplaintsRoute =
+  AuthenticatedAdminComplaintsRouteImport.update({
+    id: '/complaints',
+    path: '/complaints',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminActivityRoute =
+  AuthenticatedAdminActivityRouteImport.update({
+    id: '/activity',
+    path: '/activity',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedAdminAccountsRoute =
   AuthenticatedAdminAccountsRouteImport.update({
     id: '/accounts',
     path: '/accounts',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedReceiptTypeIdRoute =
+  AuthenticatedReceiptTypeIdRouteImport.update({
+    id: '/receipt/$type/$id',
+    path: '/receipt/$type/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedCustomerEventsEventIdRoute =
   AuthenticatedCustomerEventsEventIdRouteImport.update({
@@ -639,6 +726,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/marketplace': typeof MarketplaceRoute
   '/onboarding': typeof OnboardingRoute
+  '/partner-terms': typeof PartnerTermsRoute
   '/privacy': typeof PrivacyRoute
   '/refund-policy': typeof RefundPolicyRoute
   '/register': typeof RegisterRoute
@@ -655,15 +743,21 @@ export interface FileRoutesByFullPath {
   '/worker': typeof AuthenticatedWorkerRouteRouteWithChildren
   '/auth/callback': typeof AuthCallbackRoute
   '/blog/$slug': typeof BlogSlugRoute
-  '/hall/$id': typeof HallIdRoute
   '/hall-book/$id': typeof HallBookIdRoute
+  '/hall/$id': typeof HallIdRoute
   '/join-organization/$token': typeof JoinOrganizationTokenRoute
+  '/p/$slug': typeof PSlugRoute
   '/vendor/$id': typeof VendorIdRoute
   '/worker/$id': typeof WorkerIdRoute
   '/blog/': typeof BlogIndexRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
+  '/admin/activity': typeof AuthenticatedAdminActivityRoute
+  '/admin/complaints': typeof AuthenticatedAdminComplaintsRoute
   '/admin/earnings': typeof AuthenticatedAdminEarningsRoute
+  '/admin/events': typeof AuthenticatedAdminEventsRoute
+  '/admin/jobs': typeof AuthenticatedAdminJobsRoute
   '/admin/notifications': typeof AuthenticatedAdminNotificationsRoute
+  '/admin/refunds': typeof AuthenticatedAdminRefundsRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/admin/verification': typeof AuthenticatedAdminVerificationRoute
@@ -678,7 +772,9 @@ export interface FileRoutesByFullPath {
   '/customer/wishlist': typeof AuthenticatedCustomerWishlistRoute
   '/organization/departments': typeof AuthenticatedOrganizationDepartmentsRoute
   '/organization/events': typeof AuthenticatedOrganizationEventsRouteWithChildren
+  '/organization/jobs': typeof AuthenticatedOrganizationJobsRoute
   '/organization/members': typeof AuthenticatedOrganizationMembersRoute
+  '/organization/notifications': typeof AuthenticatedOrganizationNotificationsRoute
   '/organization/roles': typeof AuthenticatedOrganizationRolesRoute
   '/organization/settings': typeof AuthenticatedOrganizationSettingsRoute
   '/team-member/departments': typeof AuthenticatedTeamMemberDepartmentsRoute
@@ -693,13 +789,16 @@ export interface FileRoutesByFullPath {
   '/vendor/jobs': typeof AuthenticatedVendorJobsRoute
   '/vendor/messages': typeof AuthenticatedVendorMessagesRoute
   '/vendor/notifications': typeof AuthenticatedVendorNotificationsRoute
+  '/vendor/post-jobs': typeof AuthenticatedVendorPostJobsRoute
   '/vendor/profile': typeof AuthenticatedVendorProfileRoute
   '/vendor/settings': typeof AuthenticatedVendorSettingsRoute
   '/vendor/support': typeof AuthenticatedVendorSupportRoute
   '/venue/bookings': typeof AuthenticatedVenueBookingsRoute
+  '/venue/earnings': typeof AuthenticatedVenueEarningsRoute
   '/venue/enquiries': typeof AuthenticatedVenueEnquiriesRoute
   '/venue/hire-vendors': typeof AuthenticatedVenueHireVendorsRoute
   '/venue/hire-workers': typeof AuthenticatedVenueHireWorkersRoute
+  '/venue/jobs': typeof AuthenticatedVenueJobsRoute
   '/venue/messages': typeof AuthenticatedVenueMessagesRoute
   '/venue/notifications': typeof AuthenticatedVenueNotificationsRoute
   '/venue/profile': typeof AuthenticatedVenueProfileRoute
@@ -723,6 +822,7 @@ export interface FileRoutesByFullPath {
   '/venue/': typeof AuthenticatedVenueIndexRoute
   '/worker/': typeof AuthenticatedWorkerIndexRoute
   '/customer/events/$eventId': typeof AuthenticatedCustomerEventsEventIdRoute
+  '/receipt/$type/$id': typeof AuthenticatedReceiptTypeIdRoute
   '/organization/events/$eventId/form': typeof AuthenticatedOrganizationEventsEventIdFormRoute
 }
 export interface FileRoutesByTo {
@@ -733,6 +833,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/marketplace': typeof MarketplaceRoute
   '/onboarding': typeof OnboardingRoute
+  '/partner-terms': typeof PartnerTermsRoute
   '/privacy': typeof PrivacyRoute
   '/refund-policy': typeof RefundPolicyRoute
   '/register': typeof RegisterRoute
@@ -742,15 +843,21 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/blog/$slug': typeof BlogSlugRoute
-  '/hall/$id': typeof HallIdRoute
   '/hall-book/$id': typeof HallBookIdRoute
+  '/hall/$id': typeof HallIdRoute
   '/join-organization/$token': typeof JoinOrganizationTokenRoute
+  '/p/$slug': typeof PSlugRoute
   '/vendor/$id': typeof VendorIdRoute
   '/worker/$id': typeof WorkerIdRoute
   '/blog': typeof BlogIndexRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
+  '/admin/activity': typeof AuthenticatedAdminActivityRoute
+  '/admin/complaints': typeof AuthenticatedAdminComplaintsRoute
   '/admin/earnings': typeof AuthenticatedAdminEarningsRoute
+  '/admin/events': typeof AuthenticatedAdminEventsRoute
+  '/admin/jobs': typeof AuthenticatedAdminJobsRoute
   '/admin/notifications': typeof AuthenticatedAdminNotificationsRoute
+  '/admin/refunds': typeof AuthenticatedAdminRefundsRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/admin/verification': typeof AuthenticatedAdminVerificationRoute
@@ -765,7 +872,9 @@ export interface FileRoutesByTo {
   '/customer/wishlist': typeof AuthenticatedCustomerWishlistRoute
   '/organization/departments': typeof AuthenticatedOrganizationDepartmentsRoute
   '/organization/events': typeof AuthenticatedOrganizationEventsRouteWithChildren
+  '/organization/jobs': typeof AuthenticatedOrganizationJobsRoute
   '/organization/members': typeof AuthenticatedOrganizationMembersRoute
+  '/organization/notifications': typeof AuthenticatedOrganizationNotificationsRoute
   '/organization/roles': typeof AuthenticatedOrganizationRolesRoute
   '/organization/settings': typeof AuthenticatedOrganizationSettingsRoute
   '/team-member/departments': typeof AuthenticatedTeamMemberDepartmentsRoute
@@ -780,13 +889,16 @@ export interface FileRoutesByTo {
   '/vendor/jobs': typeof AuthenticatedVendorJobsRoute
   '/vendor/messages': typeof AuthenticatedVendorMessagesRoute
   '/vendor/notifications': typeof AuthenticatedVendorNotificationsRoute
+  '/vendor/post-jobs': typeof AuthenticatedVendorPostJobsRoute
   '/vendor/profile': typeof AuthenticatedVendorProfileRoute
   '/vendor/settings': typeof AuthenticatedVendorSettingsRoute
   '/vendor/support': typeof AuthenticatedVendorSupportRoute
   '/venue/bookings': typeof AuthenticatedVenueBookingsRoute
+  '/venue/earnings': typeof AuthenticatedVenueEarningsRoute
   '/venue/enquiries': typeof AuthenticatedVenueEnquiriesRoute
   '/venue/hire-vendors': typeof AuthenticatedVenueHireVendorsRoute
   '/venue/hire-workers': typeof AuthenticatedVenueHireWorkersRoute
+  '/venue/jobs': typeof AuthenticatedVenueJobsRoute
   '/venue/messages': typeof AuthenticatedVenueMessagesRoute
   '/venue/notifications': typeof AuthenticatedVenueNotificationsRoute
   '/venue/profile': typeof AuthenticatedVenueProfileRoute
@@ -810,6 +922,7 @@ export interface FileRoutesByTo {
   '/venue': typeof AuthenticatedVenueIndexRoute
   '/worker': typeof AuthenticatedWorkerIndexRoute
   '/customer/events/$eventId': typeof AuthenticatedCustomerEventsEventIdRoute
+  '/receipt/$type/$id': typeof AuthenticatedReceiptTypeIdRoute
   '/organization/events/$eventId/form': typeof AuthenticatedOrganizationEventsEventIdFormRoute
 }
 export interface FileRoutesById {
@@ -822,6 +935,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/marketplace': typeof MarketplaceRoute
   '/onboarding': typeof OnboardingRoute
+  '/partner-terms': typeof PartnerTermsRoute
   '/privacy': typeof PrivacyRoute
   '/refund-policy': typeof RefundPolicyRoute
   '/register': typeof RegisterRoute
@@ -838,15 +952,21 @@ export interface FileRoutesById {
   '/_authenticated/worker': typeof AuthenticatedWorkerRouteRouteWithChildren
   '/auth/callback': typeof AuthCallbackRoute
   '/blog/$slug': typeof BlogSlugRoute
-  '/hall/$id': typeof HallIdRoute
   '/hall-book/$id': typeof HallBookIdRoute
+  '/hall/$id': typeof HallIdRoute
   '/join-organization/$token': typeof JoinOrganizationTokenRoute
+  '/p/$slug': typeof PSlugRoute
   '/vendor/$id': typeof VendorIdRoute
   '/worker/$id': typeof WorkerIdRoute
   '/blog/': typeof BlogIndexRoute
   '/_authenticated/admin/accounts': typeof AuthenticatedAdminAccountsRoute
+  '/_authenticated/admin/activity': typeof AuthenticatedAdminActivityRoute
+  '/_authenticated/admin/complaints': typeof AuthenticatedAdminComplaintsRoute
   '/_authenticated/admin/earnings': typeof AuthenticatedAdminEarningsRoute
+  '/_authenticated/admin/events': typeof AuthenticatedAdminEventsRoute
+  '/_authenticated/admin/jobs': typeof AuthenticatedAdminJobsRoute
   '/_authenticated/admin/notifications': typeof AuthenticatedAdminNotificationsRoute
+  '/_authenticated/admin/refunds': typeof AuthenticatedAdminRefundsRoute
   '/_authenticated/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/admin/verification': typeof AuthenticatedAdminVerificationRoute
@@ -861,7 +981,9 @@ export interface FileRoutesById {
   '/_authenticated/customer/wishlist': typeof AuthenticatedCustomerWishlistRoute
   '/_authenticated/organization/departments': typeof AuthenticatedOrganizationDepartmentsRoute
   '/_authenticated/organization/events': typeof AuthenticatedOrganizationEventsRouteWithChildren
+  '/_authenticated/organization/jobs': typeof AuthenticatedOrganizationJobsRoute
   '/_authenticated/organization/members': typeof AuthenticatedOrganizationMembersRoute
+  '/_authenticated/organization/notifications': typeof AuthenticatedOrganizationNotificationsRoute
   '/_authenticated/organization/roles': typeof AuthenticatedOrganizationRolesRoute
   '/_authenticated/organization/settings': typeof AuthenticatedOrganizationSettingsRoute
   '/_authenticated/team-member/departments': typeof AuthenticatedTeamMemberDepartmentsRoute
@@ -876,13 +998,16 @@ export interface FileRoutesById {
   '/_authenticated/vendor/jobs': typeof AuthenticatedVendorJobsRoute
   '/_authenticated/vendor/messages': typeof AuthenticatedVendorMessagesRoute
   '/_authenticated/vendor/notifications': typeof AuthenticatedVendorNotificationsRoute
+  '/_authenticated/vendor/post-jobs': typeof AuthenticatedVendorPostJobsRoute
   '/_authenticated/vendor/profile': typeof AuthenticatedVendorProfileRoute
   '/_authenticated/vendor/settings': typeof AuthenticatedVendorSettingsRoute
   '/_authenticated/vendor/support': typeof AuthenticatedVendorSupportRoute
   '/_authenticated/venue/bookings': typeof AuthenticatedVenueBookingsRoute
+  '/_authenticated/venue/earnings': typeof AuthenticatedVenueEarningsRoute
   '/_authenticated/venue/enquiries': typeof AuthenticatedVenueEnquiriesRoute
   '/_authenticated/venue/hire-vendors': typeof AuthenticatedVenueHireVendorsRoute
   '/_authenticated/venue/hire-workers': typeof AuthenticatedVenueHireWorkersRoute
+  '/_authenticated/venue/jobs': typeof AuthenticatedVenueJobsRoute
   '/_authenticated/venue/messages': typeof AuthenticatedVenueMessagesRoute
   '/_authenticated/venue/notifications': typeof AuthenticatedVenueNotificationsRoute
   '/_authenticated/venue/profile': typeof AuthenticatedVenueProfileRoute
@@ -906,6 +1031,7 @@ export interface FileRoutesById {
   '/_authenticated/venue/': typeof AuthenticatedVenueIndexRoute
   '/_authenticated/worker/': typeof AuthenticatedWorkerIndexRoute
   '/_authenticated/customer/events/$eventId': typeof AuthenticatedCustomerEventsEventIdRoute
+  '/_authenticated/receipt/$type/$id': typeof AuthenticatedReceiptTypeIdRoute
   '/_authenticated/organization/events/$eventId/form': typeof AuthenticatedOrganizationEventsEventIdFormRoute
 }
 export interface FileRouteTypes {
@@ -918,6 +1044,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/marketplace'
     | '/onboarding'
+    | '/partner-terms'
     | '/privacy'
     | '/refund-policy'
     | '/register'
@@ -934,15 +1061,21 @@ export interface FileRouteTypes {
     | '/worker'
     | '/auth/callback'
     | '/blog/$slug'
-    | '/hall/$id'
     | '/hall-book/$id'
+    | '/hall/$id'
     | '/join-organization/$token'
+    | '/p/$slug'
     | '/vendor/$id'
     | '/worker/$id'
     | '/blog/'
     | '/admin/accounts'
+    | '/admin/activity'
+    | '/admin/complaints'
     | '/admin/earnings'
+    | '/admin/events'
+    | '/admin/jobs'
     | '/admin/notifications'
+    | '/admin/refunds'
     | '/admin/settings'
     | '/admin/users'
     | '/admin/verification'
@@ -957,7 +1090,9 @@ export interface FileRouteTypes {
     | '/customer/wishlist'
     | '/organization/departments'
     | '/organization/events'
+    | '/organization/jobs'
     | '/organization/members'
+    | '/organization/notifications'
     | '/organization/roles'
     | '/organization/settings'
     | '/team-member/departments'
@@ -972,13 +1107,16 @@ export interface FileRouteTypes {
     | '/vendor/jobs'
     | '/vendor/messages'
     | '/vendor/notifications'
+    | '/vendor/post-jobs'
     | '/vendor/profile'
     | '/vendor/settings'
     | '/vendor/support'
     | '/venue/bookings'
+    | '/venue/earnings'
     | '/venue/enquiries'
     | '/venue/hire-vendors'
     | '/venue/hire-workers'
+    | '/venue/jobs'
     | '/venue/messages'
     | '/venue/notifications'
     | '/venue/profile'
@@ -1002,6 +1140,7 @@ export interface FileRouteTypes {
     | '/venue/'
     | '/worker/'
     | '/customer/events/$eventId'
+    | '/receipt/$type/$id'
     | '/organization/events/$eventId/form'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -1012,6 +1151,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/marketplace'
     | '/onboarding'
+    | '/partner-terms'
     | '/privacy'
     | '/refund-policy'
     | '/register'
@@ -1021,15 +1161,21 @@ export interface FileRouteTypes {
     | '/terms'
     | '/auth/callback'
     | '/blog/$slug'
-    | '/hall/$id'
     | '/hall-book/$id'
+    | '/hall/$id'
     | '/join-organization/$token'
+    | '/p/$slug'
     | '/vendor/$id'
     | '/worker/$id'
     | '/blog'
     | '/admin/accounts'
+    | '/admin/activity'
+    | '/admin/complaints'
     | '/admin/earnings'
+    | '/admin/events'
+    | '/admin/jobs'
     | '/admin/notifications'
+    | '/admin/refunds'
     | '/admin/settings'
     | '/admin/users'
     | '/admin/verification'
@@ -1044,7 +1190,9 @@ export interface FileRouteTypes {
     | '/customer/wishlist'
     | '/organization/departments'
     | '/organization/events'
+    | '/organization/jobs'
     | '/organization/members'
+    | '/organization/notifications'
     | '/organization/roles'
     | '/organization/settings'
     | '/team-member/departments'
@@ -1059,13 +1207,16 @@ export interface FileRouteTypes {
     | '/vendor/jobs'
     | '/vendor/messages'
     | '/vendor/notifications'
+    | '/vendor/post-jobs'
     | '/vendor/profile'
     | '/vendor/settings'
     | '/vendor/support'
     | '/venue/bookings'
+    | '/venue/earnings'
     | '/venue/enquiries'
     | '/venue/hire-vendors'
     | '/venue/hire-workers'
+    | '/venue/jobs'
     | '/venue/messages'
     | '/venue/notifications'
     | '/venue/profile'
@@ -1089,6 +1240,7 @@ export interface FileRouteTypes {
     | '/venue'
     | '/worker'
     | '/customer/events/$eventId'
+    | '/receipt/$type/$id'
     | '/organization/events/$eventId/form'
   id:
     | '__root__'
@@ -1100,6 +1252,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/marketplace'
     | '/onboarding'
+    | '/partner-terms'
     | '/privacy'
     | '/refund-policy'
     | '/register'
@@ -1116,15 +1269,21 @@ export interface FileRouteTypes {
     | '/_authenticated/worker'
     | '/auth/callback'
     | '/blog/$slug'
-    | '/hall/$id'
     | '/hall-book/$id'
+    | '/hall/$id'
     | '/join-organization/$token'
+    | '/p/$slug'
     | '/vendor/$id'
     | '/worker/$id'
     | '/blog/'
     | '/_authenticated/admin/accounts'
+    | '/_authenticated/admin/activity'
+    | '/_authenticated/admin/complaints'
     | '/_authenticated/admin/earnings'
+    | '/_authenticated/admin/events'
+    | '/_authenticated/admin/jobs'
     | '/_authenticated/admin/notifications'
+    | '/_authenticated/admin/refunds'
     | '/_authenticated/admin/settings'
     | '/_authenticated/admin/users'
     | '/_authenticated/admin/verification'
@@ -1139,7 +1298,9 @@ export interface FileRouteTypes {
     | '/_authenticated/customer/wishlist'
     | '/_authenticated/organization/departments'
     | '/_authenticated/organization/events'
+    | '/_authenticated/organization/jobs'
     | '/_authenticated/organization/members'
+    | '/_authenticated/organization/notifications'
     | '/_authenticated/organization/roles'
     | '/_authenticated/organization/settings'
     | '/_authenticated/team-member/departments'
@@ -1154,13 +1315,16 @@ export interface FileRouteTypes {
     | '/_authenticated/vendor/jobs'
     | '/_authenticated/vendor/messages'
     | '/_authenticated/vendor/notifications'
+    | '/_authenticated/vendor/post-jobs'
     | '/_authenticated/vendor/profile'
     | '/_authenticated/vendor/settings'
     | '/_authenticated/vendor/support'
     | '/_authenticated/venue/bookings'
+    | '/_authenticated/venue/earnings'
     | '/_authenticated/venue/enquiries'
     | '/_authenticated/venue/hire-vendors'
     | '/_authenticated/venue/hire-workers'
+    | '/_authenticated/venue/jobs'
     | '/_authenticated/venue/messages'
     | '/_authenticated/venue/notifications'
     | '/_authenticated/venue/profile'
@@ -1184,6 +1348,7 @@ export interface FileRouteTypes {
     | '/_authenticated/venue/'
     | '/_authenticated/worker/'
     | '/_authenticated/customer/events/$eventId'
+    | '/_authenticated/receipt/$type/$id'
     | '/_authenticated/organization/events/$eventId/form'
   fileRoutesById: FileRoutesById
 }
@@ -1196,6 +1361,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   MarketplaceRoute: typeof MarketplaceRoute
   OnboardingRoute: typeof OnboardingRoute
+  PartnerTermsRoute: typeof PartnerTermsRoute
   PrivacyRoute: typeof PrivacyRoute
   RefundPolicyRoute: typeof RefundPolicyRoute
   RegisterRoute: typeof RegisterRoute
@@ -1205,9 +1371,10 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   BlogSlugRoute: typeof BlogSlugRoute
-  HallIdRoute: typeof HallIdRoute
   HallBookIdRoute: typeof HallBookIdRoute
+  HallIdRoute: typeof HallIdRoute
   JoinOrganizationTokenRoute: typeof JoinOrganizationTokenRoute
+  PSlugRoute: typeof PSlugRoute
   VendorIdRoute: typeof VendorIdRoute
   WorkerIdRoute: typeof WorkerIdRoute
   BlogIndexRoute: typeof BlogIndexRoute
@@ -1262,6 +1429,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/partner-terms': {
+      id: '/partner-terms'
+      path: '/partner-terms'
+      fullPath: '/partner-terms'
+      preLoaderRoute: typeof PartnerTermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -1339,6 +1513,13 @@ declare module '@tanstack/react-router' {
       path: '/vendor/$id'
       fullPath: '/vendor/$id'
       preLoaderRoute: typeof VendorIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/p/$slug': {
+      id: '/p/$slug'
+      path: '/p/$slug'
+      fullPath: '/p/$slug'
+      preLoaderRoute: typeof PSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/join-organization/$token': {
@@ -1579,6 +1760,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVenueMessagesRouteImport
       parentRoute: typeof AuthenticatedVenueRouteRoute
     }
+    '/_authenticated/venue/jobs': {
+      id: '/_authenticated/venue/jobs'
+      path: '/jobs'
+      fullPath: '/venue/jobs'
+      preLoaderRoute: typeof AuthenticatedVenueJobsRouteImport
+      parentRoute: typeof AuthenticatedVenueRouteRoute
+    }
     '/_authenticated/venue/hire-workers': {
       id: '/_authenticated/venue/hire-workers'
       path: '/hire-workers'
@@ -1598,6 +1786,13 @@ declare module '@tanstack/react-router' {
       path: '/enquiries'
       fullPath: '/venue/enquiries'
       preLoaderRoute: typeof AuthenticatedVenueEnquiriesRouteImport
+      parentRoute: typeof AuthenticatedVenueRouteRoute
+    }
+    '/_authenticated/venue/earnings': {
+      id: '/_authenticated/venue/earnings'
+      path: '/earnings'
+      fullPath: '/venue/earnings'
+      preLoaderRoute: typeof AuthenticatedVenueEarningsRouteImport
       parentRoute: typeof AuthenticatedVenueRouteRoute
     }
     '/_authenticated/venue/bookings': {
@@ -1626,6 +1821,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/vendor/profile'
       preLoaderRoute: typeof AuthenticatedVendorProfileRouteImport
+      parentRoute: typeof AuthenticatedVendorRouteRoute
+    }
+    '/_authenticated/vendor/post-jobs': {
+      id: '/_authenticated/vendor/post-jobs'
+      path: '/post-jobs'
+      fullPath: '/vendor/post-jobs'
+      preLoaderRoute: typeof AuthenticatedVendorPostJobsRouteImport
       parentRoute: typeof AuthenticatedVendorRouteRoute
     }
     '/_authenticated/vendor/notifications': {
@@ -1726,11 +1928,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOrganizationRolesRouteImport
       parentRoute: typeof AuthenticatedOrganizationRouteRoute
     }
+    '/_authenticated/organization/notifications': {
+      id: '/_authenticated/organization/notifications'
+      path: '/notifications'
+      fullPath: '/organization/notifications'
+      preLoaderRoute: typeof AuthenticatedOrganizationNotificationsRouteImport
+      parentRoute: typeof AuthenticatedOrganizationRouteRoute
+    }
     '/_authenticated/organization/members': {
       id: '/_authenticated/organization/members'
       path: '/members'
       fullPath: '/organization/members'
       preLoaderRoute: typeof AuthenticatedOrganizationMembersRouteImport
+      parentRoute: typeof AuthenticatedOrganizationRouteRoute
+    }
+    '/_authenticated/organization/jobs': {
+      id: '/_authenticated/organization/jobs'
+      path: '/jobs'
+      fullPath: '/organization/jobs'
+      preLoaderRoute: typeof AuthenticatedOrganizationJobsRouteImport
       parentRoute: typeof AuthenticatedOrganizationRouteRoute
     }
     '/_authenticated/organization/events': {
@@ -1831,11 +2047,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminSettingsRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/admin/refunds': {
+      id: '/_authenticated/admin/refunds'
+      path: '/refunds'
+      fullPath: '/admin/refunds'
+      preLoaderRoute: typeof AuthenticatedAdminRefundsRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
     '/_authenticated/admin/notifications': {
       id: '/_authenticated/admin/notifications'
       path: '/notifications'
       fullPath: '/admin/notifications'
       preLoaderRoute: typeof AuthenticatedAdminNotificationsRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/jobs': {
+      id: '/_authenticated/admin/jobs'
+      path: '/jobs'
+      fullPath: '/admin/jobs'
+      preLoaderRoute: typeof AuthenticatedAdminJobsRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/events': {
+      id: '/_authenticated/admin/events'
+      path: '/events'
+      fullPath: '/admin/events'
+      preLoaderRoute: typeof AuthenticatedAdminEventsRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/earnings': {
@@ -1845,12 +2082,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminEarningsRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/admin/complaints': {
+      id: '/_authenticated/admin/complaints'
+      path: '/complaints'
+      fullPath: '/admin/complaints'
+      preLoaderRoute: typeof AuthenticatedAdminComplaintsRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/activity': {
+      id: '/_authenticated/admin/activity'
+      path: '/activity'
+      fullPath: '/admin/activity'
+      preLoaderRoute: typeof AuthenticatedAdminActivityRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
     '/_authenticated/admin/accounts': {
       id: '/_authenticated/admin/accounts'
       path: '/accounts'
       fullPath: '/admin/accounts'
       preLoaderRoute: typeof AuthenticatedAdminAccountsRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/receipt/$type/$id': {
+      id: '/_authenticated/receipt/$type/$id'
+      path: '/receipt/$type/$id'
+      fullPath: '/receipt/$type/$id'
+      preLoaderRoute: typeof AuthenticatedReceiptTypeIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/customer/events/$eventId': {
       id: '/_authenticated/customer/events/$eventId'
@@ -1871,8 +2129,13 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminAccountsRoute: typeof AuthenticatedAdminAccountsRoute
+  AuthenticatedAdminActivityRoute: typeof AuthenticatedAdminActivityRoute
+  AuthenticatedAdminComplaintsRoute: typeof AuthenticatedAdminComplaintsRoute
   AuthenticatedAdminEarningsRoute: typeof AuthenticatedAdminEarningsRoute
+  AuthenticatedAdminEventsRoute: typeof AuthenticatedAdminEventsRoute
+  AuthenticatedAdminJobsRoute: typeof AuthenticatedAdminJobsRoute
   AuthenticatedAdminNotificationsRoute: typeof AuthenticatedAdminNotificationsRoute
+  AuthenticatedAdminRefundsRoute: typeof AuthenticatedAdminRefundsRoute
   AuthenticatedAdminSettingsRoute: typeof AuthenticatedAdminSettingsRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
   AuthenticatedAdminVerificationRoute: typeof AuthenticatedAdminVerificationRoute
@@ -1882,8 +2145,13 @@ interface AuthenticatedAdminRouteRouteChildren {
 const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren =
   {
     AuthenticatedAdminAccountsRoute: AuthenticatedAdminAccountsRoute,
+    AuthenticatedAdminActivityRoute: AuthenticatedAdminActivityRoute,
+    AuthenticatedAdminComplaintsRoute: AuthenticatedAdminComplaintsRoute,
     AuthenticatedAdminEarningsRoute: AuthenticatedAdminEarningsRoute,
+    AuthenticatedAdminEventsRoute: AuthenticatedAdminEventsRoute,
+    AuthenticatedAdminJobsRoute: AuthenticatedAdminJobsRoute,
     AuthenticatedAdminNotificationsRoute: AuthenticatedAdminNotificationsRoute,
+    AuthenticatedAdminRefundsRoute: AuthenticatedAdminRefundsRoute,
     AuthenticatedAdminSettingsRoute: AuthenticatedAdminSettingsRoute,
     AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
     AuthenticatedAdminVerificationRoute: AuthenticatedAdminVerificationRoute,
@@ -1962,7 +2230,9 @@ const AuthenticatedOrganizationEventsRouteWithChildren =
 interface AuthenticatedOrganizationRouteRouteChildren {
   AuthenticatedOrganizationDepartmentsRoute: typeof AuthenticatedOrganizationDepartmentsRoute
   AuthenticatedOrganizationEventsRoute: typeof AuthenticatedOrganizationEventsRouteWithChildren
+  AuthenticatedOrganizationJobsRoute: typeof AuthenticatedOrganizationJobsRoute
   AuthenticatedOrganizationMembersRoute: typeof AuthenticatedOrganizationMembersRoute
+  AuthenticatedOrganizationNotificationsRoute: typeof AuthenticatedOrganizationNotificationsRoute
   AuthenticatedOrganizationRolesRoute: typeof AuthenticatedOrganizationRolesRoute
   AuthenticatedOrganizationSettingsRoute: typeof AuthenticatedOrganizationSettingsRoute
   AuthenticatedOrganizationIndexRoute: typeof AuthenticatedOrganizationIndexRoute
@@ -1974,8 +2244,11 @@ const AuthenticatedOrganizationRouteRouteChildren: AuthenticatedOrganizationRout
       AuthenticatedOrganizationDepartmentsRoute,
     AuthenticatedOrganizationEventsRoute:
       AuthenticatedOrganizationEventsRouteWithChildren,
+    AuthenticatedOrganizationJobsRoute: AuthenticatedOrganizationJobsRoute,
     AuthenticatedOrganizationMembersRoute:
       AuthenticatedOrganizationMembersRoute,
+    AuthenticatedOrganizationNotificationsRoute:
+      AuthenticatedOrganizationNotificationsRoute,
     AuthenticatedOrganizationRolesRoute: AuthenticatedOrganizationRolesRoute,
     AuthenticatedOrganizationSettingsRoute:
       AuthenticatedOrganizationSettingsRoute,
@@ -2018,6 +2291,7 @@ interface AuthenticatedVendorRouteRouteChildren {
   AuthenticatedVendorJobsRoute: typeof AuthenticatedVendorJobsRoute
   AuthenticatedVendorMessagesRoute: typeof AuthenticatedVendorMessagesRoute
   AuthenticatedVendorNotificationsRoute: typeof AuthenticatedVendorNotificationsRoute
+  AuthenticatedVendorPostJobsRoute: typeof AuthenticatedVendorPostJobsRoute
   AuthenticatedVendorProfileRoute: typeof AuthenticatedVendorProfileRoute
   AuthenticatedVendorSettingsRoute: typeof AuthenticatedVendorSettingsRoute
   AuthenticatedVendorSupportRoute: typeof AuthenticatedVendorSupportRoute
@@ -2036,6 +2310,7 @@ const AuthenticatedVendorRouteRouteChildren: AuthenticatedVendorRouteRouteChildr
     AuthenticatedVendorMessagesRoute: AuthenticatedVendorMessagesRoute,
     AuthenticatedVendorNotificationsRoute:
       AuthenticatedVendorNotificationsRoute,
+    AuthenticatedVendorPostJobsRoute: AuthenticatedVendorPostJobsRoute,
     AuthenticatedVendorProfileRoute: AuthenticatedVendorProfileRoute,
     AuthenticatedVendorSettingsRoute: AuthenticatedVendorSettingsRoute,
     AuthenticatedVendorSupportRoute: AuthenticatedVendorSupportRoute,
@@ -2049,9 +2324,11 @@ const AuthenticatedVendorRouteRouteWithChildren =
 
 interface AuthenticatedVenueRouteRouteChildren {
   AuthenticatedVenueBookingsRoute: typeof AuthenticatedVenueBookingsRoute
+  AuthenticatedVenueEarningsRoute: typeof AuthenticatedVenueEarningsRoute
   AuthenticatedVenueEnquiriesRoute: typeof AuthenticatedVenueEnquiriesRoute
   AuthenticatedVenueHireVendorsRoute: typeof AuthenticatedVenueHireVendorsRoute
   AuthenticatedVenueHireWorkersRoute: typeof AuthenticatedVenueHireWorkersRoute
+  AuthenticatedVenueJobsRoute: typeof AuthenticatedVenueJobsRoute
   AuthenticatedVenueMessagesRoute: typeof AuthenticatedVenueMessagesRoute
   AuthenticatedVenueNotificationsRoute: typeof AuthenticatedVenueNotificationsRoute
   AuthenticatedVenueProfileRoute: typeof AuthenticatedVenueProfileRoute
@@ -2062,9 +2339,11 @@ interface AuthenticatedVenueRouteRouteChildren {
 const AuthenticatedVenueRouteRouteChildren: AuthenticatedVenueRouteRouteChildren =
   {
     AuthenticatedVenueBookingsRoute: AuthenticatedVenueBookingsRoute,
+    AuthenticatedVenueEarningsRoute: AuthenticatedVenueEarningsRoute,
     AuthenticatedVenueEnquiriesRoute: AuthenticatedVenueEnquiriesRoute,
     AuthenticatedVenueHireVendorsRoute: AuthenticatedVenueHireVendorsRoute,
     AuthenticatedVenueHireWorkersRoute: AuthenticatedVenueHireWorkersRoute,
+    AuthenticatedVenueJobsRoute: AuthenticatedVenueJobsRoute,
     AuthenticatedVenueMessagesRoute: AuthenticatedVenueMessagesRoute,
     AuthenticatedVenueNotificationsRoute: AuthenticatedVenueNotificationsRoute,
     AuthenticatedVenueProfileRoute: AuthenticatedVenueProfileRoute,
@@ -2122,6 +2401,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedVendorRouteRoute: typeof AuthenticatedVendorRouteRouteWithChildren
   AuthenticatedVenueRouteRoute: typeof AuthenticatedVenueRouteRouteWithChildren
   AuthenticatedWorkerRouteRoute: typeof AuthenticatedWorkerRouteRouteWithChildren
+  AuthenticatedReceiptTypeIdRoute: typeof AuthenticatedReceiptTypeIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -2134,6 +2414,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedVendorRouteRoute: AuthenticatedVendorRouteRouteWithChildren,
   AuthenticatedVenueRouteRoute: AuthenticatedVenueRouteRouteWithChildren,
   AuthenticatedWorkerRouteRoute: AuthenticatedWorkerRouteRouteWithChildren,
+  AuthenticatedReceiptTypeIdRoute: AuthenticatedReceiptTypeIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -2148,6 +2429,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   MarketplaceRoute: MarketplaceRoute,
   OnboardingRoute: OnboardingRoute,
+  PartnerTermsRoute: PartnerTermsRoute,
   PrivacyRoute: PrivacyRoute,
   RefundPolicyRoute: RefundPolicyRoute,
   RegisterRoute: RegisterRoute,
@@ -2157,9 +2439,10 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   BlogSlugRoute: BlogSlugRoute,
-  HallIdRoute: HallIdRoute,
   HallBookIdRoute: HallBookIdRoute,
+  HallIdRoute: HallIdRoute,
   JoinOrganizationTokenRoute: JoinOrganizationTokenRoute,
+  PSlugRoute: PSlugRoute,
   VendorIdRoute: VendorIdRoute,
   WorkerIdRoute: WorkerIdRoute,
   BlogIndexRoute: BlogIndexRoute,
@@ -2167,3 +2450,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
