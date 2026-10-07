@@ -9,7 +9,7 @@
 // cached, and only as a fallback if the network is unreachable.
 
 const CACHE_NAME = "eventorbit-shell-v1";
-const PRECACHE_URLS = ["/favicon.png", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"];
+const PRECACHE_URLS = ["/favicon.png", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
