@@ -12,7 +12,6 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { CookieConsent } from "@/components/CookieConsent";
-import { InstallAppPrompt } from "@/components/InstallAppPrompt";
 
 function NotFoundComponent() {
   return (
@@ -91,7 +90,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
-      { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "apple-touch-icon", href: "/icon-192.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
@@ -128,8 +126,8 @@ function RootComponent() {
     import("@/lib/settings").then(({ applyTheme, getStoredTheme }) => applyTheme(getStoredTheme()));
   }, []);
   useEffect(() => {
-    // Registers the service worker required for Chrome's "Install app"
-    // prompt. Safe no-op on browsers without support (Safari desktop etc).
+    // Service worker is kept ONLY for push notifications (see sw.js).
+    // The PWA install prompt/manifest have been removed on purpose.
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
@@ -156,7 +154,6 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <Outlet />
       <CookieConsent />
-      <InstallAppPrompt />
     </QueryClientProvider>
   );
 }
