@@ -25,6 +25,7 @@ const SECTIONS = [
   { id: "legal", label: "Legal & Payout" },
   { id: "portfolio", label: "Portfolio" },
   { id: "packages", label: "Packages" },
+  { id: "other", label: "Other details" },
   { id: "review", label: "Review" },
 ];
 
@@ -217,6 +218,23 @@ function ProfilePage() {
           </>
         )}
 
+        {active === "other" && (
+          <div>
+            <h3 className="text-sm font-semibold">Other details <span className="font-normal text-muted-foreground">(optional)</span></h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Anything else customers should know about your business — e.g. what is included, travel charges, setup time, special offers or terms. This is shown on your public profile.
+            </p>
+            <textarea
+              rows={7}
+              value={((form.additional_info as Record<string, unknown> | null)?.other_details as string) ?? ""}
+              onChange={(e) => set("additional_info", { ...((form.additional_info as Record<string, unknown> | null) ?? {}), other_details: e.target.value })}
+              placeholder="Write any extra information for your customers here…"
+              className="mt-3 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:border-brand-violet"
+            />
+            <p className="mt-2 text-xs text-muted-foreground">Tap <strong>Save progress</strong> below to save.</p>
+          </div>
+        )}
+
         {active === "review" && (
           <div>
             <div className="rounded-2xl border border-border p-5 space-y-2 text-sm">
@@ -226,6 +244,7 @@ function ProfilePage() {
               <ReviewRow label="Experience" value={form.years_experience != null ? `${form.years_experience} years` : "—"} />
               <ReviewRow label="Service areas" value={serviceAreas.join(", ") || "—"} />
               <ReviewRow label="Portfolio photos" value={portfolio.length} />
+              <ReviewRow label="Other details" value={((form.additional_info as Record<string, unknown> | null)?.other_details as string) ? "Added" : "—"} />
               <ReviewRow label="GST" value={form.gst_number as string} />
               <ReviewRow label="Verification status" value={form.verification_status as string} />
             </div>
