@@ -58,6 +58,7 @@ type Vendor = {
   facebook: string | null;
   website: string | null;
   service_areas: string[];
+  additional_info: Record<string, unknown> | null;
   verified: boolean;
   rating: number;
   review_count: number;
@@ -162,6 +163,13 @@ function VendorDetail() {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {!!vendor.additional_info?.other_details && (
+              <div className="mt-8">
+                <h2 className="font-display text-lg font-semibold mb-2">Other details</h2>
+                <p className="whitespace-pre-line text-sm text-muted-foreground">{String(vendor.additional_info?.other_details)}</p>
               </div>
             )}
 
