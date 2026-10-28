@@ -2,9 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Bell, Loader2, Send, Users, Clock, CheckCircle2 } from "lucide-react";
+import { Bell, Loader2, Send, Users, Clock, CheckCircle2, Search, UserRound, X } from "lucide-react";
 import { useSession } from "@/lib/session";
-import { createBroadcastMessage, fetchAllBroadcastMessages, type BroadcastAudience, type BroadcastMessage } from "@/lib/admin";
+import { createBroadcastMessage, fetchAllBroadcastMessages, searchBroadcastRecipients, sendDirectMessage, type BroadcastAudience, type BroadcastMessage, type BroadcastRecipient } from "@/lib/admin";
 
 export const Route = createFileRoute("/_authenticated/admin/notifications")({
   head: () => ({ meta: [{ title: "Broadcast Center — EventOrbit Nova" }, { name: "robots", content: "noindex" }] }),
@@ -46,13 +46,29 @@ function BroadcastPage() {
   const [deadlineLocal, setDeadlineLocal] = useState("");
   const [sending, setSending] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  // "One specific user" — search a venue / business / person and message only them.
+  const [oneUser, setOneUser] = useState(false);
+  const [recipient, setRecipient] = useState<BroadcastRecipient | null>(null);
+  const [search, setSearch] = useState("");
+  const results = useQuery({
+    queryKey: ["admin-broadcast-recipients", search.trim()],
+    queryFn: () => searchBroadcastRecipients(search),
+    enabled: oneUser && !recipient && search.trim().length >= 2,
+  });
 
   const history = useQuery({ queryKey: ["admin-broadcast-history"], queryFn: fetchAllBroadcastMessages });
 
   async function send() {
     if (!title.trim()) { toast.error("Title is required."); return; }
+    if (oneUser && !recipient) { toast.error("Pick who to send it to."); return; }
     setSending(true);
     try {
+      if (oneUser && recipient) {
+        await sendDirectMessage({ userId: recipient.user_id, label: recipient.label, title: title.trim(), body: body.trim(), type });
+        toast.success(`Sent to ${recipient.label}`);
+        setTitle(""); setBody(""); setConfirming(false);
+        return;
+      }
       await createBroadcastMessage({
         title: title.trim(), body: body.trim(), type, audience,
         deadline: localToIso(deadlineLocal), adminUserId: user!.id,
@@ -81,13 +97,57 @@ function BroadcastPage() {
           <label className="mb-1.5 block text-xs font-semibold text-muted-foreground">Audience</label>
           <div className="flex flex-wrap gap-2">
             {AUDIENCES.map((a) => (
-              <button key={a.value} onClick={() => setAudience(a.value)}
-                className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${audience === a.value ? "bg-brand-violet text-white" : "border border-border hover:bg-accent"}`}>
+              <button key={a.value} onClick={() => { setAudience(a.value); setOneUser(false); }}
+                className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${!oneUser && audience === a.value ? "bg-brand-violet text-white" : "border border-border hover:bg-accent"}`}>
                 {a.label}
               </button>
             ))}
+            <button onClick={() => setOneUser(true)}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${oneUser ? "bg-brand-violet text-white" : "border border-border hover:bg-accent"}`}>
+              <UserRound className="h-3.5 w-3.5" /> One specific user
+            </button>
           </div>
         </div>
+
+        {oneUser && (
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-muted-foreground">Send to</label>
+            {recipient ? (
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-brand-violet/40 bg-brand-violet/5 px-3.5 py-2.5">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold">{recipient.label}</div>
+                  <div className="truncate text-xs text-muted-foreground capitalize">{recipient.sub}</div>
+                </div>
+                <button onClick={() => { setRecipient(null); setSearch(""); }} className="rounded-full p-1.5 hover:bg-accent" title="Change"><X className="h-4 w-4" /></button>
+              </div>
+            ) : (
+              <>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search venue, business, person name or email — e.g. Vishwaraj Lawns"
+                    className="w-full rounded-xl border border-input bg-background py-2.5 pl-9 pr-3.5 text-sm outline-none focus:border-brand-violet" />
+                </div>
+                {search.trim().length >= 2 && (
+                  <div className="mt-2 max-h-64 overflow-y-auto rounded-xl border border-border">
+                    {results.isLoading ? (
+                      <div className="flex items-center gap-2 px-3.5 py-3 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Searching…</div>
+                    ) : (results.data ?? []).length === 0 ? (
+                      <div className="px-3.5 py-3 text-xs text-muted-foreground">No one found for "{search.trim()}".</div>
+                    ) : (
+                      (results.data ?? []).map((r) => (
+                        <button key={r.user_id} onClick={() => setRecipient(r)} className="block w-full border-b border-border px-3.5 py-2.5 text-left last:border-0 hover:bg-accent">
+                          <div className="text-sm font-medium">{r.label}</div>
+                          <div className="text-xs text-muted-foreground capitalize">{r.sub}</div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+            <p className="mt-1 text-[11px] text-muted-foreground">Only this person gets it — in their notifications (web and app) and as a phone/browser notification.</p>
+          </div>
+        )}
 
         <div>
           <label className="mb-1.5 block text-xs font-semibold text-muted-foreground">Type</label>
@@ -113,21 +173,21 @@ function BroadcastPage() {
             className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
         </label>
 
-        <label className="block max-w-xs">
+        {!oneUser && <label className="block max-w-xs">
           <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Deadline (optional)</span>
           <input type="datetime-local" value={deadlineLocal} onChange={(e) => setDeadlineLocal(e.target.value)}
             className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:border-brand-violet" />
           <span className="mt-1 block text-[11px] text-muted-foreground">After this time, the popup stops showing to anyone who hasn't seen it yet. Leave blank for no expiry.</span>
-        </label>
+        </label>}
 
         {!confirming ? (
-          <button onClick={() => setConfirming(true)} disabled={!title.trim()}
+          <button onClick={() => setConfirming(true)} disabled={!title.trim() || (oneUser && !recipient)}
             className="inline-flex items-center gap-2 rounded-full btn-brand btn-brand-hover px-5 py-2.5 text-sm font-semibold disabled:opacity-50">
             <Send className="h-4 w-4" /> Review & send
           </button>
         ) : (
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-            <p className="flex items-center gap-2 text-sm font-semibold"><Users className="h-4 w-4" /> Send to: {AUDIENCES.find((a) => a.value === audience)?.label}</p>
+            <p className="flex items-center gap-2 text-sm font-semibold"><Users className="h-4 w-4" /> Send to: {oneUser ? recipient?.label ?? "—" : AUDIENCES.find((a) => a.value === audience)?.label}</p>
             <p className="mt-1 text-xs text-muted-foreground">This can't be recalled once sent. Double-check the message above.</p>
             <div className="mt-3 flex gap-2">
               <button onClick={() => setConfirming(false)} className="rounded-full border border-input px-4 py-2 text-xs font-semibold hover:bg-accent">Cancel</button>
