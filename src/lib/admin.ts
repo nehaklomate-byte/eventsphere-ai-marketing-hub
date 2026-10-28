@@ -718,6 +718,47 @@ export async function createBroadcastMessage(opts: {
   await writeAudit("send_broadcast", "broadcast_messages", null, null, { audience: opts.audience, title: opts.title, deadline: opts.deadline });
 }
 
+// ---------- One specific user (Broadcast Center → "One specific user") ----------
+// Same as the Android app: the message goes into that one person's
+// notifications (platform_notifications — shown in their bell list and as
+// the announcement banner on their dashboard) plus a phone/browser push.
+export type BroadcastRecipient = { user_id: string; label: string; sub: string };
+
+export async function searchBroadcastRecipients(text: string): Promise<BroadcastRecipient[]> {
+  const q = text.trim().replace(/[,()*%]/g, " ").trim();
+  if (q.length < 2) return [];
+  const like = `%${q}%`;
+  const out = new Map<string, BroadcastRecipient>();
+  const add = (id: string | null | undefined, label: string, sub: string) => { if (id && !out.has(id)) out.set(id, { user_id: id, label, sub }); };
+  const [halls, vendors, workers, profiles] = await Promise.all([
+    supabase.from("halls" as never).select("owner_id,name,city" as never).ilike("name" as never, like).is("deleted_at" as never, null).limit(15),
+    supabase.from("vendors" as never).select("owner_id,business_name,city" as never).ilike("business_name" as never, like).limit(15),
+    supabase.from("workers" as never).select("owner_id,full_name,agency_name,city" as never).or(`full_name.ilike.${like},agency_name.ilike.${like}`).limit(15),
+    supabase.from("profiles" as never).select("id,full_name,email,primary_role" as never).or(`full_name.ilike.${like},email.ilike.${like}`).limit(20),
+  ]);
+  for (const h of ((halls.data ?? []) as unknown as { owner_id: string; name: string; city: string | null }[])) add(h.owner_id, h.name, ["Venue owner", h.city].filter(Boolean).join(" · "));
+  for (const v of ((vendors.data ?? []) as unknown as { owner_id: string; business_name: string; city: string | null }[])) add(v.owner_id, v.business_name, ["Vendor", v.city].filter(Boolean).join(" · "));
+  for (const w of ((workers.data ?? []) as unknown as { owner_id: string; full_name: string; agency_name: string | null; city: string | null }[])) add(w.owner_id, w.agency_name || w.full_name, ["Worker", w.city].filter(Boolean).join(" · "));
+  for (const p of ((profiles.data ?? []) as unknown as { id: string; full_name: string | null; email: string | null; primary_role: string | null }[])) {
+    if (p.primary_role === "admin") continue;
+    add(p.id, p.full_name || p.email || "User", [p.primary_role ? p.primary_role.replace("_", " ") : null, p.email].filter(Boolean).join(" · "));
+  }
+  return Array.from(out.values());
+}
+
+export async function sendDirectMessage(opts: { userId: string; label: string; title: string; body: string; type: BroadcastMessage["type"] }): Promise<void> {
+  const { error } = await supabase.from("platform_notifications" as never).insert({
+    user_id: opts.userId, title: opts.title, body: opts.body || null, type: opts.type,
+  } as never);
+  if (error) throw error;
+  try {
+    await supabase.functions.invoke("send-push", { body: { user_ids: [opts.userId], title: opts.title, body: opts.body || "", url: "broadcast" } });
+  } catch {
+    // best-effort — the notification row above is what matters
+  }
+  await writeAudit("send_direct_message", "platform_notifications", opts.userId, null, { to: opts.label, title: opts.title });
+}
+
 /** Every broadcast ever sent, newest first — with who sent it and how
  * many recipients have actually seen it (a real count now, not a
  * guess from grouping notification rows). */
