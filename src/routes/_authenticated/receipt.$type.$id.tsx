@@ -106,8 +106,10 @@ async function fetchReceipt(type: ReceiptType, id: string): Promise<ReceiptData 
 
     const featureLabels: Record<string, string> = {
       profile_activation: "Public Booking Profile — one-time activation",
-      subscription_monthly: "Top-tier visibility subscription — monthly",
-      subscription_annual: "Top-tier visibility subscription — annual",
+      subscription_first: "Marketplace subscription — starter plan (2 months)",
+      subscription_monthly: "Marketplace subscription — monthly",
+      subscription_6month: "Marketplace subscription — 6 months",
+      subscription_annual: "Marketplace subscription — annual",
     };
 
     return {
