@@ -492,7 +492,6 @@ function VenueProfilePage() {
           role="venue" entityId={form.id} variant={null} name={(form.name as string) ?? ""}
           active={!!(form as unknown as Hall).public_profile_active} slug={(form.slug as string) ?? null}
           verificationApproved={form.verification_status === "approved"}
-          trialEndsAt={(form as unknown as Hall).trial_ends_at ?? null}
           subscriptionActive={(form as unknown as Hall).subscription_active ?? false}
           subscriptionExpiresAt={(form as unknown as Hall).subscription_expires_at ?? null}
           onActivated={(slug) => { set("public_profile_active", true); set("slug", slug); }}
