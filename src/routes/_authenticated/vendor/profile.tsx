@@ -293,7 +293,6 @@ function ProfilePage() {
                   role="vendor" entityId={form.id as string} variant={null} name={(form.business_name as string) ?? ""}
                   active={!!form.public_profile_active} slug={(form.slug as string) ?? null}
                   verificationApproved={form.verification_status === "approved"}
-                  trialEndsAt={(form.trial_ends_at as string) ?? null}
                   subscriptionActive={!!form.subscription_active}
                   subscriptionExpiresAt={(form.subscription_expires_at as string) ?? null}
                   onActivated={(slug) => { set("public_profile_active", true); set("slug", slug); }}
