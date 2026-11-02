@@ -3,24 +3,39 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type ProfileRole = "venue" | "vendor" | "worker";
 export type ProfileVariant = "individual" | "agency" | null;
-export type FeatureType = "profile_activation" | "subscription_monthly" | "subscription_annual";
+export type FeatureType = "profile_activation" | "subscription_first" | "subscription_monthly" | "subscription_6month" | "subscription_annual";
+export type SubscriptionPlan = "monthly" | "6month" | "annual";
 
 type PricingSettings = {
   profile_anchor_fee_venue: number;
   profile_anchor_fee_vendor: number;
   profile_anchor_fee_agency_worker: number;
-  subscription_monthly_price: number;
-  subscription_annual_price: number;
-  trial_period_days: number;
+  profile_anchor_fee_individual_worker: number;
+  subscription_venue_monthly: number;
+  subscription_venue_6month: number;
+  subscription_venue_annual: number;
+  subscription_vendor_monthly: number;
+  subscription_vendor_6month: number;
+  subscription_vendor_annual: number;
+  subscription_worker_monthly: number;
+  subscription_worker_6month: number;
+  subscription_worker_annual: number;
 };
 
 const FALLBACK_PRICING: PricingSettings = {
-  profile_anchor_fee_venue: 400,
-  profile_anchor_fee_vendor: 350,
-  profile_anchor_fee_agency_worker: 300,
-  subscription_monthly_price: 499,
-  subscription_annual_price: 4999,
-  trial_period_days: 180,
+  profile_anchor_fee_venue: 499,
+  profile_anchor_fee_vendor: 399,
+  profile_anchor_fee_agency_worker: 299,
+  profile_anchor_fee_individual_worker: 99,
+  subscription_venue_monthly: 400,
+  subscription_venue_6month: 2200,
+  subscription_venue_annual: 4500,
+  subscription_vendor_monthly: 299,
+  subscription_vendor_6month: 1600,
+  subscription_vendor_annual: 3000,
+  subscription_worker_monthly: 199,
+  subscription_worker_6month: 1000,
+  subscription_worker_annual: 2000,
 };
 
 let cachedPricing: PricingSettings | null = null;
@@ -32,20 +47,48 @@ export async function fetchPricing(): Promise<PricingSettings> {
   if (cachedPricing) return cachedPricing;
   const { data } = await supabase
     .from("platform_settings" as never)
-    .select("profile_anchor_fee_venue, profile_anchor_fee_vendor, profile_anchor_fee_agency_worker, subscription_monthly_price, subscription_annual_price, trial_period_days")
+    .select(Object.keys(FALLBACK_PRICING).join(", "))
     .limit(1).maybeSingle();
-  cachedPricing = (data as unknown as PricingSettings) ?? FALLBACK_PRICING;
+  const row = (data as unknown as Partial<Record<keyof PricingSettings, number | string | null>>) ?? {};
+  const merged = { ...FALLBACK_PRICING };
+  (Object.keys(FALLBACK_PRICING) as (keyof PricingSettings)[]).forEach((k) => {
+    if (row[k] !== null && row[k] !== undefined) merged[k] = Number(row[k]);
+  });
+  cachedPricing = merged;
   return cachedPricing;
 }
 
-/** Individual freelance workers are fully exempt (₹0). Everyone else
- * pays the one-time anchor fee shown here, purely for display — the
- * server is the source of truth and re-checks all of this itself. */
+/** One-time public profile link fee (venue / vendor / agency worker /
+ * individual worker), purely for display — the server is the source of
+ * truth and re-checks all of this itself. */
 export function priceForActivation(role: ProfileRole, variant: ProfileVariant, pricing: PricingSettings = FALLBACK_PRICING): number {
   if (role === "venue") return pricing.profile_anchor_fee_venue;
   if (role === "vendor") return pricing.profile_anchor_fee_vendor;
-  if (role === "worker") return variant === "agency" ? pricing.profile_anchor_fee_agency_worker : 0;
+  if (role === "worker") return variant === "agency" ? pricing.profile_anchor_fee_agency_worker : pricing.profile_anchor_fee_individual_worker;
   return 0;
+}
+
+/** Marketplace visibility subscription price for a role and plan (display only). */
+export function priceForSubscription(role: ProfileRole, plan: SubscriptionPlan, pricing: PricingSettings = FALLBACK_PRICING): number {
+  return pricing[`subscription_${role}_${plan}` as keyof PricingSettings];
+}
+
+/** True while the marketplace visibility subscription is running. */
+export function isSubscriptionLive(item: { subscription_active?: boolean | null; subscription_expires_at?: string | null }): boolean {
+  return !!item.subscription_active && !!item.subscription_expires_at && new Date(item.subscription_expires_at).getTime() > Date.now();
+}
+
+/** Has this profile ever paid for a subscription? If not, the next
+ * purchase is the starter plan (monthly price, 2 months). */
+export async function hasPaidSubscription(role: ProfileRole, entityId: string): Promise<boolean> {
+  const { count } = await supabase
+    .from("public_profile_payments" as never)
+    .select("id", { count: "exact", head: true })
+    .eq("role" as never, role as never)
+    .eq("entity_id" as never, entityId as never)
+    .eq("status" as never, "paid" as never)
+    .in("feature_type" as never, ["subscription_first", "subscription_monthly", "subscription_6month", "subscription_annual"] as never);
+  return (count ?? 0) > 0;
 }
 
 declare global {
@@ -75,7 +118,7 @@ async function payAndVerify(opts: {
   if (fnErr) throw new Error(fnErr.message || "Could not start the payment.");
   if (fnResp?.error) throw new Error(fnResp.error);
 
-  // Individual freelance worker — server activated it for free, no checkout, no payment record.
+  // Activation fee set to ₹0 by admin — server activated it for free, no checkout, no payment record.
   if (fnResp?.free) return { slug: fnResp.slug as string, payment_id: null };
 
   const { order_id, amount, currency, key_id, payment_id } = fnResp as {
@@ -91,7 +134,7 @@ async function payAndVerify(opts: {
       currency,
       order_id,
       name: "EventOrbit Nova",
-      description: opts.featureType === "profile_activation" ? "Shareable Public Booking Profile — one-time activation" : "Top-tier visibility subscription",
+      description: opts.featureType === "profile_activation" ? "Shareable Public Booking Profile — one-time activation" : "Marketplace visibility subscription",
       prefill: { email: opts.payerEmail, contact: opts.payerPhone },
       theme: { color: "#7c3aed" },
       handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
@@ -124,12 +167,13 @@ export async function activatePublicProfile(opts: {
   return { slug: result.slug, paymentId: result.payment_id };
 }
 
-/** Buys/renews the top-tier visibility subscription for a venue or
- * vendor whose free 180-day trial has ended (or is ending soon). */
+/** Buys/renews the marketplace visibility subscription (venue, vendor or
+ * worker). The first ever purchase must be "monthly" — the server records
+ * it as the starter plan (2 months: 1 free + 1 paid). */
 export async function purchaseSubscription(opts: {
-  role: "venue" | "vendor"; entityId: string; name: string; plan: "monthly" | "annual"; payerEmail?: string; payerPhone?: string;
+  role: ProfileRole; entityId: string; name: string; plan: SubscriptionPlan; payerEmail?: string; payerPhone?: string;
 }): Promise<{ subscription_expires_at?: string; paymentId: string | null }> {
-  const featureType: FeatureType = opts.plan === "monthly" ? "subscription_monthly" : "subscription_annual";
+  const featureType: FeatureType = opts.plan === "6month" ? "subscription_6month" : opts.plan === "annual" ? "subscription_annual" : "subscription_monthly";
   const result = await payAndVerify({ ...opts, featureType });
   return { subscription_expires_at: result.subscription_expires_at, paymentId: result.payment_id };
 }
@@ -147,10 +191,12 @@ export async function fetchPublicProfileBySlug(slug: string) {
   return data ? { role, entity: data as Record<string, unknown> } : null;
 }
 
-const FEATURE_LABEL: Record<FeatureType, string> = {
+export const FEATURE_LABEL: Record<FeatureType, string> = {
   profile_activation: "Public profile activation",
-  subscription_monthly: "Visibility subscription — monthly",
-  subscription_annual: "Visibility subscription — annual",
+  subscription_first: "Subscription — starter (2 months)",
+  subscription_monthly: "Subscription — monthly",
+  subscription_6month: "Subscription — 6 months",
+  subscription_annual: "Subscription — annual",
 };
 
 /** Every successful link-activation / subscription payment for this

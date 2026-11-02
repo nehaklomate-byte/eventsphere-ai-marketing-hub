@@ -862,7 +862,7 @@ export type ProfileRevenueRow = {
   role: "venue" | "vendor" | "worker";
   entity_id: string;
   entity_name: string;
-  feature_type: "profile_activation" | "subscription_monthly" | "subscription_annual";
+  feature_type: "profile_activation" | "subscription_first" | "subscription_monthly" | "subscription_6month" | "subscription_annual";
   amount: number;
   status: "created" | "paid" | "failed";
   razorpay_payment_id: string | null;
