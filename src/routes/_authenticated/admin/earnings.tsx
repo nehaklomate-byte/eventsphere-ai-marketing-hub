@@ -23,7 +23,8 @@ const SOURCE_STYLE: Record<string, string> = {
 };
 
 const FEATURE_LABEL: Record<string, string> = {
-  profile_activation: "Profile link activation", subscription_monthly: "Pro plan — monthly", subscription_annual: "Pro plan — annual",
+  profile_activation: "Profile link activation", subscription_first: "Subscription — starter (2 months)",
+  subscription_monthly: "Subscription — monthly", subscription_6month: "Subscription — 6 months", subscription_annual: "Subscription — annual",
 };
 
 function money(n: number) { return `₹${Number(n || 0).toLocaleString("en-IN")}`; }
