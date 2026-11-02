@@ -425,7 +425,10 @@ function ProfilePage() {
                     role="worker" entityId={form.id as string} variant={form.worker_type === "agency" ? "agency" : "individual"} name={(form.full_name as string) ?? ""}
                     active={!!form.public_profile_active} slug={(form.slug as string) ?? null}
                     verificationApproved={form.verification_status === "approved"}
+                    subscriptionActive={!!form.subscription_active}
+                    subscriptionExpiresAt={(form.subscription_expires_at as string) ?? null}
                     onActivated={(slug) => { set("public_profile_active", true); set("slug", slug); }}
+                    onSubscribed={(expiresAt) => { set("subscription_active", true); set("subscription_expires_at", expiresAt); }}
                   />
                 </div>
               )}
