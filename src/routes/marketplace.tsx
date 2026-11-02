@@ -67,18 +67,15 @@ export const Route = createFileRoute("/marketplace")({
   component: Marketplace,
 });
 
-function hasTopTierVisibility(item: { public_profile_active?: boolean; trial_ends_at?: string | null; subscription_active?: boolean; subscription_expires_at?: string | null }): boolean {
-  if (!item.public_profile_active) return false;
-  const now = Date.now();
-  const onTrial = !!item.trial_ends_at && new Date(item.trial_ends_at).getTime() > now;
-  const subscribed = !!item.subscription_active && (!item.subscription_expires_at || new Date(item.subscription_expires_at).getTime() > now);
-  return onTrial || subscribed;
+// "Official Booking Profile" badge = the public profile link is activated.
+function hasTopTierVisibility(item: { public_profile_active?: boolean }): boolean {
+  return !!item.public_profile_active;
 }
 
-// Boosts activated + trial-or-subscribed listings to the top of search —
-// this is a RANKING boost only. Every verified listing still appears in
-// the free marketplace either way; nothing here filters or hides anyone.
-function sortByVisibility<T extends { public_profile_active?: boolean; trial_ends_at?: string | null; subscription_active?: boolean; subscription_expires_at?: string | null; rating: number }>(items: T[]): T[] {
+// Only profiles with an active subscription are listed at all (filtered in
+// the queries below); among those, profiles with an activated public link
+// (Official Booking Profile) are shown first, then by rating.
+function sortByVisibility<T extends { public_profile_active?: boolean; rating: number }>(items: T[]): T[] {
   return [...items].sort((a, b) => {
     const boost = Number(hasTopTierVisibility(b)) - Number(hasTopTierVisibility(a));
     if (boost !== 0) return boost;
@@ -124,12 +121,14 @@ function Marketplace() {
       supabase.from("halls")
         .select("id,name,city,state,category,cover_url,gallery,price_per_day,max_guests,verified,rating,review_count,public_profile_active,slug,trial_ends_at,subscription_active,subscription_expires_at,latitude,longitude")
         .eq("status", "published").eq("verified", true).is("deleted_at", null)
+        .eq("subscription_active" as never, true as never).gt("subscription_expires_at" as never, new Date().toISOString() as never)
         .order("verified", { ascending: false })
         .then(({ data }) => setItems(sortByVisibility(((data ?? []) as unknown[]).map((h) => ({ ...(h as object), kind: "venue" })) as Item[])));
     } else if (tab === "vendor") {
       supabase.from("vendors")
         .select("id,business_name,city,state,category,logo_url,portfolio,base_price,verified,rating,review_count,public_profile_active,slug,trial_ends_at,subscription_active,subscription_expires_at")
         .eq("status", "published").eq("verified", true).is("deleted_at", null)
+        .eq("subscription_active" as never, true as never).gt("subscription_expires_at" as never, new Date().toISOString() as never)
         .order("verified", { ascending: false })
         .then(({ data }) => setItems(sortByVisibility(((data ?? []) as unknown[]).map((v) => {
           const vv = v as { id: string; business_name: string; city: string | null; state: string | null; category: string | null; logo_url: string | null; portfolio: string[]; base_price: number | null; verified: boolean; rating: number; review_count: number; public_profile_active: boolean; slug: string | null; trial_ends_at: string | null; subscription_active: boolean; subscription_expires_at: string | null };
@@ -137,13 +136,14 @@ function Marketplace() {
         }))));
     } else {
       supabase.from("workers")
-        .select("id,full_name,city,state,category,photo_url,work_images,daily_charges,verified,rating,review_count,marketplace_visible,public_profile_active,slug")
+        .select("id,full_name,city,state,category,photo_url,work_images,daily_charges,verified,rating,review_count,marketplace_visible,public_profile_active,slug,subscription_active,subscription_expires_at")
         .eq("verified", true).eq("marketplace_visible", true).is("deleted_at", null)
+        .eq("subscription_active" as never, true as never).gt("subscription_expires_at" as never, new Date().toISOString() as never)
         .order("verified", { ascending: false })
-        .then(({ data }) => setItems(((data ?? []) as unknown[]).map((w) => {
+        .then(({ data }) => setItems(sortByVisibility(((data ?? []) as unknown[]).map((w) => {
           const ww = w as { id: string; full_name: string; city: string | null; state: string | null; category: string | null; photo_url: string | null; work_images: string[]; daily_charges: number | null; verified: boolean; rating: number; review_count: number; public_profile_active: boolean; slug: string | null };
           return { kind: "worker", id: ww.id, name: ww.full_name, city: ww.city, state: ww.state, category: ww.category, cover_url: ww.photo_url, gallery: ww.work_images ?? [], price_per_day: ww.daily_charges, max_guests: null, verified: ww.verified, rating: ww.rating, review_count: ww.review_count, public_profile_active: ww.public_profile_active, slug: ww.slug } as Worker;
-        })));
+        }))));
     }
   }, [tab]);
 
